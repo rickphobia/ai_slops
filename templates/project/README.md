@@ -6,22 +6,51 @@ One sentence: what this does and who it's for.
 
 `idea` | `in progress` | `working` | `abandoned` — pick one, plus a line on where it stands.
 
-## How to run
+## Requirements
+
+- Language and version (e.g. Python 3.12)
+- Accounts or API keys needed
+
+## Setup
 
 ```bash
-# install
-# run
+# install dependencies
+cp .env.example .env   # then fill in the values
 ```
+
+## Run
+
+```bash
+# command to run it
+```
+
+## Test
+
+```bash
+# lint, type check, and test commands
+```
+
+## Configuration
+
+| Variable | Required | What it does |
+|----------|----------|--------------|
+| `EXAMPLE_API_KEY` | yes | Key for ... |
 
 ## How it works
 
-A short paragraph or a few bullets on the main pieces.
+A short paragraph or a few bullets on the main pieces and how a request flows through them.
 
-## Stack
+## Folder layout
 
-- Language / framework
-- AI model or API used
+```
+src/
+  ...
+```
 
-## Notes
+## Debugging
 
-Decisions made, known problems, ideas for later.
+Where the logs go, how to turn on debug logging, and known failure modes with their fixes.
+
+## Decisions
+
+See `docs/decisions/` for why things are the way they are.

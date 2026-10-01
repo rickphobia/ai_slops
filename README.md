@@ -25,7 +25,8 @@ ai_slops/
 2. **No sharing between projects.** A project never imports code from another project. If two need the same thing, copy it.
 3. **Each project manages its own dependencies** (`package.json`, `requirements.txt`, etc.) inside its own folder. Nothing is installed at the repo root.
 4. **Each project has a README** based on `templates/project/README.md`.
-5. **Add the project to the index below** when you create it.
+5. **Each project is built to company standards**: clear structure, tests, typed code, real logging, no hard-coded secrets. The full rules are in `CLAUDE.md`.
+6. **Add the project to the index below** when you create it.
 
 ## Starting a new project
 
