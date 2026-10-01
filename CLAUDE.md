@@ -19,6 +19,11 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 - **Push back.** If a request would make the project harder to maintain, say so and offer a better way. Don't silently do the quick hack, and don't silently over-engineer either — pick the simplest thing that is production quality.
 - **No fake progress.** Never delete, skip or weaken a test to make it pass. Never claim something works that you didn't run. Report failures plainly.
 
+## Before you start
+
+- Follow the loop in `docs/workflow.md`: spec, plan, small tested steps, review, commit.
+- Check `docs/tooling.md` before adding a skill or MCP server; add it at project scope, not repo-wide.
+
 ## Scope
 
 - Find out which project the task is about. Work only inside `projects/<name>/` unless the task is about the repo itself.

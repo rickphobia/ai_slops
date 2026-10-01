@@ -28,6 +28,11 @@ ai_slops/
 5. **Each project is built to company standards**: clear structure, tests, typed code, real logging, no hard-coded secrets. The full rules are in `CLAUDE.md`.
 6. **Add the project to the index below** when you create it.
 
+## Further reading
+
+- [`docs/workflow.md`](docs/workflow.md) — the spec → plan → build → verify → review loop we follow
+- [`docs/tooling.md`](docs/tooling.md) — recommended skills and MCP servers by topic (game dev, Blender, ML, ...)
+
 ## Starting a new project
 
 ```bash
