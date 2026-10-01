@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Common build and dependency folders (projects can add their own .gitignore too)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
