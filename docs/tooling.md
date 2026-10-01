@@ -14,7 +14,7 @@ Researched 2026-10-01 from GitHub and official docs. Reddit and YouTube were blo
 | Official `code-review` / `pr-review-toolkit` plugins | Multi-agent review of a diff or PR | `/plugin install code-review@claude-plugins-official` |
 | Official LSP plugin for the language (`pyright-lsp`, `typescript-lsp`, ...) | Real go-to-definition and type errors | `/plugin install pyright-lsp@claude-plugins-official` |
 | `security-guidance` plugin | Warns on risky edits | `/plugin install security-guidance@claude-plugins-official` |
-| [obra/superpowers](https://github.com/obra/superpowers) **or** [mattpocock/skills](https://github.com/mattpocock/skills) — pick one | Spec → plan → TDD → review workflow as skills | `/plugin install superpowers@claude-plugins-official` |
+| [mattpocock/skills](https://github.com/mattpocock/skills) — **already in `.claude/skills/`**, adapted to this repo | Grill → spec → tickets → TDD → review workflow | Nothing to install. Don't also add Superpowers: two workflow packs fight each other |
 
 Optional: [Playwright MCP](https://github.com/microsoft/playwright-mcp) for web UIs, [GitHub MCP](https://github.com/github/github-mcp-server) with `--toolsets` limited.
 
