@@ -21,7 +21,7 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 
 ## Before you start
 
-- Follow the loop in `docs/workflow.md`: spec, plan, small tested steps, review, commit.
+- Follow the loop in `docs/workflow.md`: `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` (one ticket per session and PR) → review → merge. The skills live in `.claude/skills/`.
 - Check `docs/tooling.md` before adding a skill or MCP server; add it at project scope, not repo-wide.
 
 ## Scope
@@ -46,7 +46,12 @@ projects/<name>/
 │   ├── adapters/      # code that talks to outside things: AI APIs, DBs, HTTP, files
 │   └── entrypoint     # main / CLI / server startup — thin, just wires things together
 ├── tests/             # mirrors the src/ layout
-├── docs/decisions/    # one short file per important design decision (see below)
+├── GLOSSARY.md        # the project's own words and what they mean
+├── docs/
+│   ├── spec.md        # what we're building (from /to-spec)
+│   ├── specs/         # specs for later features
+│   ├── tickets/       # one file per ticket (from /to-tickets)
+│   └── decisions/     # one short file per important design decision (see below)
 └── dependency + tool config (pyproject.toml, package.json, etc.)
 ```
 
@@ -92,7 +97,7 @@ projects/<name>/
 ## Documentation
 
 - The project README must let a new person install, configure, run and test the project without asking anyone.
-- Write a decision record in `docs/decisions/NNNN-short-title.md` for choices someone might later ask "why did we do it this way?" about (picking a framework, a model, a storage approach). Keep each to: context, decision, why, trade-offs.
+- Write a decision record in `docs/decisions/NNNN-short-title.md` for choices that are hard to reverse, would surprise a future reader, and came from a real trade-off (picking a framework, a model, a storage approach). Format: `.claude/skills/domain-modeling/DECISION-FORMAT.md`.
 - Update docs in the same commit as the code change that makes them wrong.
 
 ## Git
@@ -103,7 +108,7 @@ projects/<name>/
 
 ## When creating a new project
 
-1. Create `projects/<name>/` (lowercase, hyphens) with the structure above.
+1. Create `projects/<name>/` (lowercase, hyphens) with the structure above. This is ticket 01, the walking skeleton, done before any feature.
 2. Copy `templates/project/README.md` into it and fill it in.
 3. Set up formatting, linting, type checks and a test runner before writing features.
 4. Add `.env.example` and a config module.

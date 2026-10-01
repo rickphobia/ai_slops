@@ -10,9 +10,12 @@ Think of this repo as a bookshelf: every project is a separate book. Books sit s
 ai_slops/
 ├── README.md            # this file: what the repo is and the project index
 ├── CLAUDE.md            # rules Claude Code follows when working here
+├── .claude/skills/      # shared workflow skills: /grill-with-docs, /to-spec, /to-tickets, /implement ...
+├── docs/                # how we work (workflow.md) and which tools to add (tooling.md)
 ├── projects/
 │   └── <project-name>/  # one folder per project, fully self-contained
 │       ├── README.md    # what it is, how to run it, current status
+│       ├── docs/        # its spec, tickets and decision records
 │       └── ...          # the project's own code, deps, config
 └── templates/
     └── project/

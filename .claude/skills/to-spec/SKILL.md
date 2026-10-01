@@ -1,22 +1,22 @@
 ---
 name: to-spec
-description: "Turn the current conversation into a spec and publish it to the project issue tracker: no interview, just synthesis of what you've already discussed."
+description: "Turn the current conversation into a spec file in the project's docs folder: no interview, just synthesis of what you've already discussed."
 disable-model-invocation: true
 ---
 
 This skill takes the current conversation context and codebase understanding and produces a spec. Do NOT interview the user; just synthesize what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
+Specs are files in the project, not issues. If it's unclear which project under `projects/` this is for, ask.
 
 ## Process
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the spec, and respect any ADRs in the area you're touching.
+1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the vocabulary in `projects/<name>/GLOSSARY.md` throughout the spec, and respect the decision records in `projects/<name>/docs/decisions/`.
 
 2. Sketch out the seams at which you're going to test the feature. Existing seams should be preferred to new ones. Use the highest seam possible. If new seams are needed, propose them at the highest point you can. The fewer seams across the codebase, the better - the ideal number is one.
 
 Check with the user that these seams match their expectations.
 
-3. Write the spec using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label - no need for additional triage.
+3. Write the spec using the template below. The project's first spec goes to `projects/<name>/docs/spec.md`; later features go to `projects/<name>/docs/specs/<feature-slug>.md`. Show the user the file path and ask them to read it before moving on to `/to-tickets`.
 
 <spec-template>
 

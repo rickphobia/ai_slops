@@ -9,6 +9,8 @@ metadata:
     url: "https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md"
 ---
 
+Title the PR `<project-name>: <imperative summary>` (e.g. `pdf-summarizer: Add retry to model adapter`). If the PR delivers a ticket, put `Ticket: projects/<name>/docs/tickets/<NN>-<slug>.md` as the first line of the body.
+
 Use this template for writing the PR body:
 
 ```markdown
@@ -34,7 +36,7 @@ Use this template for writing the PR body:
 
 ## Sections
 
-Skip all preambles and keep prose brief. Use the user's domain language from `GLOSSARY.md`.
+Skip all preambles and keep prose brief. Use the user's domain language from `projects/<name>/GLOSSARY.md`.
 
 ### Summary
 
