@@ -26,10 +26,11 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 
 ## Scope
 
-- Find out which project the task is about. Work only inside `projects/<name>/` unless the task is about the repo itself.
+- Find out which project the task is about. If the session started at the repo root and the task doesn't name a project, ask which one before changing anything.
+- Read that project's own `CLAUDE.md` if it has one — it adds to these rules.
+- Work only inside `projects/<name>/` unless the task is about the repo itself.
 - Never import or reference code from another project. Each project must run on its own.
 - Install dependencies inside the project folder, never at the repo root.
-- If the project has its own `CLAUDE.md`, follow it as well.
 
 ## Project structure
 

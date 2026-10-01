@@ -28,6 +28,21 @@ ai_slops/
 5. **Each project is built to company standards**: clear structure, tests, typed code, real logging, no hard-coded secrets. The full rules are in `CLAUDE.md`.
 6. **Add the project to the index below** when you create it.
 
+## Working on a project
+
+Start Claude Code **inside the project folder**:
+
+```bash
+cd ai_slops/projects/my-project
+claude
+```
+
+Claude Code loads every `CLAUDE.md` from the folder you start in up to the repo root. So it reads the shared rules in `ai_slops/CLAUDE.md` **and** the project's own `projects/my-project/CLAUDE.md` (if it has one). It also picks up that project's `.mcp.json`, so each project only gets its own tools.
+
+The rules are shared; the code is not. Like a company handbook that every team follows, while each team keeps its own codebase.
+
+In a cloud session (claude.ai/code) the session always starts at the repo root. Name the project in your first message, e.g. "work on `projects/my-project`".
+
 ## Further reading
 
 - [`docs/workflow.md`](docs/workflow.md) — the spec → plan → build → verify → review loop we follow
