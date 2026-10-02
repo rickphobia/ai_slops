@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`in progress` — the game was redesigned around a real-time swarm after a prototype (`docs/prototype/`, decision 0002). The current build is still the old tick-based one-pawn-vs-one-knight battle; tickets 04–11 in `docs/tickets/` rebuild it to the new spec.
+`in progress` — the game was redesigned around a real-time swarm after a prototype (`docs/prototype/`, decision 0002). The current build is still the old tick-based battle: one plain pawn fights wave 1 (a single knight), with pause, 0.5×–2× speed and a HUD showing wave, pawn count and seed. Tickets 04–11 in `docs/tickets/` rebuild it to the new spec.
 
 ## Requirements
 
@@ -53,7 +53,9 @@ Vite reads these from `.env` and bakes them into the build. The game checks them
 
 ## How it works
 
-`src/main.ts` loads the config, starts a run and drives it: every `VITE_TICK_MS` it advances the run by one tick, and every animation frame it redraws the board.
+`src/main.ts` loads the config, starts a run and drives it: every animation frame it asks the tick clock how many ticks are due, advances the run that many ticks, updates the HUD and redraws the board.
+
+`tick-clock.ts` turns real time into ticks. At 1× a tick is due every `VITE_TICK_MS`; at 2× every half of that; while paused, never. Speed only changes *when* ticks run, never what a tick does, so a seed plays out the same at every speed (tested in `tests/tick-clock.test.ts`).
 
 The rules are pure functions with no DOM, so tests drive them directly:
 
@@ -68,20 +70,24 @@ The `adapters/` only draw state and report clicks; they never change rules. See 
 ## Folder layout
 
 ```
-index.html                  # page shell: canvas + startup error box
+index.html                  # page shell: HUD, canvas, end screen, startup error box
 src/
   main.ts                   # entrypoint: config, game loop, wiring
   config.ts                 # reads and validates VITE_* env vars
   logger.ts                 # level-based console logger
   startup-error.ts          # error type for a page that cannot start
   rng.ts                    # seeded RNG for rule code
+  tick-clock.ts             # real time → ticks due, with speed and pause
   catalog/                  # pieces.ts (stats), waves.ts (enemies per wave)
   board/                    # square.ts, moves.ts (move generation)
   battle/                   # battle-state.ts, create-battle.ts, step.ts
   run/                      # run.ts (run state machine)
   adapters/
     canvas-renderer.ts      # draws the board, pieces and HP bars on a <canvas>
-    dom-ui.ts               # win / game-over screen with "new run"
+    dom-ui/
+      hud.ts                # wave, white pawn count, seed
+      battle-controls.ts    # pause and speed buttons
+      end-screen.ts         # win / game-over screen with "new run"
 tests/                      # mirrors src/
 docs/
   spec.md, tickets/, decisions/, screenshots/
@@ -91,7 +97,8 @@ docs/
 
 - Logs go to the browser console, prefixed `[pawn-swarm]`. Default level is `info`.
 - Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every hit and death with its tick.
-- **Replaying a battle** — the end screen shows the run's seed. Put it in `VITE_DEFAULT_SEED`, restart `npm run dev`, and the first run plays out exactly the same. "New run" picks a random seed.
+- Pause, resume and speed changes are logged at `info` with the tick they happened on.
+- **Replaying a battle** — the HUD and the end screen show the run's seed. Put it in `VITE_DEFAULT_SEED`, restart `npm run dev`, and the first run plays out exactly the same. "New run" picks a random seed. Speed and pauses don't change the result, so you can replay at 0.5× to watch a hard moment.
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
 - **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and tick; replay that seed (below) with `?debug=1` to see the ticks before it.
 - **Blank page, no error** — open the console; a script error before startup would show there.

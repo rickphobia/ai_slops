@@ -4,11 +4,11 @@
 
 **Blocked by:** 02
 
-**Status:** ready
+**Status:** done
 
 **Touches:** adapters/dom-ui, entrypoint
 
-- [ ] Speed buttons change real time per tick without changing battle results (same seed, same outcome at every speed)
-- [ ] Pause stops ticks; resume continues from the same state
-- [ ] HUD shows wave, white pawn count and seed, updated every tick
-- [ ] Screenshot of the HUD in the PR
+- [x] Speed buttons change real time per tick without changing battle results (same seed, same outcome at every speed)
+- [x] Pause stops ticks; resume continues from the same state
+- [x] HUD shows wave, white pawn count and seed, updated every tick
+- [x] Screenshot of the HUD in the PR
