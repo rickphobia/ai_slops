@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { startingPawnsFromQuery } from "../src/debug-options";
+import {
+  autoSkillsFromQuery,
+  startingPawnsFromQuery,
+} from "../src/debug-options";
 
 describe("startingPawnsFromQuery", () => {
   it("is undefined without ?pawns=", () => {
@@ -19,4 +22,14 @@ describe("startingPawnsFromQuery", () => {
       );
     },
   );
+});
+
+describe("autoSkillsFromQuery", () => {
+  it("is on with ?autoskills", () => {
+    expect(autoSkillsFromQuery("?pawns=5&autoskills")).toBe(true);
+  });
+
+  it("is off without it", () => {
+    expect(autoSkillsFromQuery("?pawns=5")).toBe(false);
+  });
 });

@@ -19,3 +19,11 @@ export function startingPawnsFromQuery(
   }
   return { pawns };
 }
+
+/**
+ * `?autoskills` in the page URL fires every skill as soon as it is ready,
+ * to try hands-off play: watching the swarm without pressing anything.
+ */
+export function autoSkillsFromQuery(search: string): boolean {
+  return new URLSearchParams(search).has("autoskills");
+}

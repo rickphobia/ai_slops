@@ -125,6 +125,13 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 - **Sound and juice:** Web Audio sounds for every hit, death, skill and pickup, plus a music loop; lunges, sliding moves, death collapses, blood sprays and gibs; volume and screen-shake settings.
 - End screens: win ("Checkmate") or loss, with wave reached, biggest swarm and pieces taken, plus "New run".
 
+### Hands-off play (open question)
+What the owner enjoys most in How Many Dudes: watching the swarm grow, interesting relics, characters and gameplay, and that **battles need no attention** — it plays well next to a YouTube video, while the big choices (relics) stay with the player. Pawn Swarm's hand-fired skills pull the other way.
+
+- Prototype: `?autoskills` fires every skill as soon as it is ready; the shop stays manual. Play a few runs with it on.
+- If hands-off feels better: make auto-fire the default (with a toggle for players who want to aim skills), and put more of the run's interesting decisions in the shop. Write that as a ticket before 08/09, since new pawn types and power-ups should be designed for it.
+- If it feels empty: keep hand-fired skills as they are.
+
 ## User Stories
 
 1. As a player, I want to open a link and start a run with one click, so that trying the demo has no setup.
