@@ -122,6 +122,7 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 - **Team bases:** white pawns stand on a pale glowing disc, black pieces on a dark blood-red one, so the sides read apart in a crowd.
 - Damage numbers, "+n ♟" drop pop-ups, death bursts, screen shake on big hits, stun "z" over stunned pawns, red warning squares, coloured rings on special black types.
 - Toasts for wave start, skills and power-ups.
+- **Sound and juice:** Web Audio sounds for every hit, death, skill and pickup, plus a music loop; lunges, sliding moves, death collapses, blood sprays and gibs; volume and screen-shake settings.
 - End screens: win ("Checkmate") or loss, with wave reached, biggest swarm and pieces taken, plus "New run".
 
 ## User Stories
@@ -186,7 +187,7 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 
 - Placing or steering pawns by hand.
 - Brotato-style stat items beyond pawn types and power-ups.
-- Art, sound and music beyond chess glyphs and simple effects.
+- Recorded music, voice acting, and art beyond the grotesque style in `docs/art/`.
 - Saving runs, accounts, leaderboards, mobile touch tuning.
 - Hosting beyond the static build.
 
