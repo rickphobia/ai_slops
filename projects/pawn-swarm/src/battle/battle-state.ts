@@ -29,6 +29,14 @@ export interface WhitePawn {
   readonly stunLeft: number;
   /** Seconds until a medic's next heal; only counts for pawn types that heal. */
   readonly healLeft: number;
+  /** Seconds until a recruiter's next plain pawn; only counts for pawn types that recruit. */
+  readonly recruitLeft: number;
+  /** Attack a berserker has gathered this wave. */
+  readonly rage: number;
+  /** Whether the next black hit or touch is dodged; only true for pawn types that dodge. */
+  readonly dodgeReady: boolean;
+  /** Whether a promoter has reached an edge and is a white queen. */
+  readonly promoted: boolean;
 }
 
 /**
@@ -68,8 +76,8 @@ export interface Landing {
   readonly warningSeconds: number;
 }
 
-/** How a pawn got hurt: by a black move landing on its square, or by touching a black piece. */
-export type HurtCause = "hit" | "contact";
+/** How a pawn got hurt: by a black move landing on its square, by touching a black piece, or by paying for its own skill (Frenzy). */
+export type HurtCause = "hit" | "contact" | "skill";
 
 export type BattleOutcome = "ongoing" | "won" | "lost";
 
@@ -132,6 +140,25 @@ export type BattleEvent =
       readonly pawnId: number;
       readonly radius: number;
       readonly stunned: number;
+      readonly at: Point;
+    }
+  /** A recruiter spawned plain pawns, by its timer or Call to arms. */
+  | {
+      readonly type: "recruit";
+      readonly pawnId: number;
+      readonly count: number;
+      readonly at: Point;
+    }
+  /** An en passant pawn took a black hit or touch without harm. */
+  | { readonly type: "dodge"; readonly pawnId: number; readonly at: Point }
+  /** A promoter reached a board edge and became a white queen. */
+  | { readonly type: "promote"; readonly pawnId: number; readonly at: Point }
+  /** A pawn jumped (Rush, Sidestep) from one spot to another. */
+  | {
+      readonly type: "leap";
+      readonly pawnId: number;
+      readonly pawnType: PawnTypeId;
+      readonly from: Point;
       readonly at: Point;
     }
   | {

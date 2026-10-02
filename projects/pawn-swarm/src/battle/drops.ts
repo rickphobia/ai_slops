@@ -42,6 +42,16 @@ export function killBlackPiece(
   );
   if (count === 0) return;
 
+  spawnPlainPawns(context, at, count);
+  context.events.push({ type: "drop", count, at });
+}
+
+/** `count` plain pawns appear on `at`, burst outward and join the fight next step. */
+export function spawnPlainPawns(
+  context: StepContext,
+  at: Point,
+  count: number,
+): void {
   const { minSpeed, extraSpeed } = BATTLE_RULES.dropBurst;
   for (let index = 0; index < count; index++) {
     const pawn = newPawn(takeId(context), "plain", at, context.random);
@@ -51,5 +61,4 @@ export function killBlackPiece(
     pawn.burstY = Math.sin(angle) * speed;
     context.pawns.push(pawn);
   }
-  context.events.push({ type: "drop", count, at });
 }

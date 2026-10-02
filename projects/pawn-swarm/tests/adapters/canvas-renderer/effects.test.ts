@@ -158,6 +158,33 @@ describe("effect lifetimes", () => {
     expect(effects.list()).toHaveLength(260);
   });
 
+  it("shows a plus-pawn number for recruits, in the recruiter's colour", () => {
+    const effects = effectsFor([{ type: "recruit", pawnId: 1, count: 2, at }]);
+    expect(effects).toMatchObject([
+      { kind: "text", text: "+2 ♟", colour: EFFECT_COLOURS.recruit },
+    ]);
+  });
+
+  it("shows 'dodge' when a hit is dodged", () => {
+    const effects = effectsFor([{ type: "dodge", pawnId: 1, at }]);
+    expect(effects).toMatchObject([{ kind: "text", text: "dodge" }]);
+  });
+
+  it("shows a ring and a crown when a promoter promotes", () => {
+    const effects = effectsFor([{ type: "promote", pawnId: 1, at }]);
+    expect(kinds(effects)).toEqual(["ring", "text"]);
+  });
+
+  it("shows a slash along a leap, in the pawn type's colour", () => {
+    const from = { x: 1.5, y: 2.5 };
+    const effects = effectsFor([
+      { type: "leap", pawnId: 1, pawnType: "promoter", from, at },
+    ]);
+    expect(effects).toMatchObject([
+      { kind: "slash", colour: "white-tint", from, to: at },
+    ]);
+  });
+
   it("keeps particles within the pool size however big the fight", () => {
     const effects = createEffects(tintOf, () => 0.5);
     const deaths = Array.from({ length: 400 }, (_, index): BattleEvent => ({

@@ -2,6 +2,7 @@ import { centreOf, type Point, type Square } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import type { HurtCause } from "./battle-state";
 import { explode } from "./explosions";
+import { growRage } from "./passives";
 import { lastingEffect } from "./skill-effects";
 import type { SpatialGrid } from "./spatial-grid";
 import { isAlive, type StepContext, type WorkingPawn } from "./step-context";
@@ -38,6 +39,15 @@ export function hurtPawn(
 ): void {
   if (!isAlive(pawn)) return;
   if (lastingEffect(context, pawn.type)?.takesNoDamage === true) return;
+  if (cause !== "skill" && pawn.dodgeReady) {
+    pawn.dodgeReady = false;
+    context.events.push({
+      type: "dodge",
+      pawnId: pawn.id,
+      at: { x: pawn.x, y: pawn.y },
+    });
+    return;
+  }
   pawn.hp -= damage;
   const at = { x: pawn.x, y: pawn.y };
   context.events.push({
@@ -54,6 +64,7 @@ export function hurtPawn(
       piece: { side: "white", type: pawn.type },
       at,
     });
+    growRage(context, pawn);
     explode(context, pawn);
   }
 }
