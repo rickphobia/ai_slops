@@ -4,7 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pawn Swarm</title>
+    <link rel="stylesheet" href="/src/fonts.css" />
     <style>
+      /* Grotesque dark fantasy (docs/art/README.md): near-black, bone text, blood for what matters. */
+      :root {
+        color-scheme: dark;
+        --bg: #0b0908;
+        --panel: #181311;
+        --panel-raised: #211915;
+        --line: #3a2c22;
+        --fg: #e6dccb;
+        --muted: #9a8a75;
+        --bone: #e9e0cc;
+        --blood: #8e1b1b;
+        --blood-bright: #c4302a;
+        --ember: #ff8a3c;
+        --font-display: "Cinzel", Georgia, serif;
+        --font-body: "Crimson Pro", Georgia, serif;
+        /* The board is 20 × 14 squares; leave room above it for the HUD. */
+        --board-width: min(94vw, calc((94vh - 72px) * 20 / 14));
+      }
       body {
         margin: 0;
         min-height: 100vh;
@@ -13,21 +32,25 @@
         align-items: center;
         justify-content: center;
         gap: 16px;
-        background: #15120e;
-        color: #efe6d4;
-        font-family: system-ui, sans-serif;
-      }
-      :root {
-        /* The board is 20 × 14 squares; leave room above it for the HUD. */
-        --board-width: min(94vw, calc((94vh - 72px) * 20 / 14));
+        background: radial-gradient(
+          ellipse at 50% 0%,
+          #1d1512 0%,
+          var(--bg) 60%
+        );
+        background-color: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-body);
+        font-size: 17px;
       }
       #board {
         width: var(--board-width);
         aspect-ratio: 20 / 14;
-        border-radius: 4px;
+        border-radius: 3px;
         box-shadow:
-          0 0 0 1px #3b3226,
-          0 20px 60px rgb(0 0 0 / 50%);
+          0 0 0 1px var(--line),
+          0 0 0 4px #120d0b,
+          0 0 0 5px #2a1d17,
+          0 24px 70px rgb(0 0 0 / 70%);
       }
       #hud {
         width: var(--board-width);
@@ -42,23 +65,29 @@
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
-        gap: 4px 20px;
+        gap: 4px 22px;
+        font-family: var(--font-display);
+        font-weight: 600;
         font-size: 0.75rem;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: #a99b81;
+        color: var(--muted);
       }
       #hud-status strong {
         margin-left: 6px;
-        font-size: 1.75rem;
-        letter-spacing: 0;
-        color: #efe6d4;
-        font-variant-numeric: tabular-nums;
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--fg);
+        font-variant-numeric: tabular-nums lining-nums;
       }
       #hud-status #hud-pawns {
         display: inline-block;
         font-size: 2.6rem;
-        color: #e8b04a;
+        font-weight: 800;
+        color: var(--bone);
+        text-shadow: 0 0 18px rgb(196 48 42 / 55%);
       }
       #hud-pawns.bump {
         animation: bump 0.25s ease-out;
@@ -66,6 +95,7 @@
       @keyframes bump {
         50% {
           transform: scale(1.18);
+          color: #fff;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -81,27 +111,37 @@
       #battle-controls button {
         min-width: 3.5rem;
         padding: 6px 10px;
-        border: 1px solid #3b3226;
-        border-radius: 6px;
-        background: #211c15;
-        color: #efe6d4;
-        font-size: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--panel);
+        color: var(--fg);
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.95rem;
         cursor: pointer;
       }
+      #battle-controls button:hover {
+        border-color: var(--muted);
+        background: var(--panel-raised);
+      }
+      #battle-controls button:focus-visible,
+      #new-run:focus-visible {
+        outline: 2px solid var(--bone);
+        outline-offset: 2px;
+      }
       #battle-controls button[aria-pressed="true"] {
-        border-color: #e8b04a;
-        background: #e8b04a;
-        color: #15120e;
-        font-weight: bold;
+        border-color: var(--blood-bright);
+        background: var(--blood);
+        color: var(--bone);
       }
       #pause {
         min-width: 5.5rem;
       }
-      /* Red, not the speed gold, so "paused" doesn't read as a fifth speed. */
+      /* Ember, not the speed red, so "paused" doesn't read as a fifth speed. */
       #battle-controls #pause[aria-pressed="true"] {
-        border-color: #e0614f;
-        background: #e0614f;
-        color: #15120e;
+        border-color: var(--ember);
+        background: var(--ember);
+        color: var(--bg);
       }
       #end-screen {
         position: fixed;
@@ -111,32 +151,52 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        background: rgb(0 0 0 / 60%);
+        background: radial-gradient(
+          ellipse at 50% 50%,
+          rgb(20 8 6 / 72%) 0%,
+          rgb(0 0 0 / 88%) 75%
+        );
+        text-align: center;
       }
       #end-screen[hidden] {
         display: none;
       }
       #end-screen h2 {
         margin: 0;
-        font-size: 2.5rem;
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-size: clamp(2.4rem, 6vw, 4rem);
+        letter-spacing: 0.04em;
+        color: var(--bone);
+        text-shadow: 0 0 30px rgb(196 48 42 / 60%);
+      }
+      #end-screen p {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--muted);
       }
       #new-run {
-        margin-top: 8px;
-        padding: 10px 24px;
-        border: none;
-        border-radius: 6px;
-        background: #e8b04a;
-        color: #15120e;
-        font-size: 1.25rem;
-        font-weight: bold;
+        margin-top: 12px;
+        padding: 10px 28px;
+        border: 1px solid var(--blood-bright);
+        border-radius: 3px;
+        background: var(--blood);
+        color: var(--bone);
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
         cursor: pointer;
+      }
+      #new-run:hover {
+        background: var(--blood-bright);
       }
       #startup-error {
         max-width: 40rem;
         padding: 12px 16px;
-        border: 1px solid #e06c6c;
-        border-radius: 6px;
-        background: #4a2020;
+        border: 1px solid var(--blood-bright);
+        border-radius: 3px;
+        background: #2a0c0a;
       }
     </style>
   </head>

@@ -1,6 +1,6 @@
 import { createCanvasRenderer } from "./adapters/canvas-renderer/canvas-renderer";
 import { createEffects } from "./adapters/canvas-renderer/effects";
-import { createGlyphArt } from "./adapters/canvas-renderer/piece-art";
+import { loadPieceArt } from "./adapters/canvas-renderer/piece-art";
 import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
@@ -67,7 +67,7 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
   }
 }
 
-function start(): void {
+async function start(): Promise<void> {
   const config = loadConfig(import.meta.env);
   logger.info("config loaded", { ...config });
   const startingPawns = startingPawnsFromQuery(window.location.search);
@@ -77,7 +77,7 @@ function start(): void {
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new StartupError('index.html is missing <canvas id="board">.');
   }
-  const art = createGlyphArt();
+  const art = await loadPieceArt();
   const renderer = createCanvasRenderer(
     canvas,
     art,
@@ -151,7 +151,7 @@ function start(): void {
     try {
       runDueSteps(nowMs);
       hud.update(hudStatus(run));
-      renderer.draw(run.battle, effects.list());
+      renderer.draw(run.battle, effects.list(), nowMs / 1000);
       requestAnimationFrame(frame);
     } catch (error) {
       // Stop the loop: a broken rule would otherwise throw again every frame.
@@ -168,9 +168,7 @@ function start(): void {
   requestAnimationFrame(frame);
 }
 
-try {
-  start();
-} catch (error) {
+start().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   logger.error("startup failed", {
     error: message,
@@ -180,4 +178,4 @@ try {
         : "unexpected",
   });
   showFatalError(`Pawn Swarm could not start: ${message}`);
-}
+});

@@ -184,7 +184,7 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 
 - Placing or steering pawns by hand.
 - Brotato-style stat items beyond pawn types and power-ups.
-- Art, sound and music beyond chess glyphs and simple effects.
+- Sound and music. Art is the grotesque dark-fantasy set in `docs/art/` (ticket 13), not painted assets.
 - Saving runs, accounts, leaderboards, mobile touch tuning.
 - Hosting beyond the static build.
 

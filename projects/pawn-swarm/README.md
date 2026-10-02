@@ -72,18 +72,23 @@ Each step also lists what happened in it (`strike`, `pawn-hurt`, `death`, `drop`
 
 The `adapters/` only draw state and report clicks; they never change rules:
 
-- `canvas-renderer/piece-art.ts` — the one place that decides how a piece looks (chess glyphs for now). An art pass replaces this file.
+- `art/` — every piece's drawing as SVG code, in the grotesque dark-fantasy style of `docs/art/` (decision 0003): all 11 pawn types, the 5 black pieces and the 8 black types, including ones the rules don't have yet. `animation.ts` lets one drawing play live (SMIL, for portraits) or as still frames (for the canvas). `portraitSvg(id, label)` in `portrait.ts` gives the DOM a live, animated portrait of a piece, e.g. for the shop.
+- `canvas-renderer/piece-art.ts` — the one place that maps a piece to its drawing and size. At startup it decodes each drawing's 8 animation frames as one image; per square size it cuts sprite sheets from them, so a battle only copies pixels. Each piece shows the frame for the current time, offset by its id so a crowd doesn't blink in step.
+- `canvas-renderer/board-art.ts` — paints the empty board: dark squares, old blood stains, a vignette.
 - `canvas-renderer/effects.ts` — turns battle events into damage numbers, death bursts, "+n ♟" pop-ups, strike lines and landing rings, and ages them with game time (so they freeze on pause).
-- `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more, warning squares, pieces and HP bars; `draw-effect.ts` draws each effect.
+- `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more (so the sprites are 2× too), warning squares, pieces back to front, and HP bars; `draw-effect.ts` draws each effect.
 
 See `docs/spec.md`.
 
 ## Folder layout
 
 ```
-index.html                  # page shell: HUD, canvas, end screen, startup error box
+index.html                  # page shell and styles: HUD, canvas, end screen, startup error box
+art-gallery.html            # dev page: every drawing at game size and as a portrait (not in the build)
 src/
   main.ts                   # entrypoint: config, game loop, wiring
+  art-gallery.ts            # entrypoint of art-gallery.html
+  fonts.css                 # Cinzel and Crimson Pro, self-hosted from @fontsource
   config.ts                 # reads and validates VITE_* env vars
   debug-options.ts          # ?pawns= for a big starting swarm
   logger.ts                 # level-based console logger
@@ -95,7 +100,8 @@ src/
   battle/                   # battle-state.ts, create-battle.ts, step.ts and one file per phase
   run/                      # run.ts (run state machine)
   adapters/
-    canvas-renderer/        # canvas-renderer.ts, piece-art.ts, effects.ts, draw-effect.ts
+    art/                    # drawings as SVG code, animation frames, palette, portraits
+    canvas-renderer/        # canvas-renderer.ts, piece-art.ts, board-art.ts, effects.ts, draw-effect.ts
     dom-ui/
       hud.ts                # pawn count, wave, black pieces left, seed
       battle-controls.ts    # pause and speed buttons
@@ -115,6 +121,8 @@ docs/
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
 - **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and step; replay that seed with `?debug=1` to see the steps before it.
 - **Blank page, no error** — open the console; a script error before startup would show there.
+- **Checking the art** — open `http://localhost:5173/art-gallery.html` while `npm run dev` runs. It shows every drawing through the game's own sprite code at game size (one square = 48 CSS px), and as the live portrait the shop uses.
+- **"Pawn Swarm could not start: The "…" drawing could not be loaded as an image"** — that drawing's SVG is broken. `npm test` checks every drawing is well formed; the art gallery shows which one fails.
 
 ## Decisions
 
@@ -123,8 +131,10 @@ See `docs/decisions/` for why things are the way they are:
 - [0001](docs/decisions/0001-browser-canvas-no-engine.md) — browser demo in TypeScript + Canvas, no game engine
 - [0002](docs/decisions/0002-capture-is-an-attack.md) — a capture is an attack; the attacker stays put (tick-based battle, replaced by the one below)
 - [0002](docs/decisions/0002-real-time-fixed-step-battle.md) — real-time fixed-step battle instead of a tick-by-tick board game
+- [0003](docs/decisions/0003-svg-drawings-baked-to-sprite-frames.md) — piece art is SVG code, baked into sprite frames at startup
 
 ## Docs
 
 - `docs/spec.md` — what the demo is
+- `docs/art/` — the approved art direction and samples
 - `GLOSSARY.md` — the game's words
