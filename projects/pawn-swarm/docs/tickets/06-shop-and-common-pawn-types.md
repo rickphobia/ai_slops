@@ -16,4 +16,5 @@
 - [ ] Shield (black pieces nearby target it first), Spear (double range, 2 attack), Twin (strikes two) work in battle (tested)
 - [ ] Tanky types placed in the middle of the spiral
 - [ ] Each type has its own colour on the board
+- [ ] Offer cards show the type's portrait and the army list a small icon, using the art module's portrait function if ticket 13 has landed (glyph fallback otherwise)
 - [ ] Screenshot in the PR
