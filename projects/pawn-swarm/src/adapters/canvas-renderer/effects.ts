@@ -62,6 +62,9 @@ export const EFFECT_COLOURS = {
   stomp: "#ffcf7a",
   heal: "#8fcf6b",
   blast: "#ff6b4a",
+  recruit: "#c58bff",
+  dodge: "#7ef0ff",
+  promote: "#ffe066",
 } as const;
 
 /** Damage numbers stop being added past this many, so a huge swarm can't flood the screen. */
@@ -174,6 +177,48 @@ export function createEffects(
           age: 0,
         });
         addSparks(EFFECT_COLOURS.blast, event.at, 18);
+        return;
+      case "recruit":
+        addText(
+          `+${String(event.count)} ♟`,
+          EFFECT_COLOURS.recruit,
+          { x: event.at.x, y: event.at.y + 0.7 },
+          0.9,
+          0.5,
+        );
+        return;
+      case "dodge":
+        addText("dodge", EFFECT_COLOURS.dodge, {
+          x: event.at.x,
+          y: event.at.y + 0.4,
+        });
+        return;
+      case "promote":
+        effects.push({
+          kind: "ring",
+          colour: EFFECT_COLOURS.promote,
+          at: event.at,
+          radius: 1.2,
+          life: 0.4,
+          age: 0,
+        });
+        addText(
+          "♛",
+          EFFECT_COLOURS.promote,
+          { x: event.at.x, y: event.at.y + 0.9 },
+          1.1,
+          0.7,
+        );
+        return;
+      case "leap":
+        effects.push({
+          kind: "slash",
+          colour: tintOf({ side: "white", type: event.pawnType }),
+          from: event.from,
+          to: event.at,
+          life: 0.25,
+          age: 0,
+        });
         return;
       case "stomp":
         effects.push({
