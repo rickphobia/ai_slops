@@ -60,6 +60,8 @@ export const EFFECT_COLOURS = {
   drop: "#e8b04a",
   landing: "#141210",
   stomp: "#ffcf7a",
+  heal: "#8fcf6b",
+  blast: "#ff6b4a",
 } as const;
 
 /** Damage numbers stop being added past this many, so a huge swarm can't flood the screen. */
@@ -155,6 +157,23 @@ export function createEffects(
         return;
       case "landed":
         addSparks(EFFECT_COLOURS.landing, event.at, 8);
+        return;
+      case "heal":
+        addText(`+${String(event.amount)}`, EFFECT_COLOURS.heal, {
+          x: event.at.x,
+          y: event.at.y + 0.4,
+        });
+        return;
+      case "blast":
+        effects.push({
+          kind: "ring",
+          colour: EFFECT_COLOURS.blast,
+          at: event.at,
+          radius: event.radius,
+          life: 0.35,
+          age: 0,
+        });
+        addSparks(EFFECT_COLOURS.blast, event.at, 18);
         return;
       case "stomp":
         effects.push({

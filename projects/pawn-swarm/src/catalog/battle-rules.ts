@@ -37,6 +37,9 @@ export const BATTLE_RULES = {
   /** ...and stop this far from it. */
   idleStopDistance: 0.94,
 
+  /** A pawn that doesn't fight (a medic) stops walking this far (along both axes together) from the pawn it follows. */
+  followDistance: 1,
+
   /** Pawns closer than this push each other apart. */
   separationRadius: 0.47,
   /** Share of the overlap removed per step. */

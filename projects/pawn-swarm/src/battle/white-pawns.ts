@@ -2,7 +2,8 @@ import { boardCentre, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
 import { blackPiecePosition } from "./piece-position";
-import { strikeDamage, walkingSpeed } from "./skill-effects";
+import { bannerBonus, bannersOf } from "./passives";
+import { strikeCooldown, strikeDamage, walkingSpeed } from "./skill-effects";
 import { buildSpatialGrid } from "./spatial-grid";
 import {
   hasRunOut,
@@ -21,15 +22,50 @@ import { strike } from "./strike";
  */
 export function actPawns(context: StepContext): void {
   const actingCount = context.pawns.length;
+  const banners = bannersOf(context);
   for (let index = 0; index < actingCount; index++) {
     const pawn = context.pawns[index];
     if (pawn === undefined || !isAlive(pawn)) continue;
     drift(pawn, context.seconds);
-    actPawn(context, pawn);
+    if (pawn.stunLeft > 0) {
+      pawn.stunLeft -= context.seconds;
+      // Subtracting 1/60 over and over leaves a hair above 0 behind.
+      if (hasRunOut(pawn.stunLeft)) pawn.stunLeft = 0;
+      continue;
+    }
+    if (PAWN_TYPES[pawn.type].attack === 0) {
+      followArmy(context, pawn);
+    } else {
+      actPawn(context, pawn, bannerBonus(banners, pawn));
+    }
   }
 }
 
-function actPawn(context: StepContext, pawn: WorkingPawn): void {
+/** A pawn that doesn't fight (a medic) walks to the nearest fighting pawn and stays beside it. */
+function followArmy(context: StepContext, pawn: WorkingPawn): void {
+  let nearest: WorkingPawn | undefined;
+  let nearestDistance = Infinity;
+  for (const other of context.pawns) {
+    if (!isAlive(other) || PAWN_TYPES[other.type].attack === 0) continue;
+    const otherDistance = distance(pawn, other);
+    if (otherDistance < nearestDistance) {
+      nearest = other;
+      nearestDistance = otherDistance;
+    }
+  }
+  walkStraight(
+    pawn,
+    nearest ?? boardCentre(context.board),
+    walkingSpeed(context, pawn) * context.seconds,
+    BATTLE_RULES.followDistance,
+  );
+}
+
+function actPawn(
+  context: StepContext,
+  pawn: WorkingPawn,
+  auraBonus: number,
+): void {
   const stats = PAWN_TYPES[pawn.type];
   pawn.strikeCooldownLeft -= context.seconds;
 
@@ -57,7 +93,7 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
   }
   if (!hasRunOut(pawn.strikeCooldownLeft)) return;
 
-  pawn.strikeCooldownLeft = stats.strikeCooldown;
+  pawn.strikeCooldownLeft = strikeCooldown(context, pawn);
   // Only types that strike several pieces look for more, so a big plain swarm stays cheap.
   const others =
     stats.strikesAtOnce > 1
@@ -65,7 +101,7 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
           .filter((piece) => piece !== target)
           .slice(0, stats.strikesAtOnce - 1)
       : [];
-  const damage = strikeDamage(context, pawn);
+  const damage = strikeDamage(context, pawn, auraBonus);
   for (const piece of [target, ...others]) {
     strike(context, pawn, piece, damage);
   }

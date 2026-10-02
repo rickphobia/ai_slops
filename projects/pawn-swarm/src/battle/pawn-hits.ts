@@ -1,6 +1,7 @@
 import { centreOf, type Point, type Square } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import type { HurtCause } from "./battle-state";
+import { explode } from "./explosions";
 import { lastingEffect } from "./skill-effects";
 import type { SpatialGrid } from "./spatial-grid";
 import { isAlive, type StepContext, type WorkingPawn } from "./step-context";
@@ -53,5 +54,6 @@ export function hurtPawn(
       piece: { side: "white", type: pawn.type },
       at,
     });
+    explode(context, pawn);
   }
 }
