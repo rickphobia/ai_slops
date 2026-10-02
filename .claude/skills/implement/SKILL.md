@@ -25,5 +25,6 @@ Implement the ticket or spec the user names, usually `projects/<name>/docs/ticke
 3. Update the project README and `.env.example` if anything they describe changed.
 4. Commit with the project prefix: `<project-name>: <imperative summary>`.
 5. Push and open a PR using /pr. Show the user the test output and the PR link.
+6. Watch the PR until it is merged or closed (in a cloud session: `subscribe_pr_activity`). Fix merge conflicts by merging `main` in (never force-push), fix failing CI, and answer review comments. The PR only waits on the user once it is green and mergeable. Never merge it yourself: the user merges.
 
 Never weaken, skip or delete a test to make it pass. If you can't get it green, say what's failing.
