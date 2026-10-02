@@ -4,7 +4,7 @@ description: "Implement one ticket (or a small spec) end to end: test-first, che
 disable-model-invocation: true
 ---
 
-Implement the ticket or spec the user names, usually `projects/<name>/docs/tickets/<NN>-<slug>.md`. One ticket per session, per branch, per PR.
+Implement the ticket or spec the user names, usually `projects/<name>/docs/tickets/<NN>-<slug>.md`. One ticket per session, per branch, per PR. Two small tickets of the same kind (e.g. two lists of new types) may share one session and PR when the user names both.
 
 ## Before starting
 
@@ -20,7 +20,7 @@ Implement the ticket or spec the user names, usually `projects/<name>/docs/ticke
 
 ## Finish
 
-1. Use /review-diff against `main` and fix what it finds. Don't chase judgement-call nits.
+1. If the change is big (roughly 400+ changed lines, or it changes core rules), use /review-diff against `main` and fix what it finds. Otherwise re-read your own diff against the ticket instead: /review-diff starts two extra sessions and costs a lot of tokens. Don't chase judgement-call nits.
 2. Tick the acceptance criteria in the ticket file and set its status to `done`.
 3. Update the project README and `.env.example` if anything they describe changed.
 4. Commit with the project prefix: `<project-name>: <imperative summary>`.

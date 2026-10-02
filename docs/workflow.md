@@ -25,9 +25,18 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 ## Rules for parallel work
 
 - Only run tickets in parallel when all their blockers are `done` **and** their **Touches** don't overlap. Two sessions editing the same area is like two painters on the same wall.
-- Each parallel ticket gets its own fresh session, branch and PR.
+- Each parallel ticket gets its own fresh session, branch and PR. Two small tickets of the same kind can share one session to save its start-up cost.
 - Each ticket's session watches its own PR until it is merged: it fixes merge conflicts (by merging `main` in) and failing CI by itself, so a PR only waits on you once it is green and mergeable. You still review and merge.
 - Merge one PR at a time; merging one can make the next conflict, and its session then fixes that.
+
+## Keeping token use down
+
+Each step in a session re-reads everything the session has seen so far, so long sessions get expensive fast.
+
+- **Ticket sessions run on Sonnet.** Pick it in the model menu when starting the session. Keep the top model for grilling, specs and tickets, where judgement matters most.
+- **The planning session doesn't watch PRs.** Each ticket's session watches its own; a second watcher doubles the cost.
+- **Start a fresh planning session** when the old one has run all day. Ticket files hold the status (`ready` / `done`), so nothing is lost.
+- `/review-diff` only for big tickets (see `/implement`).
 
 ## Habits that prevent slop
 
