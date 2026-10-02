@@ -23,7 +23,37 @@ describe("describeShop", () => {
         { kind: "rook", count: 2 },
       ],
     },
+    {
+      piecesTaken: 7,
+      pawnsGained: 12,
+      pawnsLost: 4,
+      biggestSwarm: 30,
+      seconds: 41.5,
+    },
   );
+
+  it("shows a stats row per owned type, army totals and the last wave", () => {
+    expect(view.stats.rows.map((row) => row.type)).toEqual([
+      "plain",
+      "spear",
+      "twin",
+    ]);
+    expect(view.stats.rows[1]).toEqual({
+      type: "spear",
+      name: "Spear pawn",
+      count: 5,
+      hp: 3,
+      attack: 2,
+      damagePerSecond: 2.5,
+    });
+    // 9 plain + 5 spear + 2 twin; 3 HP each.
+    expect(view.stats.totals.pawns).toBe(16);
+    expect(view.stats.totals.hp).toBe(48);
+    expect(view.stats.totals.damagePerSecond).toBeCloseTo(
+      9 * (1 / 0.7) + 5 * 2.5 + 2 * (1 / 0.7),
+    );
+    expect(view.stats.lastWave).toMatchObject({ pawnsLost: 4, seconds: 41.5 });
+  });
 
   it("shows each offer's stats, passive, skill, price and recruits this wave", () => {
     expect(view.offers[0]).toEqual({

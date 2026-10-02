@@ -20,6 +20,10 @@ export interface LastingSkillEffect {
   readonly takesNoDamage?: boolean;
   /** Black pieces whose centre is within this many squares go for these pawns first, instead of `drawsBlackWithin`. */
   readonly drawsBlackWithin?: number;
+  /** Seconds between strikes are divided by this. */
+  readonly strikeSpeedFactor?: number;
+  /** Who it changes: only pawns of the skill's own type (the default), or every pawn in the army. */
+  readonly affects?: "own-type" | "everyone";
 }
 
 /** Where a skill's hit lands around each pawn of the type, in squares from the pawn. */
@@ -50,6 +54,10 @@ export interface SkillStats {
   readonly text: string;
   readonly lasting?: LastingSkillEffect;
   readonly hit?: SkillHit;
+  /** Every white pawn goes back to full HP. */
+  readonly healsEveryone?: boolean;
+  /** Every pawn of the type blows up now, as if it had died. */
+  readonly detonates?: boolean;
 }
 
 /** What the shop says about a skill. */
@@ -60,6 +68,33 @@ export interface ShopListing {
   readonly rarity: Rarity;
   /** Plain pawns sacrificed per recruit in wave 1, before it grows with the wave. */
   readonly basePrice: number;
+}
+
+/** A blast: hurts black pieces, stuns white pawns, never hurts them. */
+export interface Blast {
+  /** Damage to every black piece whose centre is within `radius`. */
+  readonly damage: number;
+  /** In squares from the pawn. */
+  readonly radius: number;
+  /** Seconds every other white pawn within `radius` can't move or strike. */
+  readonly stunSeconds: number;
+}
+
+/** What a pawn type's passive does, in numbers. Each field is one passive; a type has at most one. */
+export interface PassiveEffect {
+  /** Heals the other pawns within `radius` by `amount` HP every `everySeconds`. */
+  readonly heals?: {
+    readonly amount: number;
+    readonly everySeconds: number;
+    readonly radius: number;
+  };
+  /** Other pawns within `radius` strike for `amount` more. */
+  readonly extraAttackNearby?: {
+    readonly amount: number;
+    readonly radius: number;
+  };
+  /** Blows up when it dies. */
+  readonly explodes?: Blast;
 }
 
 export interface PawnStats {
@@ -78,12 +113,15 @@ export interface PawnStats {
   readonly drawsBlackWithin?: number;
   /** The always-on ability, as the shop describes it. */
   readonly passive: string;
+  /** The same ability as numbers for the rules. */
+  readonly passiveEffect?: PassiveEffect;
   readonly skill: SkillStats;
   /** How the shop sells it; the plain pawn is money, not for sale. */
   readonly shop?: ShopListing;
 }
 
-export type PawnTypeId = "plain" | "shield" | "spear" | "twin";
+export type PawnTypeId =
+  "plain" | "shield" | "spear" | "twin" | "medic" | "banner" | "bomb";
 
 export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
   plain: {
@@ -159,6 +197,69 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       hit: { damage: 2, area: { shape: "around", radius: 1.375 } },
     },
     shop: { rarity: "common", basePrice: 3 },
+  },
+  medic: {
+    name: "Medic pawn",
+    hp: 4,
+    // 0 attack means it never strikes: it follows the army and heals it.
+    attack: 0,
+    speed: 1.25,
+    strikeCooldown: 0.7,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive: "Doesn't fight. Heals pawns near it 1 HP every 1.5s.",
+    passiveEffect: { heals: { amount: 1, everySeconds: 1.5, radius: 2.5 } },
+    skill: {
+      name: "Triage",
+      cooldown: 25,
+      text: "Fully heals every white pawn.",
+      healsEveryone: true,
+    },
+    shop: { rarity: "rare", basePrice: 5 },
+  },
+  banner: {
+    name: "Banner pawn",
+    hp: 5,
+    attack: 1,
+    speed: 1.25,
+    strikeCooldown: 0.8,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive: "Other pawns near it get +1 attack.",
+    passiveEffect: { extraAttackNearby: { amount: 1, radius: 2.5 } },
+    skill: {
+      name: "Rally",
+      cooldown: 25,
+      text: "Every pawn moves and strikes 60% faster for 5s.",
+      lasting: {
+        seconds: 5,
+        speedFactor: 1.6,
+        strikeSpeedFactor: 1.6,
+        affects: "everyone",
+      },
+    },
+    shop: { rarity: "rare", basePrice: 5 },
+  },
+  bomb: {
+    name: "Bomb pawn",
+    hp: 2,
+    attack: 1,
+    speed: 1.44,
+    strikeCooldown: 0.7,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive:
+      "Explodes on death: 4 damage to black pieces nearby. White pawns nearby are stunned for 2s, never hurt.",
+    passiveEffect: {
+      explodes: { damage: 4, radius: 2, stunSeconds: 2 },
+    },
+    skill: {
+      name: "Detonate",
+      cooldown: 8,
+      text: "Blows up every bomb pawn now.",
+      detonates: true,
+    },
+    shop: { rarity: "rare", basePrice: 4 },
   },
 };
 

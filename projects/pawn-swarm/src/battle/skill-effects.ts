@@ -6,6 +6,8 @@ import {
   type SkillHitArea,
 } from "../catalog/pieces";
 import { skillBlocker, startTimer } from "../skills/skills";
+import { explode } from "./explosions";
+import { healPawn } from "./passives";
 import { blackPiecePosition } from "./piece-position";
 import {
   hasRunOut,
@@ -48,6 +50,8 @@ export function fireSkills(
       pawnType: type,
       pawns: firing.length,
     });
+    if (skill.healsEveryone === true) healEveryone(context, living);
+    if (skill.detonates === true) detonateAll(context, firing);
     const hit = skill.hit;
     if (hit === undefined) continue;
     for (const pawn of firing) {
@@ -63,6 +67,30 @@ export function fireSkills(
   }
 }
 
+function healEveryone(
+  context: StepContext,
+  pawns: readonly WorkingPawn[],
+): void {
+  for (const pawn of pawns) healPawn(context, pawn, pawn.maxHp - pawn.hp);
+}
+
+/** Every bomb dies and explodes, one after another: a bomb in another's blast is stunned, but already counted out. */
+function detonateAll(
+  context: StepContext,
+  bombs: readonly WorkingPawn[],
+): void {
+  for (const bomb of bombs) {
+    bomb.hp = 0;
+    context.events.push({
+      type: "death",
+      id: bomb.id,
+      piece: { side: "white", type: bomb.type },
+      at: { x: bomb.x, y: bomb.y },
+    });
+  }
+  for (const bomb of bombs) explode(context, bomb);
+}
+
 /** The lasting skill running for pawns of `type` this step, if any. */
 export function lastingEffect(
   context: Pick<StepContext, "lastingSkills">,
@@ -73,19 +101,57 @@ export function lastingEffect(
   return PAWN_TYPES[type].skill.lasting;
 }
 
-/** A pawn's damage per strike, with any lasting skill's bonus. */
-export function strikeDamage(context: StepContext, pawn: WorkingPawn): number {
+/**
+ * The lasting skills changing this pawn right now: its own type's, and any
+ * that affect everyone (Rally).
+ */
+function effectsOn(
+  context: Pick<StepContext, "lastingSkills">,
+  pawn: WorkingPawn,
+): LastingSkillEffect[] {
+  const effects: LastingSkillEffect[] = [];
+  for (const type of Object.keys(context.lastingSkills) as PawnTypeId[]) {
+    const effect = lastingEffect(context, type);
+    if (effect === undefined) continue;
+    if (type === pawn.type || effect.affects === "everyone") {
+      effects.push(effect);
+    }
+  }
+  return effects;
+}
+
+/** A pawn's damage per strike, with any lasting skill's bonus and a banner's aura (`auraBonus`). */
+export function strikeDamage(
+  context: StepContext,
+  pawn: WorkingPawn,
+  auraBonus: number,
+): number {
   return (
     PAWN_TYPES[pawn.type].attack +
-    (lastingEffect(context, pawn.type)?.extraAttack ?? 0)
+    auraBonus +
+    effectsOn(context, pawn).reduce(
+      (total, effect) => total + (effect.extraAttack ?? 0),
+      0,
+    )
   );
 }
 
-/** A pawn's walking speed in squares per second, with any lasting skill's factor. */
+/** A pawn's walking speed in squares per second, with any lasting skills' factors. */
 export function walkingSpeed(context: StepContext, pawn: WorkingPawn): number {
-  return (
-    PAWN_TYPES[pawn.type].speed *
-    (lastingEffect(context, pawn.type)?.speedFactor ?? 1)
+  return effectsOn(context, pawn).reduce(
+    (speed, effect) => speed * (effect.speedFactor ?? 1),
+    PAWN_TYPES[pawn.type].speed,
+  );
+}
+
+/** Seconds a pawn waits after a strike, with any lasting skills' factors. */
+export function strikeCooldown(
+  context: StepContext,
+  pawn: WorkingPawn,
+): number {
+  return effectsOn(context, pawn).reduce(
+    (seconds, effect) => seconds / (effect.strikeSpeedFactor ?? 1),
+    PAWN_TYPES[pawn.type].strikeCooldown,
   );
 }
 

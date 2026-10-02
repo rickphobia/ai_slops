@@ -1,8 +1,4 @@
-import type {
-  BattleEvent,
-  BattleState,
-  StepInputs,
-} from "../battle/battle-state";
+import type { BattleState, StepInputs } from "../battle/battle-state";
 import { createBattle } from "../battle/create-battle";
 import { step } from "../battle/step";
 import type { Army } from "../catalog/pieces";
@@ -18,6 +14,7 @@ import {
   toggleLock,
 } from "../shop/shop";
 import { describeShop, type ShopView } from "../shop/shop-view";
+import { recordStep, startWaveReport, type WaveReport } from "./wave-report";
 
 export class RunError extends Error {
   override name = "RunError";
@@ -41,6 +38,8 @@ interface RunCommon extends RunScore {
   readonly waves: readonly Wave[];
   /** Offers the player locked, carried to the next shop visit. */
   readonly lockedOffers: readonly Offer[];
+  /** The wave being fought, or in the shop the wave just cleared. */
+  readonly waveReport: WaveReport;
 }
 
 /**
@@ -101,6 +100,7 @@ export function startRun(setup: RunSetup): RunState {
     wave: 1,
     waves,
     lockedOffers: [],
+    waveReport: startWaveReport(battle),
     battle,
     peakSwarm: battle.pawns.length,
     piecesTaken: 0,
@@ -113,9 +113,12 @@ export function advanceRun(run: RunState, inputs: StepInputs): RunState {
   if (run.battle.outcome === "won") return enterShop(run);
 
   const battle = step(run.battle, inputs);
-  const score: RunScore = {
+  const waveReport = recordStep(run.waveReport, battle);
+  const score = {
     peakSwarm: Math.max(run.peakSwarm, battle.pawns.length),
-    piecesTaken: run.piecesTaken + blackDeaths(battle.events),
+    piecesTaken:
+      run.piecesTaken + waveReport.piecesTaken - run.waveReport.piecesTaken,
+    waveReport,
   };
   if (battle.outcome === "lost") {
     return { ...run, ...score, phase: "lost", battle };
@@ -124,12 +127,6 @@ export function advanceRun(run: RunState, inputs: StepInputs): RunState {
     return { ...run, ...score, phase: "won", battle };
   }
   return { ...run, ...score, battle };
-}
-
-function blackDeaths(events: readonly BattleEvent[]): number {
-  return events.filter(
-    (event) => event.type === "death" && event.piece.side === "black",
-  ).length;
 }
 
 /** Applies one shop action. Pure; throws `ShopError` for an action the shop doesn't allow. */
@@ -184,6 +181,7 @@ function startNextWave(run: RunState & { phase: "shop" }): RunState {
     wave: run.wave + 1,
     waves: run.waves,
     lockedOffers: lockedOffers(run.shop),
+    waveReport: startWaveReport(battle),
     battle,
     peakSwarm: Math.max(run.peakSwarm, battle.pawns.length),
     piecesTaken: run.piecesTaken,
@@ -198,7 +196,7 @@ export function shopView(run: RunState & { phase: "shop" }): ShopView {
       `The shop leads into wave ${String(run.shop.wave)}, which is not in the wave table.`,
     );
   }
-  return describeShop(run.shop, run.army, nextWave);
+  return describeShop(run.shop, run.army, nextWave, run.waveReport);
 }
 
 /** Pawns in the army, all types together. */

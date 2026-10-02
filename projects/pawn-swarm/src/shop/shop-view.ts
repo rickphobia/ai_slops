@@ -7,6 +7,7 @@ import {
   type Rarity,
   type SkillText,
 } from "../catalog/pieces";
+import type { WaveReport } from "../run/wave-report";
 import { SHOP_RULES } from "../catalog/shop-rules";
 import type { Wave } from "../catalog/waves";
 import {
@@ -37,6 +38,27 @@ export interface OfferView {
   readonly blocker: RecruitBlocker | undefined;
 }
 
+/** One pawn type's row in the stats panel. */
+export interface StatsRow {
+  readonly type: PawnTypeId;
+  readonly name: string;
+  readonly count: number;
+  readonly hp: number;
+  readonly attack: number;
+  /** Damage per game second: attack ÷ seconds between strikes. */
+  readonly damagePerSecond: number;
+}
+
+export interface ArmyStats {
+  readonly rows: readonly StatsRow[];
+  readonly totals: {
+    readonly pawns: number;
+    readonly hp: number;
+    readonly damagePerSecond: number;
+  };
+  readonly lastWave: WaveReport;
+}
+
 export interface ShopView {
   /** The wave the shop leads into. */
   readonly wave: number;
@@ -47,6 +69,7 @@ export interface ShopView {
     readonly name: string;
     readonly count: number;
   }[];
+  readonly stats: ArmyStats;
   readonly offers: readonly OfferView[];
   readonly reroll: {
     readonly price: number;
@@ -64,6 +87,7 @@ export function describeShop(
   shop: ShopState,
   army: Army,
   nextWave: Wave,
+  lastWave: WaveReport,
 ): ShopView {
   return {
     wave: shop.wave,
@@ -72,6 +96,7 @@ export function describeShop(
       const count = army[type] ?? 0;
       return count > 0 ? [{ type, name: PAWN_TYPES[type].name, count }] : [];
     }),
+    stats: describeArmy(army, lastWave),
     offers: shop.offers.map((offer, index) => {
       const stats = PAWN_TYPES[offer.type];
       return {
@@ -99,5 +124,34 @@ export function describeShop(
       name: BLACK_PIECES[kind].name,
       count,
     })),
+  };
+}
+
+function describeArmy(army: Army, lastWave: WaveReport): ArmyStats {
+  const rows = (Object.keys(PAWN_TYPES) as PawnTypeId[]).flatMap((type) => {
+    const count = army[type] ?? 0;
+    if (count === 0) return [];
+    const stats = PAWN_TYPES[type];
+    return [
+      {
+        type,
+        name: stats.name,
+        count,
+        hp: stats.hp,
+        attack: stats.attack,
+        damagePerSecond: stats.attack / stats.strikeCooldown,
+      },
+    ];
+  });
+  const sum = (value: (row: StatsRow) => number): number =>
+    rows.reduce((total, row) => total + row.count * value(row), 0);
+  return {
+    rows,
+    totals: {
+      pawns: sum(() => 1),
+      hp: sum((row) => row.hp),
+      damagePerSecond: sum((row) => row.damagePerSecond),
+    },
+    lastWave,
   };
 }

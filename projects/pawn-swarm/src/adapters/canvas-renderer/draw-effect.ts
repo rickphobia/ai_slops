@@ -1,5 +1,6 @@
 import type { Point } from "../../board/square";
-import { type Effect, TEXT_RISE_SPEED } from "./effects";
+import { EFFECT_COLOURS, type Effect, TEXT_RISE_SPEED } from "./effects";
+import type { ParticlePool } from "./particles";
 
 /** Draws one effect, faded by its age. `toPixels` turns board units into canvas pixels. */
 export function drawEffect(
@@ -37,14 +38,22 @@ export function drawEffect(
       context.stroke();
       return;
     }
-    case "spark": {
-      const centre = toPixels({
-        x: effect.at.x + effect.velocity.x * effect.age,
-        y: effect.at.y + effect.velocity.y * effect.age,
-      });
-      const size = Math.max(3, squarePx * 0.09);
-      context.fillStyle = effect.colour;
-      context.fillRect(centre.x - size / 2, centre.y - size / 2, size, size);
+    case "blood-pool": {
+      const centre = toPixels(effect.at);
+      // Pools stay dark for most of their life, then dry out.
+      context.globalAlpha = Math.min(1, fade * 2.5) * 0.6;
+      context.fillStyle = EFFECT_COLOURS.bloodDark;
+      context.beginPath();
+      context.ellipse(
+        centre.x,
+        centre.y + squarePx * 0.3,
+        effect.radius * squarePx,
+        effect.radius * squarePx * 0.45,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
       return;
     }
     case "text": {
@@ -63,4 +72,31 @@ export function drawEffect(
       return;
     }
   }
+}
+
+/** Draws every live particle: blood as small drops, gibs as chunky pieces, sparks as specks. */
+export function drawParticles(
+  context: CanvasRenderingContext2D,
+  particles: ParticlePool,
+  toPixels: (point: Point) => Point,
+  squarePx: number,
+): void {
+  let lastColour = "";
+  particles.forEach((kind, colour, x, y, size, fade) => {
+    if (colour !== lastColour) {
+      context.fillStyle = colour;
+      lastColour = colour;
+    }
+    const centre = toPixels({ x, y });
+    // Gibs stay solid until the end; blood and sparks fade out.
+    context.globalAlpha = kind === "gib" ? Math.min(1, fade * 3) : fade;
+    const width = Math.max(2, size * squarePx);
+    const height = kind === "gib" ? width * 0.7 : width;
+    context.fillRect(
+      centre.x - width / 2,
+      centre.y - height / 2,
+      width,
+      height,
+    );
+  });
 }

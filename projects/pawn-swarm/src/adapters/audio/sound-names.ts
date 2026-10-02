@@ -1,0 +1,30 @@
+/** Every sound the game can make. Recorded files can replace any of these later: only the audio adapter knows how each is made. */
+export const SOUND_NAMES = [
+  "pawn-strike",
+  "black-hit",
+  "warning",
+  "pawn-death",
+  "black-death-small",
+  "black-death-big",
+  "king-death",
+  "drop-pop",
+  "landed",
+  "stomp",
+  "skill-charge",
+  "skill-hold",
+  "skill-volley",
+  "skill-fork",
+  "skill-triage",
+  "skill-rally",
+  "skill-detonate",
+  "blast",
+  "wave-start",
+  "push",
+  "win",
+  "loss",
+  "shop-buy",
+  "shop-reroll",
+  "shop-click",
+] as const;
+
+export type SoundName = (typeof SOUND_NAMES)[number];
