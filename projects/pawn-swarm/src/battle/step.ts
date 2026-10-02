@@ -1,11 +1,18 @@
 import {
+  bishopPattern,
   type BoardView,
-  knightMoves,
-  knightStepsTo,
+  KING,
+  KNIGHT,
   type Move,
+  type MovePattern,
   pawnMoves,
+  patternMoves,
+  queenPattern,
+  rookPattern,
+  stepsTo,
 } from "../board/moves";
 import { isSameSquare, type Square } from "../board/square";
+import { ENEMY_TYPES, type EnemyKind } from "../catalog/pieces";
 import { pickOne, type RngState } from "../rng";
 import type {
   BattleEvent,
@@ -95,11 +102,29 @@ function chooseMove(
   board: BoardView,
   rng: RngState,
 ): MoveChoice {
-  switch (piece.kind) {
-    case "pawn":
-      return choosePawnMove(piece, board, rng);
+  if (piece.kind === "pawn") return choosePawnMove(piece, board, rng);
+  return chooseEnemyMove(
+    piece,
+    patternOf(piece.kind),
+    livingPieces,
+    board,
+    rng,
+  );
+}
+
+function patternOf(kind: EnemyKind): MovePattern {
+  const { range } = ENEMY_TYPES[kind];
+  switch (kind) {
     case "knight":
-      return chooseKnightMove(piece, livingPieces, board, rng);
+      return KNIGHT;
+    case "bishop":
+      return bishopPattern(range);
+    case "rook":
+      return rookPattern(range);
+    case "queen":
+      return queenPattern(range);
+    case "king":
+      return KING;
   }
 }
 
@@ -118,9 +143,14 @@ function choosePawnMove(
   return { move: moves[0], rng };
 }
 
-/** The legal jump that leaves the fewest jumps to the nearest white pawn; a capture counts as 0. */
-function chooseKnightMove(
+/**
+ * The legal move that leaves the fewest moves to the nearest white pawn; a capture counts as 0.
+ * If no move can ever reach a pawn (a bishop on the other colour), the one that ends
+ * nearest in king steps.
+ */
+function chooseEnemyMove(
   piece: Piece,
+  pattern: MovePattern,
   livingPieces: readonly Piece[],
   board: BoardView,
   rng: RngState,
@@ -128,15 +158,23 @@ function chooseKnightMove(
   const targets: Square[] = livingPieces
     .filter((other) => other.side !== piece.side)
     .map((other) => other.square);
-  const moves = knightMoves(piece.square, piece.side, board);
+  const moves = patternMoves(piece.square, piece.side, pattern, board);
   if (targets.length === 0 || moves.length === 0)
     return { move: undefined, rng };
 
-  const jumpsToTarget = knightStepsTo(targets, board.size);
-  const fewest = Math.min(...moves.map((move) => jumpsToTarget(move.to)));
-  const best = moves.filter((move) => jumpsToTarget(move.to) === fewest);
+  const movesToTarget = stepsTo(targets, board.size, pattern);
+  let score = (move: Move): number => movesToTarget(move.to);
+  if (moves.every((move) => score(move) === Infinity)) {
+    score = (move) => Math.min(...targets.map((t) => kingSteps(move.to, t)));
+  }
+  const fewest = Math.min(...moves.map(score));
+  const best = moves.filter((move) => score(move) === fewest);
   const pick = pickOne(rng, best);
   return { move: pick.value, rng: pick.state };
+}
+
+function kingSteps(a: Square, b: Square): number {
+  return Math.max(Math.abs(a.file - b.file), Math.abs(a.rank - b.rank));
 }
 
 function outcomeOf(pieces: readonly Piece[]): BattleOutcome {

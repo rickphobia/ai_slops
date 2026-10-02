@@ -11,6 +11,10 @@ const HP_BAR_FILL = "#4fd16b";
 const GLYPHS: Readonly<Record<PieceKind, string>> = {
   pawn: "♟︎",
   knight: "♞",
+  bishop: "♝",
+  rook: "♜",
+  queen: "♛",
+  king: "♚",
 };
 
 const PIECE_COLOURS: Readonly<Record<Side, { fill: string; outline: string }>> =

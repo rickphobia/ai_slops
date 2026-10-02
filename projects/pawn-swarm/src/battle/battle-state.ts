@@ -1,8 +1,9 @@
 import type { Side, Square } from "../board/square";
+import type { EnemyKind } from "../catalog/pieces";
 import type { RngState } from "../rng";
 
 /** How a piece moves. */
-export type PieceKind = "pawn" | "knight";
+export type PieceKind = "pawn" | EnemyKind;
 
 export interface Piece {
   readonly id: number;
