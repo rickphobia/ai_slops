@@ -98,4 +98,34 @@ describe("describeShop", () => {
       { kind: "rook", name: "Rook", count: 2 },
     ]);
   });
+
+  it("lists the black types new in the next wave and the ones that could already have turned up", () => {
+    // The shop leads into wave 5: hunter and tower unlock then.
+    expect(view.newBlackTypes.map((type) => type.type)).toEqual([
+      "hunter",
+      "tower",
+    ]);
+    expect(view.newBlackTypes[1]).toEqual({
+      type: "tower",
+      name: "Tower",
+      pieceName: "Rook",
+      colour: "#9fb4c8",
+      power: "3× HP, moves 50% slower.",
+    });
+    expect(view.metBlackTypes.map((type) => type.type)).toEqual([
+      "stomper",
+      "priest",
+    ]);
+  });
+
+  it("has nothing new before wave 3", () => {
+    const early = describeShop(
+      { ...shop, wave: 2 },
+      { plain: 3 },
+      { blackPieces: [{ kind: "knight", count: 8 }] },
+      view.stats.lastWave,
+    );
+    expect(early.newBlackTypes).toEqual([]);
+    expect(early.metBlackTypes).toEqual([]);
+  });
 });

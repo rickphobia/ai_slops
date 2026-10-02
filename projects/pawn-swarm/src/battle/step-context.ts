@@ -6,6 +6,8 @@ import type {
   BattleEvent,
   BlackPiece,
   Landing,
+  PowerUpOrb,
+  PowerUpTimers,
   WhitePawn,
 } from "./battle-state";
 
@@ -14,6 +16,7 @@ type Mutable<T> = { -readonly [Key in keyof T]: T[Key] };
 export type WorkingPawn = Mutable<WhitePawn>;
 export type WorkingBlackPiece = Mutable<BlackPiece>;
 export type WorkingLanding = Mutable<Landing>;
+export type WorkingOrb = Mutable<PowerUpOrb>;
 
 /**
  * The battle while one step is being worked out. `step` copies every piece into
@@ -30,6 +33,9 @@ export interface StepContext {
   readonly pawns: WorkingPawn[];
   readonly blackPieces: WorkingBlackPiece[];
   landings: WorkingLanding[];
+  orbs: WorkingOrb[];
+  /** Timed power-ups running now; the step counts them down at its end. */
+  powerUps: PowerUpTimers;
   pushes: readonly (readonly BlackKind[])[];
   pushSize: number;
   pushSecondsLeft: number;

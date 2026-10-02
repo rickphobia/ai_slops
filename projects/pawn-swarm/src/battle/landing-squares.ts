@@ -8,9 +8,11 @@ import {
   squareAt,
 } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import type { BlackTypeId } from "../catalog/black-types";
 import type { BlackKind } from "../catalog/pieces";
 import type { Random } from "../rng";
 import type { BlackPiece, Landing } from "./battle-state";
+import { rollBlackType } from "./black-type-rules";
 import { isAmong, squaresHeldByBlack } from "./black-squares";
 
 /** There is no free square left for a black piece to land on. */
@@ -21,6 +23,8 @@ export class BoardFullError extends Error {
 /** What landing squares are picked around: where the pawns are and which squares black already holds. */
 export interface LandingView {
   readonly board: BoardSize;
+  /** The wave being fought: it decides which special types can turn up. */
+  readonly wave: number;
   readonly pawns: readonly Point[];
   readonly blackPieces: readonly Pick<BlackPiece, "square" | "move" | "hp">[];
   readonly landings: readonly Pick<Landing, "square">[];
@@ -28,7 +32,8 @@ export interface LandingView {
 
 /**
  * Picks a free square for each piece of a push: half try a ring around the
- * swarm's centre, half anywhere, and none lands near a white pawn. When random
+ * swarm's centre, half anywhere, and none lands near a white pawn. Each piece
+ * may turn out to be a special type of its kind. When random
  * picks keep missing (a big swarm fills the board), the piece takes the free
  * square farthest from any pawn.
  */
@@ -60,7 +65,12 @@ export function planPushLandings(
     }
     square ??= farthestFreeSquare(view.board, isFree, pawnGap, random);
     taken.push(square);
-    return landingOn(kind, square, BATTLE_RULES.landingWarningSeconds);
+    return landingOn(
+      kind,
+      rollBlackType(kind, view.wave, random),
+      square,
+      BATTLE_RULES.landingWarningSeconds,
+    );
   });
 }
 
@@ -90,7 +100,7 @@ export function planSummonLandings(
     const [square] = free.splice(Math.floor(random.next() * free.length), 1);
     if (square === undefined) break;
     landings.push(
-      landingOn("knight", square, BATTLE_RULES.summonWarningSeconds),
+      landingOn("knight", undefined, square, BATTLE_RULES.summonWarningSeconds),
     );
   }
   return landings;
@@ -98,10 +108,11 @@ export function planSummonLandings(
 
 function landingOn(
   kind: BlackKind,
+  type: BlackTypeId | undefined,
   square: Square,
   warningSeconds: number,
 ): Landing {
-  return { kind, square, secondsLeft: warningSeconds, warningSeconds };
+  return { kind, type, square, secondsLeft: warningSeconds, warningSeconds };
 }
 
 /** The middle of the swarm, or of the board when there are no pawns. */

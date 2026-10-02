@@ -1,6 +1,7 @@
 import type {
   BattleState,
   BlackPiece,
+  PowerUpOrb,
   WhitePawn,
 } from "../../battle/battle-state";
 import {
@@ -9,7 +10,9 @@ import {
   type Point,
   type Square,
 } from "../../board/square";
-import type { BlackKind } from "../../catalog/pieces";
+import { BLACK_TYPES } from "../../catalog/black-types";
+import { BLACK_PIECES, type BlackKind } from "../../catalog/pieces";
+import { POWER_UP_RULES, POWER_UPS } from "../../catalog/power-ups";
 import { StartupError } from "../../startup-error";
 import { frameIndexAt } from "../art/animation";
 import type { ArtId } from "../art/drawings";
@@ -44,6 +47,11 @@ const HOP_HEIGHT: Readonly<Record<BlackKind, number>> = {
 /** The biggest screen shake, in squares, at full strength. */
 const MAX_SHAKE_SQUARES = 0.28;
 const DYING_ROTATION = 0.7;
+/** The tint over the board while a Freeze power-up holds the black pieces. */
+const FREEZE_TINT = "rgb(191 243 255 / 14%)";
+const ORB_RADIUS_SQUARES = 0.26;
+/** How many times a dying orb blinks per game second. */
+const ORB_BLINKS_PER_SECOND = 4;
 
 /** Everything drawn besides the battle itself: made from events, aged with game time. */
 export interface Scene {
@@ -326,6 +334,84 @@ export function createCanvasRenderer(
     }
   };
 
+  /** A ring in the type's colour at a special black piece's feet, so it stands out in a wave. */
+  const drawTypeRing = (
+    piece: BlackPiece,
+    centre: Point,
+    squarePx: number,
+  ): void => {
+    if (piece.type === undefined) return;
+    const colour = BLACK_TYPES[piece.type].colour;
+    const width = BLACK_PIECES[piece.kind].bodyRadius * 2.6 * squarePx;
+    context.beginPath();
+    context.ellipse(
+      centre.x,
+      centre.y + squarePx * 0.4,
+      width / 2,
+      width * 0.2,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.globalAlpha = TYPE_DISC_ALPHA * 0.6;
+    context.fillStyle = colour;
+    context.fill();
+    context.globalAlpha = 1;
+    context.strokeStyle = colour;
+    context.lineWidth = Math.max(2, squarePx * 0.06);
+    context.stroke();
+  };
+
+  /** A power-up orb: a glowing disc with its symbol, pulsing, and blinking when it is about to vanish. */
+  const drawOrb = (
+    orb: PowerUpOrb,
+    board: BoardSize,
+    squarePx: number,
+    nowSeconds: number,
+  ): void => {
+    const blinkingOut =
+      orb.secondsLeft < POWER_UP_RULES.blinkSeconds &&
+      Math.floor(orb.secondsLeft * ORB_BLINKS_PER_SECOND * 2) % 2 === 0;
+    if (blinkingOut) return;
+    const stats = POWER_UPS[orb.powerUp];
+    const centre = toCanvas(orb, board, squarePx);
+    const radius =
+      squarePx *
+      ORB_RADIUS_SQUARES *
+      (1 + 0.1 * Math.sin(nowSeconds * 8 + orb.id));
+    const glow = context.createRadialGradient(
+      centre.x,
+      centre.y,
+      radius * 0.2,
+      centre.x,
+      centre.y,
+      radius * 1.8,
+    );
+    glow.addColorStop(0, stats.colour);
+    glow.addColorStop(1, "rgb(0 0 0 / 0%)");
+    context.globalAlpha = 0.55;
+    context.fillStyle = glow;
+    context.fillRect(
+      centre.x - radius * 1.8,
+      centre.y - radius * 1.8,
+      radius * 3.6,
+      radius * 3.6,
+    );
+    context.globalAlpha = 1;
+    context.beginPath();
+    context.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
+    context.fillStyle = stats.colour;
+    context.fill();
+    context.lineWidth = Math.max(2, squarePx * 0.05);
+    context.strokeStyle = "#15120e";
+    context.stroke();
+    context.font = `bold ${String(Math.round(radius * 1.3))}px sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#15120e";
+    context.fillText(stats.symbol, centre.x, centre.y + radius * 0.05);
+  };
+
   const drawBlackPiece = (
     piece: BlackPiece,
     board: BoardSize,
@@ -359,9 +445,14 @@ export function createCanvasRenderer(
       );
       context.fill();
     }
+    drawTypeRing(piece, centre, squarePx);
     const raised = { x: centre.x, y: centre.y - lift };
     drawSprite(
-      artIdOf({ side: "black", kind: piece.kind }),
+      artIdOf({
+        side: "black",
+        kind: piece.kind,
+        ...(piece.type === undefined ? {} : { type: piece.type }),
+      }),
       raised,
       squarePx,
       frameIndexAt(nowSeconds, piece.id),
@@ -420,6 +511,13 @@ export function createCanvasRenderer(
         drawBlackPiece(piece, battle.board, squarePx, nowSeconds, scene.motion);
       }
       drawLandingWarnings(battle, squarePx);
+      for (const orb of battle.orbs) {
+        drawOrb(orb, battle.board, squarePx, nowSeconds);
+      }
+      if (battle.powerUps.freeze !== undefined) {
+        context.fillStyle = FREEZE_TINT;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
       drawParticles(context, scene.particles, toPixels, squarePx);
       for (const effect of scene.effects) {
         if (effect.kind !== "blood-pool") {

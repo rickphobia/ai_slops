@@ -1,5 +1,10 @@
 import type { ShopAction } from "../../run/run";
-import type { ArmyStats, OfferView, ShopView } from "../../shop/shop-view";
+import type {
+  ArmyStats,
+  BlackTypeView,
+  OfferView,
+  ShopView,
+} from "../../shop/shop-view";
 import { portraitSvg } from "../art/portrait";
 import { PAWN_TYPE_COLOURS } from "../art/type-colours";
 import { requireElement } from "./require-element";
@@ -30,6 +35,32 @@ export function createShopScreen(
     HTMLElement,
   );
   const nextWaveList = requireElement(root, "shop-next-wave", HTMLElement);
+  const blackTypes = requireElement(root, "shop-black-types", HTMLElement);
+  const newBlackTypesBox = requireElement(
+    root,
+    "shop-new-black-types-box",
+    HTMLElement,
+  );
+  const newBlackTypes = requireElement(
+    root,
+    "shop-new-black-types",
+    HTMLElement,
+  );
+  const metBlackTypes = requireElement(
+    root,
+    "shop-met-black-types",
+    HTMLDetailsElement,
+  );
+  const metBlackTypesTitle = requireElement(
+    root,
+    "shop-met-black-types-title",
+    HTMLElement,
+  );
+  const metBlackTypesList = requireElement(
+    root,
+    "shop-met-black-types-list",
+    HTMLElement,
+  );
   const statsRows = requireElement(root, "shop-stats-rows", HTMLElement);
   const statsTotals = requireElement(root, "shop-stats-totals", HTMLElement);
   const lastWave = requireElement(root, "shop-last-wave", HTMLElement);
@@ -164,6 +195,30 @@ export function createShopScreen(
     return box;
   };
 
+  const blackTypeElement = (view: BlackTypeView): HTMLElement => {
+    const item = element("li", "black-type");
+    item.style.setProperty("--ring", view.colour);
+    const text = element("span", "");
+    text.append(
+      element("span", "black-type-name", `${view.name} ${view.pieceName}`),
+      element("span", "black-type-power", view.power),
+    );
+    item.append(portrait("chip-icon", view.type, view.name), text);
+    return item;
+  };
+
+  const showBlackTypes = (
+    newTypes: readonly BlackTypeView[],
+    metTypes: readonly BlackTypeView[],
+  ): void => {
+    blackTypes.hidden = newTypes.length === 0 && metTypes.length === 0;
+    newBlackTypesBox.hidden = newTypes.length === 0;
+    newBlackTypes.replaceChildren(...newTypes.map(blackTypeElement));
+    metBlackTypes.hidden = metTypes.length === 0;
+    metBlackTypesTitle.textContent = `Black types met so far (${String(metTypes.length)})`;
+    metBlackTypesList.replaceChildren(...metTypes.map(blackTypeElement));
+  };
+
   const tableRow = (
     first: Node | string,
     ...cells: readonly string[]
@@ -252,6 +307,7 @@ export function createShopScreen(
         }),
       );
 
+      showBlackTypes(view.newBlackTypes, view.metBlackTypes);
       showStats(view.stats);
       offers.replaceChildren(...view.offers.map(offerElement));
 

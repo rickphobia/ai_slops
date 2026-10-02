@@ -4,12 +4,12 @@
 
 **Blocked by:** 09
 
-**Status:** ready
+**Status:** done
 
 **Touches:** catalog, battle, adapters/canvas-renderer, adapters/dom-ui
 
-- [ ] Black types in the catalog with piece, unlock wave, chance rule, colour and power text
-- [ ] Each power matches the spec table (tested)
-- [ ] Special types drop 1 extra pawn
-- [ ] Coloured ring on the board; shop shows "New black types this wave" and a collapsible "met" list
-- [ ] Screenshot in the PR
+- [x] Black types in the catalog with piece, unlock wave, chance rule, colour and power text
+- [x] Each power matches the spec table (tested)
+- [x] Special types drop 1 extra pawn
+- [x] Coloured ring on the board; shop shows "New black types this wave" and a collapsible "met" list
+- [x] Screenshot in the PR (`docs/screenshots/10-shop-black-types.png`, `10-black-type-rings.png`)

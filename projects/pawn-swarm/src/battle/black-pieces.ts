@@ -1,9 +1,14 @@
 import { centreOf } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import type { BlackTypeId } from "../catalog/black-types";
+import { BLACK_TYPE_RULES } from "../catalog/black-types";
 import { BLACK_PIECES, type BlackKind } from "../catalog/pieces";
 import { advanceMove } from "./black-moves";
+import { actEveryOf, hpFactorOf, summonsOf } from "./black-type-rules";
+import { useBlackPower } from "./black-powers";
 import { planSummonLandings } from "./landing-squares";
 import { hurtPawn } from "./pawn-hits";
+import { isRunning } from "./power-ups";
 import { buildSpatialGrid, type SpatialGrid } from "./spatial-grid";
 import {
   hasRunOut,
@@ -14,11 +19,19 @@ import {
   type WorkingPawn,
 } from "./step-context";
 
-/** A black piece's HP in a wave: its wave-1 HP plus a share of it per wave after, rounded up. */
-export function blackHp(kind: BlackKind, wave: number): number {
+/**
+ * A black piece's HP in a wave: its wave-1 HP plus a share of it per wave
+ * after, times its type's factor (a tower's 3), rounded up.
+ */
+export function blackHp(
+  kind: BlackKind,
+  wave: number,
+  type?: BlackTypeId,
+): number {
   const hp =
     BLACK_PIECES[kind].hp *
-    (1 + BATTLE_RULES.blackHpGrowthPerWave * (wave - 1));
+    (1 + BATTLE_RULES.blackHpGrowthPerWave * (wave - 1)) *
+    hpFactorOf(type);
   // 220 × 4.15 comes out a hair above 913; don't let that round up to 914.
   return Math.ceil(hp - 1e-9);
 }
@@ -28,19 +41,25 @@ export function landPieces(context: StepContext): void {
   for (const landing of context.landings) {
     landing.secondsLeft -= context.seconds;
     if (!hasRunOut(landing.secondsLeft)) continue;
-    const stats = BLACK_PIECES[landing.kind];
-    const hp = blackHp(landing.kind, context.wave);
+    const piece = { kind: landing.kind, type: landing.type };
+    const hp = blackHp(landing.kind, context.wave, landing.type);
     const id = takeId(context);
     context.blackPieces.push({
       id,
-      kind: landing.kind,
+      ...piece,
       square: landing.square,
       hp,
       maxHp: hp,
       // Spread out first moves so a push doesn't move in lockstep.
-      actLeft: context.random.next() * stats.actEvery,
+      actLeft: context.random.next() * actEveryOf(piece),
       contactLeft: 0,
-      summonLeft: stats.summons?.everySeconds ?? 0,
+      summonLeft: summonsOf(piece)?.everySeconds ?? 0,
+      // The same spread for a special type's first power.
+      powerLeft:
+        landing.type === undefined
+          ? 0
+          : BLACK_TYPE_RULES.firstPowerMinSeconds +
+            context.random.next() * BLACK_TYPE_RULES.firstPowerSpreadSeconds,
       move: undefined,
     });
     context.events.push({
@@ -57,14 +76,17 @@ export function landPieces(context: StepContext): void {
 
 /**
  * Each black piece hurts the pawns touching it, calls knights if it is a
- * summoner, then carries on with its move.
+ * summoner, uses its type's power, then carries on with its move. A Freeze
+ * power-up stops all of it.
  */
 export function actBlackPieces(context: StepContext): void {
+  if (isRunning(context, "freeze")) return;
   const pawns = buildSpatialGrid(context.pawns.filter(isAlive), 1);
   for (const piece of context.blackPieces) {
     if (!isAlive(piece)) continue;
     hurtTouchingPawns(context, pawns, piece);
     summonKnights(context, piece);
+    useBlackPower(context, pawns, piece);
     advanceMove(context, pawns, piece);
   }
 }
@@ -90,9 +112,9 @@ function hurtTouchingPawns(
   );
 }
 
-/** A summoner (the king) calls knights onto free squares next to it, with a landing warning. */
+/** A summoner (the king, a Summoner queen) calls knights onto free squares next to it, with a landing warning. */
 function summonKnights(context: StepContext, piece: WorkingBlackPiece): void {
-  const summons = BLACK_PIECES[piece.kind].summons;
+  const summons = summonsOf(piece);
   if (summons === undefined) return;
   piece.summonLeft -= context.seconds;
   if (!hasRunOut(piece.summonLeft)) return;

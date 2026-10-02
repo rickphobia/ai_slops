@@ -1,10 +1,11 @@
-import type { Point } from "../board/square";
 import {
   type LastingSkillEffect,
   PAWN_TYPES,
   type PawnTypeId,
-  type SkillHitArea,
 } from "../catalog/pieces";
+import { POWER_UP_RULES } from "../catalog/power-ups";
+import { isInArea } from "./area-hits";
+import { isRunning } from "./power-ups";
 import { skillBlocker, startTimer } from "../skills/skills";
 import { explode } from "./explosions";
 import { healPawn, growRage } from "./passives";
@@ -137,16 +138,20 @@ export function strikeDamage(
     effectsOn(context, pawn).reduce(
       (total, effect) => total + (effect.extraAttack ?? 0),
       0,
-    )
+    ) +
+    (isRunning(context, "fury") ? POWER_UP_RULES.furyExtraAttack : 0)
   );
 }
 
 /** A pawn's walking speed in squares per second, with any lasting skills' factors. */
 export function walkingSpeed(context: StepContext, pawn: WorkingPawn): number {
-  return effectsOn(context, pawn).reduce(
+  const speed = effectsOn(context, pawn).reduce(
     (speed, effect) => speed * (effect.speedFactor ?? 1),
     bodyOf(pawn).speed,
   );
+  return isRunning(context, "haste")
+    ? speed * POWER_UP_RULES.hasteSpeedFactor
+    : speed;
 }
 
 /** Seconds a pawn waits after a strike, with any lasting skills' factors. */
@@ -169,18 +174,4 @@ export function drawsBlackWithin(
     lastingEffect(context, type)?.drawsBlackWithin ??
     PAWN_TYPES[type].drawsBlackWithin
   );
-}
-
-function isInArea(area: SkillHitArea, from: Point, to: Point): boolean {
-  const dx = Math.abs(to.x - from.x);
-  const dy = Math.abs(to.y - from.y);
-  switch (area.shape) {
-    case "around":
-      return Math.hypot(dx, dy) <= area.radius;
-    case "row-and-column":
-      return (
-        (dx <= area.halfWidth && dy <= area.reach) ||
-        (dy <= area.halfWidth && dx <= area.reach)
-      );
-  }
 }

@@ -63,6 +63,7 @@ export function landNextPushIfDue(context: StepContext): void {
       next,
       {
         board: context.board,
+        wave: context.wave,
         pawns: context.pawns.filter(isAlive),
         blackPieces: context.blackPieces,
         landings: context.landings,

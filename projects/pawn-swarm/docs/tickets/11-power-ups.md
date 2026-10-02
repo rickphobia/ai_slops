@@ -4,12 +4,12 @@
 
 **Blocked by:** 10
 
-**Status:** ready
+**Status:** done
 
 **Touches:** catalog, battle, adapters/canvas-renderer
 
-- [ ] Drop chances by piece from the catalog; orbs vanish after 9s and blink before they do
-- [ ] Orbs drift to the nearest pawn within range and trigger on touch
-- [ ] Each effect matches the spec (tested); Bounty doubles drops before crowding rounding
-- [ ] Toast names the power-up and its effect
-- [ ] README status set to `working` and root index updated when the demo is complete
+- [x] Drop chances by piece from the catalog; orbs vanish after 9s and blink before they do
+- [x] Orbs drift to the nearest pawn within range and trigger on touch
+- [x] Each effect matches the spec (tested); Bounty doubles drops before crowding rounding
+- [x] Toast names the power-up and its effect (`docs/screenshots/11-power-up-freeze.png`)
+- [x] README status set to `working` and root index updated when the demo is complete

@@ -110,11 +110,11 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 - **Reroll** costs `1 + rerolls this visit + floor(wave / 3)` and replaces unlocked offers.
 - **Lock** keeps an offer for the next visit.
 - Every offer card shows the pawn type's **portrait** (its art, animated), and the army list shows a small icon per type.
-- The shop shows your army, the next wave's pieces, any **new black types** in it with their power, and a collapsible list of black types already met.
+- The shop shows your army, the next wave's pieces, any **new black types** in it with their power, and a collapsible list of black types already met. "Met" means the type was unlocked in an earlier wave, so it could have turned up: the game doesn't track which ones actually did.
 
 ### Power-ups
 - Killed black pieces sometimes drop a coloured orb: rooks and queens 35%, special types 20%, others 3%.
-- Orbs drift to the nearest pawn within ~3 squares and are picked up on touch; they vanish after 9s.
+- Orbs drift to the nearest pawn within ~3 squares and are picked up on touch; they vanish after 9s and blink for the last 2s. A new orb can't be picked up for its first 0.4s: the pawns its kill dropped land on the same spot and would grab it before anyone saw it.
 - Heal (all pawns full HP), Haste (pawns 50% faster, 6s), Fury (+2 attack, 6s), Freeze (black pieces stop, 3s), Bounty (double drops, 8s), Reinforcements (+3 pawns).
 
 ### Feedback

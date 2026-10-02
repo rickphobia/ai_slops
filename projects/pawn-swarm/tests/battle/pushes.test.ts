@@ -133,6 +133,7 @@ describe("push landing squares", () => {
       Array.from({ length: 20 }, () => "knight" as const),
       {
         board: BATTLE_RULES.board,
+        wave: 1,
         pawns: [
           { x: 3, y: 3 },
           { x: 12.4, y: 7.7 },
@@ -178,7 +179,13 @@ describe("push landing squares", () => {
     }
     const landings = planPushLandings(
       ["knight", "knight", "knight"],
-      { board: BATTLE_RULES.board, pawns, blackPieces: [], landings: [] },
+      {
+        board: BATTLE_RULES.board,
+        wave: 1,
+        pawns,
+        blackPieces: [],
+        landings: [],
+      },
       createRandom(2),
     );
     expect(landings).toHaveLength(3);

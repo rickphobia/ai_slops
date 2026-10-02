@@ -54,6 +54,13 @@ export function soundForEvent(event: BattleEvent): SoundName | undefined {
       return "warning";
     case "skill":
       return SKILL_SOUNDS[event.pawnType];
+    case "black-power":
+      // A priest's heal is quiet; the powers that hurt reuse the closest sounds.
+      return event.blackType === "priest" ? undefined : "blast";
+    case "orb-drop":
+      return "drop-pop";
+    case "power-up":
+      return "shop-buy";
   }
 }
 

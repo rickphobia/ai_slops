@@ -45,9 +45,9 @@ export function drawSpriteCentred(
   );
 }
 
-/** Which drawing a piece on the board uses. Black types join in ticket 10. */
+/** Which drawing a piece on the board uses: a special black type has its own. */
 export function artIdOf(piece: PieceIdentity): ArtId {
-  return piece.side === "white" ? piece.type : piece.kind;
+  return piece.side === "white" ? piece.type : (piece.type ?? piece.kind);
 }
 
 /**

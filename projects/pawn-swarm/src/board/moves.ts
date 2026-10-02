@@ -29,8 +29,11 @@ const L_JUMPS: readonly Step[] = [
 /** Which lines a piece moves along: knight L-jumps, diagonals, straight lines, or both kinds of line. */
 export type MoveLines = "L" | "diagonal" | "straight" | "any";
 
-/** What a move hits: every square it passes through (sliders), or the 3×3 block where it lands. */
-export type HitShape = "path" | "landing-block";
+/**
+ * What a move hits: every square it passes through (sliders), the 3×3 block
+ * where it lands, or that block plus the squares two away in each straight line.
+ */
+export type HitShape = "path" | "landing-block" | "landing-block-and-cross";
 
 /** How a black piece moves, as data the catalog can hold. */
 export interface MovePattern {
@@ -77,12 +80,35 @@ export function pieceMoves(
       path.push(to);
       moves.push({
         to,
-        hitSquares:
-          pattern.hits === "path" ? [...path] : blockAround(to, board),
+        hitSquares: hitSquaresOf(pattern.hits, path, to, board),
       });
     }
   }
   return moves;
+}
+
+function hitSquaresOf(
+  hits: HitShape,
+  path: readonly Square[],
+  to: Square,
+  board: BoardSize,
+): Square[] {
+  switch (hits) {
+    case "path":
+      return [...path];
+    case "landing-block":
+      return blockAround(to, board);
+    case "landing-block-and-cross":
+      return [...blockAround(to, board), ...crossArms(to, board)];
+  }
+}
+
+/** The four squares two away from `centre` in a straight line, the ones the 3×3 block misses; cut at the board edge. */
+function crossArms(centre: Square, board: BoardSize): Square[] {
+  return STRAIGHT.map(([fileStep, rankStep]) => ({
+    file: centre.file + fileStep * 2,
+    rank: centre.rank + rankStep * 2,
+  })).filter((square) => isOnBoard(square, board));
 }
 
 /** The 3×3 block around a square, cut at the board edge. */

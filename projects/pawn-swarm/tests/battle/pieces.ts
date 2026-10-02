@@ -4,11 +4,14 @@ import {
   type BlackPiece,
   type Landing,
   NO_INPUTS,
+  type PowerUpOrb,
+  type PowerUpTimers,
   type WhitePawn,
 } from "../../src/battle/battle-state";
 import { step } from "../../src/battle/step";
 import type { Square } from "../../src/board/square";
 import { BATTLE_RULES } from "../../src/catalog/battle-rules";
+import { BLACK_TYPES, type BlackTypeId } from "../../src/catalog/black-types";
 import {
   BLACK_PIECES,
   type BlackKind,
@@ -56,18 +59,35 @@ export function blackOn(
   overrides: Partial<BlackPiece> = {},
 ): BlackPiece {
   const stats = BLACK_PIECES[kind];
+  const hp =
+    stats.hp *
+    (overrides.type === undefined
+      ? 1
+      : (BLACK_TYPES[overrides.type].hpFactor ?? 1));
   return {
     id,
     kind,
+    type: undefined,
     square,
-    hp: stats.hp,
-    maxHp: stats.hp,
+    hp,
+    maxHp: hp,
     actLeft: 99,
     contactLeft: 99,
     summonLeft: 99,
+    powerLeft: 99,
     move: undefined,
     ...overrides,
   };
+}
+
+/** A special black type's piece, of the kind the catalog says it is, standing still. */
+export function typedOn(
+  type: BlackTypeId,
+  id: number,
+  square: Square,
+  overrides: Partial<BlackPiece> = {},
+): BlackPiece {
+  return blackOn(BLACK_TYPES[type].piece, id, square, { type, ...overrides });
 }
 
 export function knightOn(
@@ -82,8 +102,9 @@ export function landingOn(
   square: Square,
   secondsLeft = 99,
   kind: BlackKind = "knight",
+  type?: BlackTypeId,
 ): Landing {
-  return { kind, square, secondsLeft, warningSeconds: 1.2 };
+  return { kind, type, square, secondsLeft, warningSeconds: 1.2 };
 }
 
 /** A battle with no pushes still to come, unless a test gives some. */
@@ -98,6 +119,8 @@ export function battleWith(parts: {
   rng?: number;
   skillCooldowns?: SkillTimers;
   lastingSkills?: SkillTimers;
+  orbs?: readonly PowerUpOrb[];
+  powerUps?: PowerUpTimers;
 }): BattleState {
   const pieces = [...parts.pawns, ...(parts.blackPieces ?? [])];
   return {
@@ -107,6 +130,8 @@ export function battleWith(parts: {
     pawns: parts.pawns,
     blackPieces: parts.blackPieces ?? [],
     landings: parts.landings ?? [],
+    orbs: parts.orbs ?? [],
+    powerUps: parts.powerUps ?? {},
     pushes: parts.pushes ?? [],
     pushSize: parts.pushSize ?? 0,
     pushSecondsLeft: parts.pushSecondsLeft ?? 99,

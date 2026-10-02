@@ -3,6 +3,12 @@ import { centreOf, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES } from "../catalog/pieces";
 import type { BlackMove } from "./battle-state";
+import {
+  actEveryOf,
+  attackOf,
+  movePatternOf,
+  typeStatsOf,
+} from "./black-type-rules";
 import { isAmong, squaresHeldByBlack } from "./black-squares";
 import { hitSquares } from "./pawn-hits";
 import { drawsBlackWithin } from "./skill-effects";
@@ -32,7 +38,7 @@ export function advanceMove(
   if (move === undefined) {
     piece.actLeft -= context.seconds;
     if (!hasRunOut(piece.actLeft)) return;
-    piece.actLeft = stats.actEvery;
+    piece.actLeft = actEveryOf(piece);
     piece.move = chooseMove(context, piece);
     return;
   }
@@ -53,10 +59,10 @@ export function advanceMove(
   }
   piece.square = move.to;
   piece.move = undefined;
-  if (stats.move.hits === "landing-block") {
+  if (movePatternOf(piece).hits !== "path") {
     context.events.push({ type: "stomp", id: piece.id, at: centreOf(move.to) });
   }
-  hitSquares(context, pawns, move.hitSquares, stats.attack);
+  hitSquares(context, pawns, move.hitSquares, attackOf(piece));
 }
 
 /** The legal move that lands closest to the piece's target, as a warning about to start. */
@@ -64,13 +70,17 @@ function chooseMove(
   context: StepContext,
   piece: WorkingBlackPiece,
 ): BlackMove | undefined {
-  const target = chooseTarget(context, centreOf(piece.square));
+  const target = chooseTarget(
+    context,
+    centreOf(piece.square),
+    typeStatsOf(piece)?.huntsSpecialPawns === true,
+  );
   if (target === undefined) return undefined;
 
   const held = squaresHeldByBlack(context.blackPieces, context.landings, piece);
   const moves = pieceMoves(
     piece.square,
-    BLACK_PIECES[piece.kind].move,
+    movePatternOf(piece),
     context.board,
     (square) => isAmong(held, square),
   );
@@ -99,14 +109,18 @@ function chooseMove(
 
 /**
  * The pawn a black piece goes for: the nearest pawn that draws black pieces
- * (a shield) if one is close enough, otherwise the nearest pawn.
+ * (a shield) if one is close enough; a hunter next goes for the nearest
+ * special (not plain) pawn; otherwise the nearest pawn.
  */
 function chooseTarget(
   context: StepContext,
   from: Point,
+  hunts: boolean,
 ): WorkingPawn | undefined {
   let nearest: WorkingPawn | undefined;
   let nearestDistance = Infinity;
+  let nearestSpecial: WorkingPawn | undefined;
+  let nearestSpecialDistance = Infinity;
   let drawingPawn: WorkingPawn | undefined;
   let drawingPawnDistance = Infinity;
   for (const pawn of context.pawns) {
@@ -115,6 +129,14 @@ function chooseTarget(
     if (pawnDistance < nearestDistance) {
       nearest = pawn;
       nearestDistance = pawnDistance;
+    }
+    if (
+      hunts &&
+      pawn.type !== "plain" &&
+      pawnDistance < nearestSpecialDistance
+    ) {
+      nearestSpecial = pawn;
+      nearestSpecialDistance = pawnDistance;
     }
     const drawsWithin = drawsBlackWithin(context, pawn.type);
     if (
@@ -126,5 +148,5 @@ function chooseTarget(
       drawingPawnDistance = pawnDistance;
     }
   }
-  return drawingPawn ?? nearest;
+  return drawingPawn ?? nearestSpecial ?? nearest;
 }
