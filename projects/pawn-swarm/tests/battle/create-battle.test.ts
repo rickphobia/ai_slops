@@ -15,7 +15,11 @@ const key = (square: Square): string =>
 
 describe("createBattle", () => {
   it("starts a single pawn in the middle of the 16×11 board", () => {
-    const battle = createBattle({ ...setup, plainPawns: 1, wave: knights(3) });
+    const battle = createBattle({
+      ...setup,
+      army: { plain: 1 },
+      wave: knights(3),
+    });
     expect(battle.board).toEqual({ files: 16, ranks: 11 });
     expect(battle.pawns).toHaveLength(1);
     expect(battle.pawns[0]).toMatchObject({
@@ -32,7 +36,11 @@ describe("createBattle", () => {
   });
 
   it("places the army in a tight spiral around the centre, no two pawns on one spot", () => {
-    const battle = createBattle({ ...setup, plainPawns: 60, wave: knights(3) });
+    const battle = createBattle({
+      ...setup,
+      army: { plain: 60 },
+      wave: knights(3),
+    });
     const distances = battle.pawns.map((pawn) =>
       Math.hypot(pawn.x - CENTRE.x, pawn.y - CENTRE.y),
     );
@@ -55,7 +63,11 @@ describe("createBattle", () => {
   });
 
   it("splits the wave into 3 pushes and starts the first one landing after a 1.2s warning", () => {
-    const battle = createBattle({ ...setup, plainPawns: 1, wave: knights(9) });
+    const battle = createBattle({
+      ...setup,
+      army: { plain: 1 },
+      wave: knights(9),
+    });
     expect(battle.blackPieces).toEqual([]);
     expect(battle.landings).toHaveLength(3);
     for (const landing of battle.landings) {
@@ -75,7 +87,7 @@ describe("createBattle", () => {
   it("lands every piece of the push on its own square, at least 3 squares from the pawns", () => {
     for (let seed = 0; seed < 30; seed++) {
       const battle = createBattle({
-        plainPawns: 1,
+        army: { plain: 1 },
         wave: knights(60),
         waveNumber: 1,
         seed,
@@ -102,14 +114,14 @@ describe("createBattle", () => {
   it("fails clearly when a push has more pieces than the board has squares", () => {
     // 600 knights make pushes of 200; the board has 176 squares.
     expect(() =>
-      createBattle({ ...setup, plainPawns: 1, wave: knights(600) }),
+      createBattle({ ...setup, army: { plain: 1 }, wave: knights(600) }),
     ).toThrow(BoardFullError);
   });
 
   it("gives different landing squares for different seeds and the same for the same seed", () => {
     const squaresFor = (seed: number) =>
       createBattle({
-        plainPawns: 1,
+        army: { plain: 1 },
         wave: knights(8),
         waveNumber: 1,
         seed,

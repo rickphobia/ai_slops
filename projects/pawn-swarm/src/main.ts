@@ -4,12 +4,22 @@ import { loadPieceArt } from "./adapters/canvas-renderer/piece-art";
 import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
+import { createShopScreen } from "./adapters/dom-ui/shop-screen";
 import { NO_INPUTS } from "./battle/battle-state";
 import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
 import { ConfigError, loadConfig } from "./config";
 import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
-import { advanceRun, type RunState, startRun } from "./run/run";
+import {
+  actInShop,
+  advanceRun,
+  armySize,
+  type RunState,
+  type ShopAction,
+  shopView,
+  startRun,
+} from "./run/run";
+import { ShopError } from "./shop/shop";
 import { StartupError } from "./startup-error";
 import { createTickClock } from "./tick-clock";
 
@@ -35,10 +45,53 @@ function hudStatus(run: RunState): HudStatus {
   return {
     wave: run.wave,
     waveCount: run.waves.length,
-    whitePawns: run.battle.pawns.length,
+    whitePawns:
+      run.phase === "shop" ? armySize(run.army) : run.battle.pawns.length,
     blackLeft: blackPiecesLeft(run.battle),
     seed: run.seed,
   };
+}
+
+function logShopAction(
+  previous: RunState,
+  next: RunState,
+  action: ShopAction,
+  log: Logger,
+): void {
+  if (previous.phase !== "shop") return;
+  const plainPawns = (run: RunState): number | undefined =>
+    run.phase === "shop" ? run.army.plain : undefined;
+  switch (action.type) {
+    case "recruit":
+      log.info("pawn recruited", {
+        wave: previous.shop.wave,
+        type: previous.shop.offers[action.offer]?.type,
+        plainPawnsBefore: plainPawns(previous),
+        plainPawnsAfter: plainPawns(next),
+      });
+      break;
+    case "reroll":
+      log.info("shop rerolled", {
+        wave: previous.shop.wave,
+        rerolls: previous.shop.rerolls + 1,
+        plainPawnsBefore: plainPawns(previous),
+        plainPawnsAfter: plainPawns(next),
+      });
+      break;
+    case "lock":
+      log.info("offer lock toggled", {
+        wave: previous.shop.wave,
+        type: previous.shop.offers[action.offer]?.type,
+      });
+      break;
+    case "start-wave":
+      log.info("wave started", {
+        wave: next.wave,
+        pawns: next.battle.pawns.length,
+        army: previous.army,
+      });
+      break;
+  }
 }
 
 function logStep(previous: RunState, next: RunState, log: Logger): void {
@@ -54,10 +107,11 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
       });
     }
   }
-  if (next.wave !== previous.wave) {
-    log.info("wave started", {
-      wave: next.wave,
-      pawns: next.battle.pawns.length,
+  if (previous.phase === "battle" && next.phase === "shop") {
+    log.info("shop opened", {
+      wave: next.shop.wave,
+      offers: next.shop.offers.map((offer) => offer.type),
+      army: next.army,
     });
   } else if (
     previous.battle.outcome === "ongoing" &&
@@ -70,7 +124,10 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
       pawns: next.battle.pawns.length,
     });
   }
-  if (previous.phase === "battle" && next.phase !== "battle") {
+  if (
+    previous.phase === "battle" &&
+    (next.phase === "won" || next.phase === "lost")
+  ) {
     log.info("run ended", {
       result: next.phase,
       seed: next.seed,
@@ -137,8 +194,28 @@ async function start(): Promise<void> {
     },
   });
   controls.show(clock.state());
+  const shopScreen = createShopScreen(document, (action) => {
+    const previous = run;
+    try {
+      run = actInShop(run, action);
+    } catch (error) {
+      // The screen greys out what the shop refuses, so a refusal here means the two disagree.
+      if (!(error instanceof ShopError)) throw error;
+      logger.error("shop action refused", {
+        action,
+        error: error.message,
+        wave: run.wave,
+        seed: run.seed,
+      });
+      return;
+    }
+    logShopAction(previous, run, action, logger);
+    if (run.phase === "shop") shopScreen.show(shopView(run));
+    else shopScreen.hide();
+  });
   const endScreen = createEndScreen(document, () => {
     run = beginRun(randomSeed());
+    shopScreen.hide();
     // The speed carries over to the next run; a pause doesn't.
     if (clock.state().paused) setPaused(false);
     endScreen.hide();
@@ -156,7 +233,8 @@ async function start(): Promise<void> {
       effects.advance(STEP_SECONDS);
       effects.add(run.battle.events);
       if (run.battle.events.some((event) => event.type === "drop")) hud.bump();
-      if (run.phase !== "battle") {
+      if (run.phase === "shop") shopScreen.show(shopView(run));
+      if (run.phase === "won" || run.phase === "lost") {
         endScreen.show({
           outcome: run.phase,
           wave: run.wave,

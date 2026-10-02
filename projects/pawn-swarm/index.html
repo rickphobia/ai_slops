@@ -19,6 +19,10 @@
         --blood: #8e1b1b;
         --blood-bright: #c4302a;
         --ember: #ff8a3c;
+        /* Shop rarities: common uses --muted. */
+        --rare: #6fb0ff;
+        --epic: #c58bff;
+        --black-edge: #4a1a16;
         --font-display: "Cinzel", Georgia, serif;
         --font-body: "Crimson Pro", Georgia, serif;
         /* The board is 16 × 11 squares; leave room above it for the HUD. */
@@ -191,6 +195,211 @@
       #new-run:hover {
         background: var(--blood-bright);
       }
+      #shop {
+        position: fixed;
+        inset: 0;
+        overflow-y: auto;
+        padding: 24px 16px;
+        box-sizing: border-box;
+        background: radial-gradient(
+          ellipse at 50% 30%,
+          rgb(20 8 6 / 82%) 0%,
+          rgb(0 0 0 / 92%) 75%
+        );
+      }
+      #shop[hidden] {
+        display: none;
+      }
+      .shop-sheet {
+        max-width: 64rem;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .shop-sheet h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-size: clamp(2rem, 4.5vw, 3rem);
+        letter-spacing: 0.04em;
+        color: var(--bone);
+        text-shadow: 0 0 30px rgb(196 48 42 / 60%);
+      }
+      .shop-sheet h3 {
+        margin: 0 0 8px;
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      #shop-purse {
+        margin: 6px 0 0;
+        max-width: 62ch;
+        color: var(--muted);
+      }
+      #shop-purse strong {
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        color: var(--bone);
+      }
+      .shop-columns {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+        gap: 12px 24px;
+      }
+      .chips {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px 2px 2px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--panel);
+        font-variant-numeric: tabular-nums;
+      }
+      .chip-black {
+        border-color: var(--black-edge);
+      }
+      .chip-icon svg {
+        display: block;
+        width: 34px;
+        height: 34px;
+      }
+      #shop-offers {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: 12px;
+      }
+      .offer {
+        --rarity: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        padding: 12px 14px 14px;
+        border: 1px solid var(--line);
+        border-top: 3px solid var(--rarity);
+        border-radius: 3px;
+        background: linear-gradient(var(--panel-raised), var(--panel));
+      }
+      .offer[data-rarity="rare"] {
+        --rarity: var(--rare);
+      }
+      .offer[data-rarity="epic"] {
+        --rarity: var(--epic);
+      }
+      .offer-full {
+        opacity: 0.55;
+      }
+      .offer p {
+        margin: 0;
+      }
+      .offer-portrait {
+        align-self: center;
+      }
+      .offer-portrait svg {
+        display: block;
+        width: 128px;
+        height: 128px;
+      }
+      .offer-rarity {
+        font-family: var(--font-display);
+        font-size: 0.7rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--rarity);
+      }
+      .offer .offer-name {
+        margin: 0;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+      .offer-stats,
+      .offer-count,
+      .offer-note {
+        font-size: 0.95rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .offer-count strong {
+        color: var(--fg);
+      }
+      .offer-note {
+        color: var(--ember);
+      }
+      .offer-skill strong {
+        font-family: var(--font-display);
+        font-weight: 600;
+        color: var(--ember);
+      }
+      .offer-buttons {
+        margin-top: auto;
+        padding-top: 8px;
+        display: flex;
+        gap: 6px;
+      }
+      .shop-bar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .shop-button {
+        padding: 8px 14px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--panel);
+        color: var(--fg);
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      .shop-button:hover:not(:disabled) {
+        border-color: var(--muted);
+        background: var(--panel-raised);
+      }
+      .shop-button:focus-visible {
+        outline: 2px solid var(--bone);
+        outline-offset: 2px;
+      }
+      .shop-button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .shop-button-main {
+        flex: 1;
+        border-color: var(--blood-bright);
+        background: var(--blood);
+        color: var(--bone);
+      }
+      .shop-button-main:hover:not(:disabled) {
+        border-color: var(--blood-bright);
+        background: var(--blood-bright);
+      }
+      .shop-button[aria-pressed="true"] {
+        border-color: var(--ember);
+        color: var(--ember);
+      }
+      #shop-start {
+        padding: 10px 28px;
+        font-size: 1.15rem;
+        letter-spacing: 0.08em;
+      }
       #startup-error {
         max-width: 40rem;
         padding: 12px 16px;
@@ -215,6 +424,40 @@
       </div>
     </header>
     <canvas id="board" aria-label="Chess board"></canvas>
+    <section id="shop" role="dialog" aria-labelledby="shop-title" hidden>
+      <div class="shop-sheet">
+        <header>
+          <h2 id="shop-title"></h2>
+          <p id="shop-purse"></p>
+        </header>
+        <div class="shop-columns">
+          <section aria-labelledby="shop-army-title">
+            <h3 id="shop-army-title">Your army</h3>
+            <ul id="shop-army" class="chips"></ul>
+          </section>
+          <section aria-labelledby="shop-next-wave-title">
+            <h3>Next: <span id="shop-next-wave-title"></span></h3>
+            <ul id="shop-next-wave" class="chips"></ul>
+          </section>
+        </div>
+        <div id="shop-offers"></div>
+        <footer class="shop-bar">
+          <button
+            id="shop-reroll"
+            class="shop-button"
+            type="button"
+            data-action="reroll"
+            data-focus-key="reroll"
+          ></button>
+          <button
+            id="shop-start"
+            class="shop-button shop-button-main"
+            type="button"
+            data-action="start-wave"
+          ></button>
+        </footer>
+      </div>
+    </section>
     <section id="end-screen" role="dialog" aria-labelledby="end-title" hidden>
       <h2 id="end-title"></h2>
       <p id="end-detail"></p>

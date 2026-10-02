@@ -22,6 +22,7 @@ const HP_BAR_BACK = "rgb(0 0 0 / 60%)";
 const PAWN_HP = "#8fcf6b";
 const BLACK_HP = "#e0614f";
 const SHADOW = "rgb(0 0 0 / 40%)";
+const TYPE_DISC_ALPHA = 0.45;
 /** The board, and so every piece sprite, is drawn at least at 2× the CSS size so the art stays sharp. */
 const MIN_PIXEL_RATIO = 2;
 /** How high a knight's jump arcs, in squares. */
@@ -168,6 +169,33 @@ export function createCanvasRenderer(
     context.fillRect(left, top, width * Math.max(0, share), height);
   };
 
+  /** A disc in the type's colour under its feet, so pawn types stand out in a plain crowd. */
+  const drawTypeDisc = (
+    pawn: WhitePawn,
+    centre: Point,
+    squarePx: number,
+  ): void => {
+    const colour = art.tint({ side: "white", type: pawn.type });
+    // At the feet, which sit about half a square below the sprite's centre.
+    context.beginPath();
+    context.ellipse(
+      centre.x,
+      centre.y + squarePx * 0.5,
+      squarePx * 0.42,
+      squarePx * 0.17,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.globalAlpha = TYPE_DISC_ALPHA;
+    context.fillStyle = colour;
+    context.fill();
+    context.globalAlpha = 1;
+    context.strokeStyle = colour;
+    context.lineWidth = Math.max(1.5, squarePx * 0.04);
+    context.stroke();
+  };
+
   const drawPawn = (
     pawn: WhitePawn,
     board: BoardSize,
@@ -175,6 +203,7 @@ export function createCanvasRenderer(
     nowSeconds: number,
   ): void => {
     const centre = toCanvas(pawn, board, squarePx);
+    if (pawn.type !== "plain") drawTypeDisc(pawn, centre, squarePx);
     drawSprite(
       artIdOf({ side: "white", type: pawn.type }),
       centre,

@@ -3,21 +3,35 @@ import { NO_INPUTS } from "../../src/battle/battle-state";
 import { blackPiecesLeft } from "../../src/battle/step";
 import type { Wave } from "../../src/catalog/waves";
 import {
+  actInShop,
   advanceRun,
+  armySize,
   RunError,
   type RunState,
+  shopView,
   startRun,
 } from "../../src/run/run";
+import { ShopError } from "../../src/shop/shop";
 
 const knights = (count: number): Wave => ({
   blackPieces: [{ kind: "knight", count }],
 });
 
+/** Plays to the end of the run, leaving every shop straight away. */
 function playRun(start: RunState, maxSteps = 50_000): RunState {
   let run = start;
-  for (let index = 0; index < maxSteps && run.phase === "battle"; index++) {
-    run = advanceRun(run, NO_INPUTS);
+  for (let index = 0; index < maxSteps; index++) {
+    if (run.phase === "shop") run = actInShop(run, { type: "start-wave" });
+    else if (run.phase === "battle") run = advanceRun(run, NO_INPUTS);
+    else break;
   }
+  return run;
+}
+
+/** Plays the current wave until it is cleared, then opens the shop. */
+function playToShop(start: RunState): RunState {
+  let run = start;
+  while (run.phase === "battle") run = advanceRun(run, NO_INPUTS);
   return run;
 }
 
@@ -37,7 +51,7 @@ describe("run", () => {
     expect(run.battle.pushes).toEqual([["knight"]]);
   });
 
-  it("starts the next wave with the survivors at full HP once a wave is cleared", () => {
+  it("opens the shop for the next wave once a wave is cleared, with the survivors as the army", () => {
     let run = startRun({
       seed: 3,
       plainPawns: 20,
@@ -49,13 +63,87 @@ describe("run", () => {
     expect(run).toMatchObject({ phase: "battle", wave: 1 });
     const survivors = run.battle.pawns.length;
 
-    const next = advanceRun(run, NO_INPUTS);
+    const shop = advanceRun(run, NO_INPUTS);
+    if (shop.phase !== "shop") throw new Error("expected the shop");
+    expect(shop.wave).toBe(1);
+    expect(shop.shop).toMatchObject({ wave: 2, rerolls: 0, recruited: {} });
+    expect(shop.shop.offers).toHaveLength(3);
+    expect(shop.army).toEqual({ plain: survivors });
+    // The shop waits for the player: battle steps do nothing.
+    expect(advanceRun(shop, NO_INPUTS)).toBe(shop);
+  });
+
+  it("starts the next wave from the shop with the army at full HP, recruits included", () => {
+    let run = playToShop(
+      startRun({ seed: 3, plainPawns: 20, waves: [knights(2), knights(4)] }),
+    );
+    run = actInShop(run, { type: "recruit", offer: 0 });
+    if (run.phase !== "shop") throw new Error("expected the shop");
+    const army = run.army;
+    const recruitedType = run.shop.offers[0]?.type ?? "plain";
+
+    const next = actInShop(run, { type: "start-wave" });
     expect(next).toMatchObject({ phase: "battle", wave: 2 });
-    expect(next.battle).toMatchObject({ stepNumber: 0, outcome: "ongoing" });
-    expect(next.battle.pawns).toHaveLength(survivors);
+    expect(next.battle).toMatchObject({
+      stepNumber: 0,
+      outcome: "ongoing",
+      wave: 2,
+    });
+    const pawnsOf = (type: string): number =>
+      next.battle.pawns.filter((pawn) => pawn.type === type).length;
+    expect(pawnsOf("plain")).toBe(army.plain);
+    expect(pawnsOf(recruitedType)).toBe(1);
     for (const pawn of next.battle.pawns) expect(pawn.hp).toBe(pawn.maxHp);
-    expect(next.battle.wave).toBe(2);
     expect(blackPiecesLeft(next.battle)).toBe(4);
+  });
+
+  it("keeps recruited types through a wave and carries locked offers to the next shop", () => {
+    let run = playToShop(
+      startRun({
+        seed: 5,
+        plainPawns: 40,
+        waves: [knights(2), knights(2), knights(2)],
+      }),
+    );
+    if (run.phase !== "shop") throw new Error("expected the shop");
+    const lockedType = run.shop.offers[1]?.type;
+    run = actInShop(run, { type: "recruit", offer: 1 });
+    run = actInShop(run, { type: "lock", offer: 1 });
+    run = playToShop(actInShop(run, { type: "start-wave" }));
+
+    if (run.phase !== "shop") throw new Error("expected the second shop");
+    expect(run.shop.wave).toBe(3);
+    expect(run.shop.recruited).toEqual({});
+    expect(run.shop.offers[0]).toEqual({ type: lockedType, locked: true });
+    expect(run.army[lockedType ?? "plain"]).toBeGreaterThanOrEqual(1);
+  });
+
+  it("describes the shop with the next wave's pieces, and counts the army", () => {
+    const run = playToShop(
+      startRun({ seed: 3, plainPawns: 20, waves: [knights(2), knights(4)] }),
+    );
+    if (run.phase !== "shop") throw new Error("expected the shop");
+    const view = shopView(run);
+    expect(view.wave).toBe(2);
+    expect(view.nextWave).toEqual([
+      { kind: "knight", name: "Knight", count: 4 },
+    ]);
+    expect(view.plainPawns).toBe(run.army.plain);
+    expect(armySize({ plain: 4, shield: 2, twin: 1 })).toBe(7);
+  });
+
+  it("refuses shop actions outside the shop, and passes on the shop's own refusals", () => {
+    const battle = startRun({ seed: 1 });
+    expect(() => actInShop(battle, { type: "reroll" })).toThrow(RunError);
+
+    // A pawn that took one knight has at most 2 plain pawns; a shield, spear or twin uses 3 in wave 2.
+    const poor = playToShop(
+      startRun({ seed: 3, plainPawns: 1, waves: [knights(1), knights(1)] }),
+    );
+    expect(poor.phase).toBe("shop");
+    expect(() => actInShop(poor, { type: "recruit", offer: 0 })).toThrow(
+      ShopError,
+    );
   });
 
   it("reaches won when the last wave is cleared", () => {

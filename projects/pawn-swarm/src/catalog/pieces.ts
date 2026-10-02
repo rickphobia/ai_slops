@@ -4,6 +4,23 @@ import type { MovePattern } from "../board/moves";
  * Balance numbers for every piece. Change these to rebalance; no logic lives here.
  * Distances are in board units (1 square = 1), times in game seconds.
  */
+export type Rarity = "common" | "rare" | "epic";
+
+/** A pawn type's hand-fired ability. Skills join the battle in ticket 07; the shop already shows them. */
+export interface SkillText {
+  readonly name: string;
+  /** Seconds between uses. */
+  readonly cooldown: number;
+  readonly text: string;
+}
+
+/** How the shop sells a pawn type. */
+export interface ShopListing {
+  readonly rarity: Rarity;
+  /** Plain pawns sacrificed per recruit in wave 1, before it grows with the wave. */
+  readonly basePrice: number;
+}
+
 export interface PawnStats {
   readonly name: string;
   readonly hp: number;
@@ -14,9 +31,18 @@ export interface PawnStats {
   readonly strikeCooldown: number;
   /** How far from a black piece's edge the pawn can strike it. */
   readonly range: number;
+  /** Black pieces it strikes at once: the nearest, then the next nearest in reach. */
+  readonly strikesAtOnce: number;
+  /** Black pieces whose centre is within this many squares go for this pawn first. */
+  readonly drawsBlackWithin?: number;
+  /** The always-on ability, as the shop describes it. */
+  readonly passive: string;
+  readonly skill: SkillText;
+  /** How the shop sells it; the plain pawn is money, not for sale. */
+  readonly shop?: ShopListing;
 }
 
-export type PawnTypeId = "plain";
+export type PawnTypeId = "plain" | "shield" | "spear" | "twin";
 
 export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
   plain: {
@@ -26,8 +52,68 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
     speed: 1.44,
     strikeCooldown: 0.7,
     range: 0.875,
+    strikesAtOnce: 1,
+    passive: "Also your money.",
+    skill: {
+      name: "Charge",
+      cooldown: 12,
+      text: "Plain pawns move twice as fast and get +1 attack for 3s.",
+    },
+  },
+  shield: {
+    name: "Shield pawn",
+    hp: 10,
+    attack: 1,
+    speed: 1.06,
+    strikeCooldown: 0.9,
+    range: 0.875,
+    strikesAtOnce: 1,
+    drawsBlackWithin: 3.4,
+    passive: "Black pieces nearby attack shields first.",
+    skill: {
+      name: "Hold the line",
+      cooldown: 20,
+      text: "Shields take no damage for 4s and pull black pieces from further away.",
+    },
+    shop: { rarity: "common", basePrice: 3 },
+  },
+  spear: {
+    name: "Spear pawn",
+    hp: 3,
+    attack: 2,
+    speed: 1.375,
+    strikeCooldown: 0.8,
+    // Twice the plain pawn's reach.
+    range: 1.75,
+    strikesAtOnce: 1,
+    passive: "Strikes from twice as far, for 2 damage.",
+    skill: {
+      name: "Volley",
+      cooldown: 15,
+      text: "Each spear hits every black piece within 4 squares in its row and column for 3.",
+    },
+    shop: { rarity: "common", basePrice: 3 },
+  },
+  twin: {
+    name: "Twin pawn",
+    hp: 3,
+    attack: 1,
+    speed: 1.44,
+    strikeCooldown: 0.7,
+    range: 0.94,
+    strikesAtOnce: 2,
+    passive: "Strikes two black pieces at once.",
+    skill: {
+      name: "Fork",
+      cooldown: 12,
+      text: "Each twin hits every black piece around it for 2.",
+    },
+    shop: { rarity: "common", basePrice: 3 },
   },
 };
+
+/** How many pawns of each type the player owns. A missing type means none. */
+export type Army = Readonly<Partial<Record<PawnTypeId, number>>>;
 
 export interface BlackPieceStats {
   readonly name: string;

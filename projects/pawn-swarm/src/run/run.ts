@@ -5,8 +5,19 @@ import type {
 } from "../battle/battle-state";
 import { createBattle } from "../battle/create-battle";
 import { step } from "../battle/step";
+import type { Army } from "../catalog/pieces";
 import { WAVES, type Wave } from "../catalog/waves";
 import type { RngState } from "../rng";
+import {
+  lockedOffers,
+  type Offer,
+  openShop,
+  recruit,
+  reroll,
+  type ShopState,
+  toggleLock,
+} from "../shop/shop";
+import { describeShop, type ShopView } from "../shop/shop-view";
 
 export class RunError extends Error {
   override name = "RunError";
@@ -23,30 +34,46 @@ export interface RunScore {
   readonly piecesTaken: number;
 }
 
+interface RunCommon extends RunScore {
+  readonly seed: RngState;
+  /** 1-based, as shown to the player: the wave being fought, or the last one fought. */
+  readonly wave: number;
+  readonly waves: readonly Wave[];
+  /** Offers the player locked, carried to the next shop visit. */
+  readonly lockedOffers: readonly Offer[];
+}
+
 /**
- * One run, as a state machine: `battle → (next battle | won | lost)`.
- * The shop between waves arrives in a later ticket.
+ * One run, as a state machine: `battle → (shop → battle | won | lost)`.
  */
-export type RunState = RunScore &
+export type RunState = RunCommon &
   (
     | {
         readonly phase: "battle";
-        readonly seed: RngState;
-        /** 1-based, as shown to the player. */
-        readonly wave: number;
-        readonly waves: readonly Wave[];
-        /** A battle whose outcome is `won` is a cleared wave: the next advance starts the next one. */
+        /** A battle whose outcome is `won` is a cleared wave: the next advance opens the shop. */
         readonly battle: BattleState;
       }
     | {
+        readonly phase: "shop";
+        /** The wave just cleared, so the board behind the shop still shows it. */
+        readonly battle: BattleState;
+        readonly shop: ShopState;
+        /** The pawns that will fight the next wave, changed by recruiting and rerolling. */
+        readonly army: Army;
+      }
+    | {
         readonly phase: "won" | "lost";
-        readonly seed: RngState;
-        readonly wave: number;
-        readonly waves: readonly Wave[];
         /** The last battle as it ended, so the final board can still be shown. */
         readonly battle: BattleState;
       }
   );
+
+/** What the player can do in the shop. `offer` is the offer's slot, from 0. */
+export type ShopAction =
+  | { readonly type: "recruit"; readonly offer: number }
+  | { readonly type: "lock"; readonly offer: number }
+  | { readonly type: "reroll" }
+  | { readonly type: "start-wave" };
 
 export interface RunSetup {
   readonly seed: RngState;
@@ -63,7 +90,7 @@ export function startRun(setup: RunSetup): RunState {
     throw new RunError("Cannot start a run with no waves.");
   }
   const battle = createBattle({
-    plainPawns: setup.plainPawns ?? STARTING_PLAIN_PAWNS,
+    army: { plain: setup.plainPawns ?? STARTING_PLAIN_PAWNS },
     wave: firstWave,
     waveNumber: 1,
     seed: setup.seed,
@@ -73,16 +100,17 @@ export function startRun(setup: RunSetup): RunState {
     seed: setup.seed,
     wave: 1,
     waves,
+    lockedOffers: [],
     battle,
     peakSwarm: battle.pawns.length,
     piecesTaken: 0,
   };
 }
 
-/** Advances the run by one battle step, or starts the next wave after a cleared one. Pure. */
+/** Advances the run by one battle step, or opens the shop after a cleared wave. Pure; does nothing outside a battle. */
 export function advanceRun(run: RunState, inputs: StepInputs): RunState {
   if (run.phase !== "battle") return run;
-  if (run.battle.outcome === "won") return startNextWave(run);
+  if (run.battle.outcome === "won") return enterShop(run);
 
   const battle = step(run.battle, inputs);
   const score: RunScore = {
@@ -104,22 +132,82 @@ function blackDeaths(events: readonly BattleEvent[]): number {
   ).length;
 }
 
-/** Survivors carry over as fresh plain pawns at full HP; the RNG carries on from the last battle. */
-function startNextWave(run: RunState & { phase: "battle" }): RunState {
+/** Applies one shop action. Pure; throws `ShopError` for an action the shop doesn't allow. */
+export function actInShop(run: RunState, action: ShopAction): RunState {
+  if (run.phase !== "shop") {
+    throw new RunError(
+      `Can't ${action.type} in the shop during the ${run.phase} phase.`,
+    );
+  }
+  switch (action.type) {
+    case "recruit":
+      return { ...run, ...recruit(run.shop, run.army, action.offer) };
+    case "reroll":
+      return { ...run, ...reroll(run.shop, run.army) };
+    case "lock":
+      return { ...run, shop: toggleLock(run.shop, action.offer) };
+    case "start-wave":
+      return startNextWave(run);
+  }
+}
+
+/** Survivors join the army at full HP, each keeping its type; the shop rolls on from the battle's RNG. */
+function enterShop(run: RunState & { phase: "battle" }): RunState {
+  return {
+    ...run,
+    phase: "shop",
+    army: armyOf(run.battle.pawns),
+    shop: openShop({
+      wave: run.wave + 1,
+      locked: run.lockedOffers,
+      rng: run.battle.rng,
+    }),
+  };
+}
+
+function startNextWave(run: RunState & { phase: "shop" }): RunState {
   const wave = run.waves[run.wave];
   if (wave === undefined) {
     throw new RunError(
       `Wave ${String(run.wave + 1)} is not in the wave table.`,
     );
   }
+  const battle = createBattle({
+    army: run.army,
+    wave,
+    waveNumber: run.wave + 1,
+    seed: run.shop.rng,
+  });
   return {
-    ...run,
+    phase: "battle",
+    seed: run.seed,
     wave: run.wave + 1,
-    battle: createBattle({
-      plainPawns: run.battle.pawns.length,
-      wave,
-      waveNumber: run.wave + 1,
-      seed: run.battle.rng,
-    }),
+    waves: run.waves,
+    lockedOffers: lockedOffers(run.shop),
+    battle,
+    peakSwarm: Math.max(run.peakSwarm, battle.pawns.length),
+    piecesTaken: run.piecesTaken,
   };
+}
+
+/** What the shop screen shows for this run's shop visit. */
+export function shopView(run: RunState & { phase: "shop" }): ShopView {
+  const nextWave = run.waves[run.shop.wave - 1];
+  if (nextWave === undefined) {
+    throw new RunError(
+      `The shop leads into wave ${String(run.shop.wave)}, which is not in the wave table.`,
+    );
+  }
+  return describeShop(run.shop, run.army, nextWave);
+}
+
+/** Pawns in the army, all types together. */
+export function armySize(army: Army): number {
+  return Object.values(army).reduce((total, count) => total + count, 0);
+}
+
+function armyOf(pawns: readonly { readonly type: keyof Army }[]): Army {
+  const army: Partial<Record<keyof Army, number>> = {};
+  for (const pawn of pawns) army[pawn.type] = (army[pawn.type] ?? 0) + 1;
+  return army;
 }
