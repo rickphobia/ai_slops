@@ -12,6 +12,11 @@ const SKILL_SOUNDS: Readonly<Record<PawnTypeId, SoundName>> = {
   medic: "skill-triage",
   banner: "skill-rally",
   bomb: "skill-detonate",
+  // The epic skills reuse the closest common sound until they get their own.
+  recruiter: "skill-rally",
+  berserker: "skill-charge",
+  promoter: "skill-fork",
+  enPassant: "skill-volley",
 };
 
 const BLACK_DEATH_SOUNDS: Readonly<Record<BlackKind, SoundName>> = {

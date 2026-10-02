@@ -9,7 +9,7 @@ import type {
   WhitePawn,
 } from "./battle-state";
 import { actBlackPieces, landPieces } from "./black-pieces";
-import { pulseMedics } from "./passives";
+import { promoteAtEdges, pulseMedics, pulseRecruiters } from "./passives";
 import { landNextPushIfDue } from "./pushes";
 import { fireSkills } from "./skill-effects";
 import { isAlive, type StepContext } from "./step-context";
@@ -54,8 +54,10 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
   fireSkills(context, inputs.skillUses);
   landPieces(context);
   pulseMedics(context);
+  pulseRecruiters(context);
   actPawns(context);
   separatePawns(context);
+  promoteAtEdges(context);
   actBlackPieces(context);
   landNextPushIfDue(context);
 

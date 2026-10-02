@@ -58,6 +58,20 @@ describe("offers", () => {
     expect(at(6).sort()).toEqual(["shield", "spear", "twin"]);
   });
 
+  it("sells the epic pawn types from wave 6 and not before, with the real catalog", () => {
+    const EPIC = ["recruiter", "berserker", "promoter", "enPassant"];
+    const seen = (wave: number): Set<string> =>
+      new Set(
+        Array.from({ length: 60 }, (_, seed) =>
+          typesOf(openShop({ wave, locked: [], rng: seed + 1 }).offers),
+        ).flat(),
+      );
+    expect(EPIC.filter((type) => seen(5).has(type))).toEqual([]);
+    expect(EPIC.filter((type) => seen(6).has(type)).sort()).toEqual(
+      [...EPIC].sort(),
+    );
+  });
+
   it("picks types by rarity weight: common 6, rare 3, epic 1.4", () => {
     const listings: ShopListings = {
       shield: { rarity: "common", basePrice: 3 },

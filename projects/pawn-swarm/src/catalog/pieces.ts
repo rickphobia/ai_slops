@@ -58,6 +58,20 @@ export interface SkillStats {
   readonly healsEveryone?: boolean;
   /** Every pawn of the type blows up now, as if it had died. */
   readonly detonates?: boolean;
+  /** Each pawn of the type spawns this many plain pawns around itself. */
+  readonly recruits?: number;
+  /** Each pawn of the type loses this much HP. */
+  readonly costsHp?: number;
+  /** Each pawn of the type jumps straight toward the nearest black piece. */
+  readonly leaps?: Leap;
+  /** Every pawn of the type can dodge a hit again. */
+  readonly refreshesDodge?: boolean;
+}
+
+/** A jump in a straight line (not along the board's axes). */
+export interface Leap {
+  /** The farthest it jumps, in squares. */
+  readonly squares: number;
 }
 
 /** What the shop says about a skill. */
@@ -95,6 +109,26 @@ export interface PassiveEffect {
   };
   /** Blows up when it dies. */
   readonly explodes?: Blast;
+  /** Spawns `count` plain pawns beside itself every `everySeconds`. */
+  readonly recruits?: { readonly count: number; readonly everySeconds: number };
+  /** Gains `amount` attack whenever a white pawn within `radius` dies, until the wave ends. */
+  readonly growsOnNearbyDeath?: {
+    readonly amount: number;
+    readonly radius: number;
+  };
+  /** Takes no damage from the first black hit or touch of the wave. */
+  readonly dodgesFirstHit?: boolean;
+  /** Turns into a white queen on reaching any board edge, for the rest of the wave. */
+  readonly promotesAtEdge?: QueenStats;
+}
+
+/** The numbers a promoted pawn fights with, in place of its own. */
+export interface QueenStats {
+  readonly hp: number;
+  readonly attack: number;
+  readonly speed: number;
+  readonly strikeCooldown: number;
+  readonly range: number;
 }
 
 export interface PawnStats {
@@ -121,7 +155,17 @@ export interface PawnStats {
 }
 
 export type PawnTypeId =
-  "plain" | "shield" | "spear" | "twin" | "medic" | "banner" | "bomb";
+  | "plain"
+  | "shield"
+  | "spear"
+  | "twin"
+  | "medic"
+  | "banner"
+  | "bomb"
+  | "recruiter"
+  | "berserker"
+  | "promoter"
+  | "enPassant";
 
 export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
   plain: {
@@ -260,6 +304,90 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       detonates: true,
     },
     shop: { rarity: "rare", basePrice: 4 },
+  },
+  recruiter: {
+    name: "Recruiter pawn",
+    hp: 5,
+    attack: 1,
+    speed: 1.25,
+    strikeCooldown: 0.8,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive: "Spawns a plain pawn every 8s.",
+    passiveEffect: { recruits: { count: 1, everySeconds: 8 } },
+    skill: {
+      name: "Call to arms",
+      cooldown: 25,
+      text: "Each recruiter spawns 2 plain pawns now.",
+      recruits: 2,
+    },
+    shop: { rarity: "epic", basePrice: 8 },
+  },
+  berserker: {
+    name: "Berserker pawn",
+    hp: 6,
+    attack: 2,
+    speed: 1.44,
+    strikeCooldown: 0.7,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive:
+      "+1 attack for each white pawn that dies near it, until the wave ends.",
+    passiveEffect: { growsOnNearbyDeath: { amount: 1, radius: 3 } },
+    skill: {
+      name: "Frenzy",
+      cooldown: 15,
+      text: "Each berserker loses 1 HP and gets +3 attack for 5s.",
+      lasting: { seconds: 5, extraAttack: 3 },
+      costsHp: 1,
+    },
+    shop: { rarity: "epic", basePrice: 7 },
+  },
+  promoter: {
+    name: "Promoter pawn",
+    hp: 3,
+    attack: 1,
+    speed: 1.9,
+    strikeCooldown: 0.7,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive:
+      "Fast. At any board edge it becomes a white queen for the rest of the wave.",
+    passiveEffect: {
+      promotesAtEdge: {
+        hp: 12,
+        attack: 4,
+        speed: 1.9,
+        strikeCooldown: 0.6,
+        range: 1.25,
+      },
+    },
+    skill: {
+      name: "Rush",
+      cooldown: 18,
+      text: "Each promoter leaps up to 5 squares toward the nearest black piece.",
+      leaps: { squares: 5 },
+    },
+    shop: { rarity: "epic", basePrice: 7 },
+  },
+  enPassant: {
+    name: "En passant pawn",
+    hp: 4,
+    attack: 2,
+    speed: 1.44,
+    strikeCooldown: 0.7,
+    range: 0.875,
+    strikesAtOnce: 1,
+    passive: "Dodges the first hit each wave.",
+    passiveEffect: { dodgesFirstHit: true },
+    skill: {
+      name: "Sidestep",
+      cooldown: 15,
+      text: "Each en passant pawn can dodge again and dashes up to 3 squares at the nearest black piece.",
+      leaps: { squares: 3 },
+      refreshesDodge: true,
+    },
+    shop: { rarity: "epic", basePrice: 6 },
   },
 };
 

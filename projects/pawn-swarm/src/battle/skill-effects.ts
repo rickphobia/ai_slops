@@ -7,7 +7,9 @@ import {
 } from "../catalog/pieces";
 import { skillBlocker, startTimer } from "../skills/skills";
 import { explode } from "./explosions";
-import { healPawn } from "./passives";
+import { healPawn, growRage } from "./passives";
+import { bodyOf } from "./pawn-body";
+import { applyPawnSkill } from "./pawn-skills";
 import { blackPiecePosition } from "./piece-position";
 import {
   hasRunOut,
@@ -52,6 +54,7 @@ export function fireSkills(
     });
     if (skill.healsEveryone === true) healEveryone(context, living);
     if (skill.detonates === true) detonateAll(context, firing);
+    applyPawnSkill(context, skill, firing);
     const hit = skill.hit;
     if (hit === undefined) continue;
     for (const pawn of firing) {
@@ -88,6 +91,7 @@ function detonateAll(
       at: { x: bomb.x, y: bomb.y },
     });
   }
+  for (const bomb of bombs) growRage(context, bomb);
   for (const bomb of bombs) explode(context, bomb);
 }
 
@@ -127,7 +131,8 @@ export function strikeDamage(
   auraBonus: number,
 ): number {
   return (
-    PAWN_TYPES[pawn.type].attack +
+    bodyOf(pawn).attack +
+    pawn.rage +
     auraBonus +
     effectsOn(context, pawn).reduce(
       (total, effect) => total + (effect.extraAttack ?? 0),
@@ -140,7 +145,7 @@ export function strikeDamage(
 export function walkingSpeed(context: StepContext, pawn: WorkingPawn): number {
   return effectsOn(context, pawn).reduce(
     (speed, effect) => speed * (effect.speedFactor ?? 1),
-    PAWN_TYPES[pawn.type].speed,
+    bodyOf(pawn).speed,
   );
 }
 
@@ -151,7 +156,7 @@ export function strikeCooldown(
 ): number {
   return effectsOn(context, pawn).reduce(
     (seconds, effect) => seconds / (effect.strikeSpeedFactor ?? 1),
-    PAWN_TYPES[pawn.type].strikeCooldown,
+    bodyOf(pawn).strikeCooldown,
   );
 }
 

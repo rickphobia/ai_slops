@@ -1,5 +1,6 @@
 import { centreOf, type Point } from "../board/square";
 import type { BlackPiece } from "./battle-state";
+import { isAlive, type WorkingBlackPiece } from "./step-context";
 
 /**
  * Where a black piece is right now: its square's centre, or partway along its
@@ -18,4 +19,23 @@ export function blackPiecePosition(
     x: from.x + (to.x - from.x) * progress,
     y: from.y + (to.y - from.y) * progress,
   };
+}
+
+/** The living black piece closest to `from`, where it is now (even mid-move). */
+export function nearestBlackPiece(
+  pieces: readonly WorkingBlackPiece[],
+  from: Point,
+): WorkingBlackPiece | undefined {
+  let nearest: WorkingBlackPiece | undefined;
+  let nearestDistance = Infinity;
+  for (const piece of pieces) {
+    if (!isAlive(piece)) continue;
+    const at = blackPiecePosition(piece);
+    const pieceDistance = Math.hypot(from.x - at.x, from.y - at.y);
+    if (pieceDistance < nearestDistance) {
+      nearest = piece;
+      nearestDistance = pieceDistance;
+    }
+  }
+  return nearest;
 }

@@ -279,6 +279,23 @@ export function createCanvasRenderer(
     context.fillText("z", at.x, at.y);
   };
 
+  /** A "♛" over a promoted promoter, in its colour, so a white queen stands out in the swarm. */
+  const drawCrown = (
+    pawn: WhitePawn,
+    centre: Point,
+    squarePx: number,
+  ): void => {
+    context.font = `bold ${String(Math.round(squarePx * 0.5))}px sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.lineWidth = Math.max(2, squarePx * 0.07);
+    context.strokeStyle = "rgb(0 0 0 / 70%)";
+    context.fillStyle = art.tint({ side: "white", type: pawn.type });
+    const at = { x: centre.x, y: centre.y - squarePx * 0.62 };
+    context.strokeText("♛", at.x, at.y);
+    context.fillText("♛", at.x, at.y);
+  };
+
   const drawPawn = (
     pawn: WhitePawn,
     board: BoardSize,
@@ -295,6 +312,7 @@ export function createCanvasRenderer(
       frameIndexAt(nowSeconds, pawn.id),
       motion.poseOf(pawn.id),
     );
+    if (pawn.promoted) drawCrown(pawn, centre, squarePx);
     if (pawn.stunLeft > 0) drawStunMark(centre, squarePx, nowSeconds, pawn.id);
     if (pawn.hp < pawn.maxHp) {
       drawHpBar(

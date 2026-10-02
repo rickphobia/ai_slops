@@ -1,4 +1,6 @@
 import { PAWN_TYPES } from "../catalog/pieces";
+import { BATTLE_RULES } from "../catalog/battle-rules";
+import { spawnPlainPawns } from "./drops";
 import {
   hasRunOut,
   isAlive,
@@ -63,4 +65,71 @@ export function bannerBonus(
     }
   }
   return bonus;
+}
+
+/** Each awake recruiter whose timer has run out spawns its plain pawns. */
+export function pulseRecruiters(context: StepContext): void {
+  // Pawns spawned in the loop must not be looked at, so the count is fixed first.
+  const acting = context.pawns.length;
+  for (let index = 0; index < acting; index++) {
+    const recruiter = context.pawns[index];
+    const recruits =
+      recruiter === undefined
+        ? undefined
+        : PAWN_TYPES[recruiter.type].passiveEffect?.recruits;
+    if (recruiter === undefined || recruits === undefined) continue;
+    if (!isAlive(recruiter)) continue;
+    recruiter.recruitLeft -= context.seconds;
+    if (!hasRunOut(recruiter.recruitLeft) || !hasRunOut(recruiter.stunLeft)) {
+      continue;
+    }
+    recruiter.recruitLeft = recruits.everySeconds;
+    recruit(context, recruiter, recruits.count);
+  }
+}
+
+/** A recruiter spawns `count` plain pawns beside itself. */
+export function recruit(
+  context: StepContext,
+  recruiter: WorkingPawn,
+  count: number,
+): void {
+  const at = { x: recruiter.x, y: recruiter.y };
+  spawnPlainPawns(context, at, count);
+  context.events.push({ type: "recruit", pawnId: recruiter.id, count, at });
+}
+
+/** A white pawn died: each berserker near it gathers attack, until the wave ends. */
+export function growRage(context: StepContext, dead: WorkingPawn): void {
+  for (const pawn of context.pawns) {
+    const growth = PAWN_TYPES[pawn.type].passiveEffect?.growsOnNearbyDeath;
+    if (growth === undefined || pawn === dead || !isAlive(pawn)) continue;
+    if (Math.hypot(pawn.x - dead.x, pawn.y - dead.y) <= growth.radius) {
+      pawn.rage += growth.amount;
+    }
+  }
+}
+
+/** A promoter standing at a board edge becomes a white queen at full HP. */
+export function promoteAtEdges(context: StepContext): void {
+  const { edgeMargin } = BATTLE_RULES;
+  const slack = edgeMargin + 1e-6;
+  for (const pawn of context.pawns) {
+    const queen = PAWN_TYPES[pawn.type].passiveEffect?.promotesAtEdge;
+    if (queen === undefined || pawn.promoted || !isAlive(pawn)) continue;
+    const atEdge =
+      pawn.x <= slack ||
+      pawn.y <= slack ||
+      pawn.x >= context.board.files - slack ||
+      pawn.y >= context.board.ranks - slack;
+    if (!atEdge) continue;
+    pawn.promoted = true;
+    pawn.maxHp = queen.hp;
+    pawn.hp = queen.hp;
+    context.events.push({
+      type: "promote",
+      pawnId: pawn.id,
+      at: { x: pawn.x, y: pawn.y },
+    });
+  }
 }

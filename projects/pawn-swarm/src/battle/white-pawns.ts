@@ -1,7 +1,8 @@
 import { boardCentre, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
-import { blackPiecePosition } from "./piece-position";
+import { blackPiecePosition, nearestBlackPiece } from "./piece-position";
+import { bodyOf } from "./pawn-body";
 import { bannerBonus, bannersOf } from "./passives";
 import { strikeCooldown, strikeDamage, walkingSpeed } from "./skill-effects";
 import { buildSpatialGrid } from "./spatial-grid";
@@ -67,6 +68,7 @@ function actPawn(
   auraBonus: number,
 ): void {
   const stats = PAWN_TYPES[pawn.type];
+  const body = bodyOf(pawn);
   pawn.strikeCooldownLeft -= context.seconds;
 
   const target = nearestBlackPiece(context.blackPieces, pawn);
@@ -74,14 +76,14 @@ function actPawn(
     walkStraight(
       pawn,
       boardCentre(context.board),
-      stats.speed * BATTLE_RULES.idleSpeedFactor * context.seconds,
+      body.speed * BATTLE_RULES.idleSpeedFactor * context.seconds,
       BATTLE_RULES.idleStopDistance,
     );
     return;
   }
 
   const targetCentre = blackPiecePosition(target);
-  const reach = stats.range + BLACK_PIECES[target.kind].bodyRadius;
+  const reach = body.range + BLACK_PIECES[target.kind].bodyRadius;
   if (distance(pawn, targetCentre) > reach) {
     walkStraight(
       pawn,
@@ -97,7 +99,7 @@ function actPawn(
   // Only types that strike several pieces look for more, so a big plain swarm stays cheap.
   const others =
     stats.strikesAtOnce > 1
-      ? blackPiecesInReach(context.blackPieces, pawn, stats.range)
+      ? blackPiecesInReach(context.blackPieces, pawn, body.range)
           .filter((piece) => piece !== target)
           .slice(0, stats.strikesAtOnce - 1)
       : [];
@@ -199,23 +201,6 @@ function drift(pawn: WorkingPawn, seconds: number): void {
     pawn.burstX = 0;
     pawn.burstY = 0;
   }
-}
-
-function nearestBlackPiece(
-  pieces: readonly WorkingBlackPiece[],
-  from: Point,
-): WorkingBlackPiece | undefined {
-  let nearest: WorkingBlackPiece | undefined;
-  let nearestDistance = Infinity;
-  for (const piece of pieces) {
-    if (!isAlive(piece)) continue;
-    const pieceDistance = distance(from, blackPiecePosition(piece));
-    if (pieceDistance < nearestDistance) {
-      nearest = piece;
-      nearestDistance = pieceDistance;
-    }
-  }
-  return nearest;
 }
 
 function distance(a: Point, b: Point): number {

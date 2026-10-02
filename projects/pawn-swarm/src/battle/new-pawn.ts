@@ -24,5 +24,9 @@ export function newPawn(
     burstY: 0,
     stunLeft: 0,
     healLeft: stats.passiveEffect?.heals?.everySeconds ?? 0,
+    recruitLeft: stats.passiveEffect?.recruits?.everySeconds ?? 0,
+    rage: 0,
+    dodgeReady: stats.passiveEffect?.dodgesFirstHit === true,
+    promoted: false,
   };
 }

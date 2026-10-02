@@ -40,6 +40,10 @@ export function pawnAt(
     burstY: 0,
     stunLeft: 0,
     healLeft: 0,
+    recruitLeft: 0,
+    rage: 0,
+    dodgeReady: stats.passiveEffect?.dodgesFirstHit === true,
+    promoted: false,
     ...overrides,
   };
 }
