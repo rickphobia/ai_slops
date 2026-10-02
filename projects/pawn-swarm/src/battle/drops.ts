@@ -33,6 +33,7 @@ export function killBlackPiece(
     piece: { side: "black", kind: piece.kind },
     at,
   });
+  if (BLACK_PIECES[piece.kind].isKing === true) context.kingDown = true;
   const swarm = context.pawns.filter(isAlive).length;
   const count = dropCount(
     BLACK_PIECES[piece.kind].drop,

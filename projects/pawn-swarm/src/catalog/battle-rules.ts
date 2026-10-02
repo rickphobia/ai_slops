@@ -3,12 +3,25 @@
  * board units (1 square = 1), times in game seconds. No logic lives here.
  */
 export const BATTLE_RULES = {
-  board: { files: 20, ranks: 14 },
+  board: { files: 16, ranks: 11 },
+
+  /**
+   * Game seconds per real second at 1× speed, so battles are readable. Like
+   * the speed setting it only changes when steps run, never what they do.
+   */
+  pace: 0.65,
+
+  /** Black HP grows by this share of its wave-1 value each wave after the first. */
+  blackHpGrowthPerWave: 0.35,
 
   /** Red squares show this long before a black move starts. */
   moveWarningSeconds: 0.4,
   /** Red squares show this long before a wave's pieces land. */
   landingWarningSeconds: 1.2,
+  /** Red squares show this long before summoned knights land. */
+  summonWarningSeconds: 0.8,
+  /** Summoned knights land at most this many squares from the summoner along each axis: right next to it. */
+  summonReach: 1,
   /** A pawn this close (along each axis) to a hit square's centre is on it. Half a square plus a little slack. */
   squareHitReach: 0.5625,
 
@@ -38,22 +51,31 @@ export const BATTLE_RULES = {
   /** Golden angle in radians: spreads the spiral evenly. */
   spiralAngle: 2.39996,
 
+  pushes: {
+    /** Each wave lands in this many pushes; the king always comes in the last one. */
+    perWave: 3,
+    /** The next push lands once the black pieces left are down to this share of the last push... */
+    nextAtShareLeft: 0.25,
+    /** ...or this many seconds after it, whichever comes first. */
+    nextAfterSeconds: 25,
+  },
+
   landing: {
-    /** Chance that a piece lands in the ring around the centre rather than anywhere. */
+    /** Chance that a piece lands in the ring around the swarm's centre rather than anywhere. */
     ringChance: 0.5,
-    ringMinDistance: 4.7,
-    ringMaxDistance: 8.4,
-    /** No piece lands with its square centre this close to the board centre. */
-    keepClearOfCentre: 3.75,
-    /** Random picks tried before falling back to any free square far enough out. */
+    ringMinDistance: 3,
+    ringMaxDistance: 7,
+    /** While there is room, no piece lands closer than this to a white pawn along both axes. */
+    keepClearOfPawns: 3,
+    /** Random picks tried before falling back to the free square farthest from any pawn. */
     tries: 40,
   },
 
   crowding: {
     /** At this many white pawns, kills drop only the floor share. */
-    swarmSize: 400,
+    swarmSize: 300,
     /** Kills always drop at least this share of the normal drop. */
-    floor: 0.15,
+    floor: 0.1,
   },
 
   dropBurst: {

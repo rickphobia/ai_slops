@@ -30,6 +30,7 @@ describe("step", () => {
     const start = createBattle({
       plainPawns: 30,
       wave: EIGHT_KNIGHTS,
+      waveNumber: 1,
       seed: 4,
     });
     const midBattle = after(start, 200);
@@ -39,7 +40,7 @@ describe("step", () => {
   });
 
   it("plays out exactly the same battle for the same seed", () => {
-    const setup = { plainPawns: 12, wave: EIGHT_KNIGHTS };
+    const setup = { plainPawns: 12, wave: EIGHT_KNIGHTS, waveNumber: 1 };
     const first = history(createBattle({ ...setup, seed: 777 }));
     const second = history(createBattle({ ...setup, seed: 777 }));
     expect(first.at(-1)?.outcome).not.toBe("ongoing");
@@ -50,7 +51,12 @@ describe("step", () => {
     const endings = new Set<string>();
     for (let seed = 0; seed < 5; seed++) {
       const end = playToEnd(
-        createBattle({ plainPawns: 12, wave: EIGHT_KNIGHTS, seed }),
+        createBattle({
+          plainPawns: 12,
+          wave: EIGHT_KNIGHTS,
+          waveNumber: 1,
+          seed,
+        }),
       );
       endings.add(JSON.stringify(end));
     }
@@ -66,7 +72,7 @@ describe("step", () => {
   });
 
   it("is won once every black piece is dead and none is still to land", () => {
-    const lastKnight = knightOn(2, { file: 5, rank: 5 });
+    const lastKnight = knightOn(2, { file: 5, rank: 5 }, { hp: 1 });
     const pawn = pawnAt(1, 5.5, 4.7);
     expect(
       after(battleWith({ pawns: [pawn], blackPieces: [lastKnight] }), 1)
@@ -77,7 +83,7 @@ describe("step", () => {
         battleWith({
           pawns: [pawn],
           blackPieces: [lastKnight],
-          landings: [landingOn({ file: 18, rank: 1 })],
+          landings: [landingOn({ file: 15, rank: 1 })],
         }),
         1,
       ).outcome,

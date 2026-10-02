@@ -53,8 +53,15 @@ _Avoid_: elite, variant
 A red square showing where a black move or a landing piece is about to hit.
 _Avoid_: telegraph, danger zone
 
+**Push**:
+One of the 3 groups a wave lands in. The next push lands when the last one is down to 25% or after 25 seconds; the king comes in the last push.
+_Avoid_: spawn group, sub-wave
+
 **Landing**:
-A black piece arriving at wave start: its square shows a warning, then the piece appears there.
+A black piece arriving with a push or a king's call: its square shows a warning, then the piece appears there.
+
+**Pace**:
+How fast the game runs at 1× speed: 0.65 game seconds per real second. Like speed, it never changes how a battle ends.
 
 **Contact**:
 A white pawn touching a black piece. It hurts the pawn on the piece's own timer.

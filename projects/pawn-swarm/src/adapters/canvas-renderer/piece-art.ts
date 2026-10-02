@@ -34,6 +34,10 @@ const PAWN_GLYPHS: Readonly<Record<PawnTypeId, GlyphStyle>> = {
 
 const BLACK_GLYPHS: Readonly<Record<BlackKind, GlyphStyle>> = {
   knight: { glyph: "♞", size: 0.8125, fill: "#141210", outline: "#e9dcc2" },
+  bishop: { glyph: "♝", size: 0.875, fill: "#141210", outline: "#e9dcc2" },
+  rook: { glyph: "♜", size: 0.9375, fill: "#141210", outline: "#e9dcc2" },
+  queen: { glyph: "♛", size: 1.0625, fill: "#141210", outline: "#e9dcc2" },
+  king: { glyph: "♚", size: 1.4375, fill: "#141210", outline: "#e9dcc2" },
 };
 
 /** U+FE0E asks for the text form, so the pawn doesn't show as a colour emoji. */

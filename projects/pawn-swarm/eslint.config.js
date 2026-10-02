@@ -28,6 +28,13 @@ export default defineConfig(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
+    // Command-line scripts run in Node and print their results.
+    files: ["scripts/**/*.mjs"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: globals.node },
+    rules: { "no-console": "off" },
+  },
+  {
     // The logger is the one place allowed to write to the console.
     files: ["src/logger.ts"],
     rules: { "no-console": "off" },
