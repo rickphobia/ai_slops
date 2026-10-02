@@ -33,10 +33,14 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 
 Each step in a session re-reads everything the session has seen so far, so long sessions get expensive fast.
 
-- **Ticket sessions run on Sonnet.** Pick it in the model menu when starting the session. Keep the top model for grilling, specs and tickets, where judgement matters most.
-- **The planning session doesn't watch PRs.** Each ticket's session watches its own; a second watcher doubles the cost.
-- **Start a fresh planning session** when the old one has run all day. Ticket files hold the status (`ready` / `done`), so nothing is lost.
-- `/review-diff` only for big tickets (see `/implement`).
+- **Sonnet by default; Opus only to write the spec and tickets.** Opus costs several times more per token. Use it for grilling, `/to-spec` and `/to-tickets`, then switch to Sonnet. Never leave a long planning chat on Opus.
+- **Keep sessions short.** Start a fresh session when the topic changes or the old one has run all day. Ticket files hold the status (`ready` / `done`), so nothing is lost.
+- **Watch a PR only when it matters.** Every GitHub event adds a few thousand tokens that are re-read for the rest of the session. For a small change, skip the watching and check CI yourself. The planning session never watches PRs; a second watcher doubles the cost.
+- **Batch small changes.** Collect small fixes (a rename, a doc line) into one session instead of one session each.
+- **`/review-diff` only for big tickets** (see `/implement`). It starts two extra sessions.
+- **No agents or multi-agent workflows in parallel** unless the owner asks. Each one has its own full cost.
+- **Keep `CLAUDE.md` short.** It is loaded into every session, so each extra line is paid for every time.
+- **Check where the money goes** on the account usage page (cost per session and model) before guessing.
 
 ## Habits that prevent slop
 
