@@ -1,5 +1,5 @@
 import type { ShopAction } from "../../run/run";
-import type { OfferView, ShopView } from "../../shop/shop-view";
+import type { ArmyStats, OfferView, ShopView } from "../../shop/shop-view";
 import { portraitSvg } from "../art/portrait";
 import { PAWN_TYPE_COLOURS } from "../art/type-colours";
 import { requireElement } from "./require-element";
@@ -30,6 +30,9 @@ export function createShopScreen(
     HTMLElement,
   );
   const nextWaveList = requireElement(root, "shop-next-wave", HTMLElement);
+  const statsRows = requireElement(root, "shop-stats-rows", HTMLElement);
+  const statsTotals = requireElement(root, "shop-stats-totals", HTMLElement);
+  const lastWave = requireElement(root, "shop-last-wave", HTMLElement);
   const offers = requireElement(root, "shop-offers", HTMLElement);
   const rerollButton = requireElement(root, "shop-reroll", HTMLButtonElement);
   const startButton = requireElement(root, "shop-start", HTMLButtonElement);
@@ -161,6 +164,56 @@ export function createShopScreen(
     return box;
   };
 
+  const tableRow = (
+    first: Node | string,
+    ...cells: readonly string[]
+  ): HTMLTableRowElement => {
+    const row = root.createElement("tr");
+    const head = element("td", "");
+    head.append(first);
+    row.append(head, ...cells.map((text) => element("td", "", text)));
+    return row;
+  };
+
+  const showStats = ({ rows, totals, lastWave: wave }: ArmyStats): void => {
+    statsRows.replaceChildren(
+      ...rows.map((row) => {
+        const name = element("span", "");
+        name.append(portrait("chip-icon", row.type, row.name), row.name);
+        return tableRow(
+          name,
+          String(row.count),
+          String(row.hp),
+          String(row.attack),
+          oneDecimal(row.damagePerSecond),
+        );
+      }),
+    );
+    statsTotals.replaceChildren(
+      tableRow(
+        "Army",
+        String(totals.pawns),
+        String(totals.hp),
+        "",
+        oneDecimal(totals.damagePerSecond),
+      ),
+    );
+    lastWave.replaceChildren(
+      "Last wave: ",
+      ...[
+        [wave.piecesTaken, "black pieces taken"],
+        [wave.pawnsGained, "pawns gained"],
+        [wave.pawnsLost, "pawns lost"],
+        [wave.biggestSwarm, "biggest swarm"],
+      ].flatMap(([value, label]) => [
+        element("strong", "", String(value)),
+        ` ${String(label)} · `,
+      ]),
+      element("strong", "", `${oneDecimal(wave.seconds)}s`),
+      " taken",
+    );
+  };
+
   return {
     show: (view) => {
       // Re-rendering replaces the buttons; put keyboard focus back where it was.
@@ -199,6 +252,7 @@ export function createShopScreen(
         }),
       );
 
+      showStats(view.stats);
       offers.replaceChildren(...view.offers.map(offerElement));
 
       rerollButton.textContent = `Reroll (${String(view.reroll.price)} ${PLAIN_PAWN_SYMBOL})`;
@@ -224,4 +278,8 @@ export function createShopScreen(
       panel.hidden = true;
     },
   };
+}
+
+function oneDecimal(value: number): string {
+  return value.toFixed(1);
 }

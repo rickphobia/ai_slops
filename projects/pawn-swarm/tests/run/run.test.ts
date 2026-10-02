@@ -73,6 +73,30 @@ describe("run", () => {
     expect(advanceRun(shop, NO_INPUTS)).toBe(shop);
   });
 
+  it("records the wave as it plays and the shop reads it; the next wave starts a fresh record", () => {
+    const run = playToShop(
+      startRun({ seed: 3, plainPawns: 20, waves: [knights(2), knights(4)] }),
+    );
+    if (run.phase !== "shop") throw new Error("expected the shop");
+    expect(run.waveReport.piecesTaken).toBe(2);
+    expect(run.waveReport.pawnsGained).toBeGreaterThan(0);
+    expect(run.waveReport.biggestSwarm).toBeGreaterThanOrEqual(20);
+    expect(run.waveReport.seconds).toBeGreaterThan(0);
+    // pawns alive now = start + gained - lost
+    expect(run.army.plain).toBe(
+      20 + run.waveReport.pawnsGained - run.waveReport.pawnsLost,
+    );
+    expect(shopView(run).stats.lastWave).toBe(run.waveReport);
+
+    const next = actInShop(run, { type: "start-wave" });
+    expect(next.waveReport).toMatchObject({
+      piecesTaken: 0,
+      pawnsGained: 0,
+      pawnsLost: 0,
+      seconds: 0,
+    });
+  });
+
   it("starts the next wave from the shop with the army at full HP, recruits included", () => {
     let run = playToShop(
       startRun({ seed: 3, plainPawns: 20, waves: [knights(2), knights(4)] }),
