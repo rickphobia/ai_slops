@@ -19,6 +19,12 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 - **Push back.** If a request would make the project harder to maintain, say so and offer a better way. Don't silently do the quick hack, and don't silently over-engineer either — pick the simplest thing that is production quality.
 - **No fake progress.** Never delete, skip or weaken a test to make it pass. Never claim something works that you didn't run. Report failures plainly.
 
+## Hosting and how we work here
+
+- **Hosting:** the owner runs their own nginx in Docker on a home server (Beelink, Ubuntu), site root `~/homelab/html`, public at `rickphobia.com`. Web projects go under `/ai-projects/<name>/`. GitHub can't reach the server, so it pulls: `projects/<name>/deploy/update-site.sh` builds `main` and swaps it in. A bug fix reaches the site by merging the PR, then running that script on the server (no re-clone; it keeps its own checkout in `~/homelab/dev`). See `projects/pawn-swarm/README.md` ("Deploy") as the model for other projects.
+- **Sessions and PRs:** one ticket per session, branch and PR, run on Sonnet. The session watches its own PR until it is green; the owner reviews and merges. Never merge for them.
+- **Keep dev cost low:** follow "Keeping token use down" in `docs/workflow.md`. In short: Sonnet for ticket sessions, a fresh session per ticket, `/review-diff` only for big changes, no second session watching the same PR. Read only the files the task needs, and don't start sub-agents or multi-agent workflows unless asked.
+
 ## Before you start
 
 - Follow the loop in `docs/workflow.md`: `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` (one ticket per session and PR) → review → merge. The skills live in `.claude/skills/`.
