@@ -17,9 +17,60 @@
         color: #f0f0f0;
         font-family: system-ui, sans-serif;
       }
+      :root {
+        /* Leaves room above the board for the HUD. */
+        --board-size: min(90vw, calc(90vh - 56px));
+      }
       #board {
-        width: min(90vw, 90vh);
-        height: min(90vw, 90vh);
+        width: var(--board-size);
+        height: var(--board-size);
+      }
+      #hud {
+        width: var(--board-size);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 16px;
+      }
+      #hud-status {
+        margin: 0;
+        display: flex;
+        gap: 16px;
+        font-size: 1.1rem;
+      }
+      #hud-status strong {
+        font-variant-numeric: tabular-nums;
+      }
+      #battle-controls,
+      #speed-buttons {
+        display: flex;
+        gap: 6px;
+      }
+      #battle-controls button {
+        min-width: 3.5rem;
+        padding: 6px 10px;
+        border: 1px solid #5c5a57;
+        border-radius: 6px;
+        background: #3d3b38;
+        color: #f0f0f0;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #battle-controls button[aria-pressed="true"] {
+        border-color: #81b64c;
+        background: #81b64c;
+        color: #ffffff;
+        font-weight: bold;
+      }
+      #pause {
+        min-width: 5.5rem;
+      }
+      /* Amber, not the speed green, so "paused" doesn't read as a fifth speed. */
+      #battle-controls #pause[aria-pressed="true"] {
+        border-color: #e0a84f;
+        background: #e0a84f;
+        color: #1a1a1a;
       }
       #end-screen {
         position: fixed;
@@ -60,6 +111,17 @@
   </head>
   <body>
     <p id="startup-error" role="alert" hidden></p>
+    <header id="hud">
+      <p id="hud-status">
+        <span>Wave <strong id="hud-wave"></strong></span>
+        <span>Pawns <strong id="hud-pawns"></strong></span>
+        <span>Seed <strong id="hud-seed"></strong></span>
+      </p>
+      <div id="battle-controls">
+        <button id="pause" type="button" aria-pressed="false">Pause</button>
+        <div id="speed-buttons" role="group" aria-label="Battle speed"></div>
+      </div>
+    </header>
     <canvas id="board" aria-label="Chess board"></canvas>
     <section id="end-screen" role="dialog" aria-labelledby="end-title" hidden>
       <h2 id="end-title"></h2>

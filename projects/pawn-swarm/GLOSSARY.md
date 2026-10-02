@@ -14,6 +14,12 @@ One battle against a set of black pieces. A run has 10.
 One step of the battle simulation.
 _Avoid_: frame, turn
 
+**Speed**:
+How many ticks run per tick length of real time: 0.5×, 1×, 1.5× or 2×. Changes how fast a battle plays, never how it ends.
+
+**HUD**:
+The bar above the board during a battle: wave, pawn count (the army's size), seed, pause and speed buttons.
+
 **Army**:
 All white pawns the player owns.
 
