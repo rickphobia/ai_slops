@@ -28,7 +28,7 @@ function history(start: BattleState): BattleState[] {
 describe("step", () => {
   it("does not change the state it is given", () => {
     const start = createBattle({
-      plainPawns: 30,
+      army: { plain: 30 },
       wave: EIGHT_KNIGHTS,
       waveNumber: 1,
       seed: 4,
@@ -40,7 +40,7 @@ describe("step", () => {
   });
 
   it("plays out exactly the same battle for the same seed", () => {
-    const setup = { plainPawns: 12, wave: EIGHT_KNIGHTS, waveNumber: 1 };
+    const setup = { army: { plain: 12 }, wave: EIGHT_KNIGHTS, waveNumber: 1 };
     const first = history(createBattle({ ...setup, seed: 777 }));
     const second = history(createBattle({ ...setup, seed: 777 }));
     expect(first.at(-1)?.outcome).not.toBe("ongoing");
@@ -52,7 +52,7 @@ describe("step", () => {
     for (let seed = 0; seed < 5; seed++) {
       const end = playToEnd(
         createBattle({
-          plainPawns: 12,
+          army: { plain: 12 },
           wave: EIGHT_KNIGHTS,
           waveNumber: 1,
           seed,

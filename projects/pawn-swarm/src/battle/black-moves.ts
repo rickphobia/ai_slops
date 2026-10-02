@@ -1,7 +1,7 @@
 import { pieceMoves } from "../board/moves";
 import { centreOf, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
-import { BLACK_PIECES } from "../catalog/pieces";
+import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
 import type { BlackMove } from "./battle-state";
 import { isAmong, squaresHeldByBlack } from "./black-squares";
 import { hitSquares } from "./pawn-hits";
@@ -97,8 +97,8 @@ function chooseMove(
 }
 
 /**
- * The pawn a black piece goes for: the nearest one. Shield pawns arrive in
- * ticket 06 and will be picked first when one is within reach.
+ * The pawn a black piece goes for: the nearest pawn that draws black pieces
+ * (a shield) if one is close enough, otherwise the nearest pawn.
  */
 function chooseTarget(
   pawns: readonly WorkingPawn[],
@@ -106,6 +106,8 @@ function chooseTarget(
 ): WorkingPawn | undefined {
   let nearest: WorkingPawn | undefined;
   let nearestDistance = Infinity;
+  let drawing: WorkingPawn | undefined;
+  let drawingDistance = Infinity;
   for (const pawn of pawns) {
     if (!isAlive(pawn)) continue;
     const pawnDistance = Math.hypot(pawn.x - from.x, pawn.y - from.y);
@@ -113,6 +115,15 @@ function chooseTarget(
       nearest = pawn;
       nearestDistance = pawnDistance;
     }
+    const drawsWithin = PAWN_TYPES[pawn.type].drawsBlackWithin;
+    if (
+      drawsWithin !== undefined &&
+      pawnDistance <= drawsWithin &&
+      pawnDistance < drawingDistance
+    ) {
+      drawing = pawn;
+      drawingDistance = pawnDistance;
+    }
   }
-  return nearest;
+  return drawing ?? nearest;
 }

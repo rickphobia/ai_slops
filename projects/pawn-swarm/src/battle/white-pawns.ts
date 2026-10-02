@@ -52,17 +52,55 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
   if (!hasRunOut(pawn.strikeCooldownLeft)) return;
 
   pawn.strikeCooldownLeft = stats.strikeCooldown;
-  target.hp -= stats.attack;
+  // Only types that strike several pieces look for more, so a big plain swarm stays cheap.
+  const others =
+    stats.strikesAtOnce > 1
+      ? blackPiecesInReach(context.blackPieces, pawn, stats.range)
+          .filter((piece) => piece !== target)
+          .slice(0, stats.strikesAtOnce - 1)
+      : [];
+  for (const piece of [target, ...others]) strike(context, pawn, piece);
+}
+
+/** One blow from `pawn` to `target`, for the pawn's attack. */
+function strike(
+  context: StepContext,
+  pawn: WorkingPawn,
+  target: WorkingBlackPiece,
+): void {
+  const damage = PAWN_TYPES[pawn.type].attack;
+  const targetCentre = blackPiecePosition(target);
+  target.hp -= damage;
   context.events.push({
     type: "strike",
     pawnId: pawn.id,
     pawnType: pawn.type,
     targetId: target.id,
-    damage: stats.attack,
+    damage,
     from: { x: pawn.x, y: pawn.y },
     at: targetCentre,
   });
   if (!isAlive(target)) killBlackPiece(context, target, targetCentre);
+}
+
+/** Living black pieces a pawn with this range can strike from where it stands, nearest first. */
+function blackPiecesInReach(
+  pieces: readonly WorkingBlackPiece[],
+  from: Point,
+  range: number,
+): WorkingBlackPiece[] {
+  return pieces
+    .filter(isAlive)
+    .map((piece) => ({
+      piece,
+      distance: distance(from, blackPiecePosition(piece)),
+    }))
+    .filter(
+      ({ piece, distance: pieceDistance }) =>
+        pieceDistance <= range + BLACK_PIECES[piece.kind].bodyRadius,
+    )
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ piece }) => piece);
 }
 
 /** Pawns push each other apart so the swarm spreads out, then stay inside the board edge. */

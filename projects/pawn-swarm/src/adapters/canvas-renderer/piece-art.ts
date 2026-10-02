@@ -2,7 +2,7 @@ import { ANIMATION_FRAMES } from "../art/animation";
 import { ArtError } from "../art/art-error";
 import { ART_IDS, type ArtId } from "../art/drawings";
 import { frameStripSvg } from "../art/frame-strip";
-import { BONE } from "../art/palette";
+import { PAWN_TYPE_COLOURS } from "../art/type-colours";
 import type { PieceIdentity } from "../../battle/battle-state";
 import { StartupError } from "../../startup-error";
 
@@ -21,7 +21,7 @@ export interface Sprite {
 export interface PieceArt {
   /** The image for `id` in animation frame `frame`, sized for squares `squarePx` wide. */
   sprite(id: ArtId, squarePx: number, frame: number): Sprite;
-  /** The colour effects use for this piece: sparks when it dies, slashes when it strikes. */
+  /** The piece's colour: its sparks when it dies, its slashes when it strikes, a pawn type's ground disc. */
   tint(piece: PieceIdentity): string;
 }
 
@@ -153,6 +153,7 @@ export async function loadPieceArt(): Promise<PieceArt> {
       const size = Math.round(CELL_SQUARES[id] * squarePx);
       return { sheet: sheetFor(id, size), sourceX: frame * size, size };
     },
-    tint: (piece) => (piece.side === "white" ? BONE : BLACK_TINT),
+    tint: (piece) =>
+      piece.side === "white" ? PAWN_TYPE_COLOURS[piece.type] : BLACK_TINT,
   };
 }

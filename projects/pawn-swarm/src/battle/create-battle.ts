@@ -1,5 +1,6 @@
 import { type BoardSize, boardCentre, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import { type Army, PAWN_TYPES, type PawnTypeId } from "../catalog/pieces";
 import type { Wave } from "../catalog/waves";
 import { createRandom, type RngState } from "../rng";
 import type { BattleState } from "./battle-state";
@@ -8,8 +9,8 @@ import { newPawn } from "./new-pawn";
 import { splitIntoPushes } from "./pushes";
 
 export interface BattleSetup {
-  /** Plain pawns in the army. */
-  readonly plainPawns: number;
+  /** How many pawns of each type fight. */
+  readonly army: Army;
   readonly wave: Wave;
   /** 1-based wave number: black HP grows with it. */
   readonly waveNumber: number;
@@ -17,14 +18,16 @@ export interface BattleSetup {
 }
 
 /**
- * Places the army in a spiral around the board centre, splits the wave into
+ * Places the army in a spiral around the board centre, tanky types in the
+ * middle, splits the wave into
  * pushes and starts the first one landing, each piece on its own square away from the pawns.
  */
 export function createBattle(setup: BattleSetup): BattleState {
   const board = BATTLE_RULES.board;
   const random = createRandom(setup.seed);
-  const pawns = spiralAround(boardCentre(board), setup.plainPawns, board).map(
-    (at, index) => newPawn(index + 1, "plain", at, random),
+  const types = innermostFirst(setup.army);
+  const pawns = spiralAround(boardCentre(board), types.length, board).map(
+    (at, index) => newPawn(index + 1, types[index] ?? "plain", at, random),
   );
   const [firstPush = [], ...laterPushes] = splitIntoPushes(setup.wave, random);
   const landings = planPushLandings(
@@ -47,6 +50,16 @@ export function createBattle(setup: BattleSetup): BattleState {
     outcome: "ongoing",
     events: [],
   };
+}
+
+/** One entry per pawn, most HP first: the spiral fills from the centre, so the tanky pawns end up in the middle. */
+function innermostFirst(army: Army): PawnTypeId[] {
+  const types = (Object.keys(PAWN_TYPES) as PawnTypeId[]).sort(
+    (a, b) => PAWN_TYPES[b].hp - PAWN_TYPES[a].hp,
+  );
+  return types.flatMap((type) =>
+    Array.from({ length: army[type] ?? 0 }, () => type),
+  );
 }
 
 /** A sunflower spiral: tight around the centre, even all round. */

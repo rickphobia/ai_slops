@@ -17,17 +17,18 @@ import {
 
 /** Test setups: exact pieces at exact places, with catalog stats. */
 
-/** A plain pawn that is ready to strike and has no drop burst. */
+/** A pawn (plain unless `overrides.type` says otherwise) that is ready to strike and has no drop burst. */
 export function pawnAt(
   id: number,
   x: number,
   y: number,
   overrides: Partial<WhitePawn> = {},
 ): WhitePawn {
-  const stats = PAWN_TYPES.plain;
+  const type = overrides.type ?? "plain";
+  const stats = PAWN_TYPES[type];
   return {
     id,
-    type: "plain",
+    type,
     x,
     y,
     hp: stats.hp,

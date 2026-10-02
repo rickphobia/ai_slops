@@ -1,6 +1,7 @@
 import { NO_INPUTS, type StepInputs } from "../battle/battle-state";
 import { WAVES, type Wave } from "../catalog/waves";
-import { advanceRun, type RunState, startRun } from "../run/run";
+import { actInShop, advanceRun, type RunState, startRun } from "../run/run";
+import { recruitBlocker } from "../shop/shop";
 
 /** How one headless run ended. */
 export interface RunSummary {
@@ -37,23 +38,40 @@ export class RunStuckError extends Error {
 const MAX_STEPS_PER_RUN = 1_000_000;
 
 /**
- * What the bot does each step. There are no skills or shop yet, so it does
- * nothing; tickets 06 and 07 teach it to recruit greedily and fire skills when ready.
+ * What the bot does each battle step. There are no skills yet, so it does
+ * nothing; ticket 07 teaches it to fire skills when ready.
  */
 function botInputs(): StepInputs {
   return NO_INPUTS;
 }
 
+/** The bot's shop visit: recruits from the first offer it can, over and over, then starts the wave. */
+function shopGreedily(start: RunState & { phase: "shop" }): RunState {
+  let run: RunState = start;
+  while (run.phase === "shop") {
+    const { shop, army } = run;
+    const offer = shop.offers.findIndex(
+      (_, index) => recruitBlocker(shop, army, index) === undefined,
+    );
+    run = actInShop(
+      run,
+      offer < 0 ? { type: "start-wave" } : { type: "recruit", offer },
+    );
+  }
+  return run;
+}
+
 /** Plays one run to the end with the bot. */
 export function playBotRun(seed: number, waves: readonly Wave[]): RunSummary {
   let run: RunState = startRun({ seed, waves });
-  for (let index = 0; run.phase === "battle"; index++) {
+  for (let index = 0; run.phase === "battle" || run.phase === "shop"; index++) {
     if (index >= MAX_STEPS_PER_RUN) {
       throw new RunStuckError(
         `The run with seed ${String(seed)} was still in wave ${String(run.wave)} after ${String(MAX_STEPS_PER_RUN)} steps.`,
       );
     }
-    run = advanceRun(run, botInputs());
+    run =
+      run.phase === "shop" ? shopGreedily(run) : advanceRun(run, botInputs());
   }
   return {
     seed,
