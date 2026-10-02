@@ -36,7 +36,7 @@ describe("describeShop", () => {
       skill: {
         name: "Hold the line",
         cooldown: 20,
-        text: "Shields take no damage for 4s and pull enemies from further away.",
+        text: "Shields take no damage for 4s and pull black pieces from further away.",
       },
       // Price ceil(1.5 × 2) = 3, plus the pawn that turns.
       plainPawnsUsed: 4,

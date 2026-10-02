@@ -106,8 +106,8 @@ function chooseTarget(
 ): WorkingPawn | undefined {
   let nearest: WorkingPawn | undefined;
   let nearestDistance = Infinity;
-  let drawing: WorkingPawn | undefined;
-  let drawingDistance = Infinity;
+  let drawingPawn: WorkingPawn | undefined;
+  let drawingPawnDistance = Infinity;
   for (const pawn of pawns) {
     if (!isAlive(pawn)) continue;
     const pawnDistance = Math.hypot(pawn.x - from.x, pawn.y - from.y);
@@ -119,11 +119,11 @@ function chooseTarget(
     if (
       drawsWithin !== undefined &&
       pawnDistance <= drawsWithin &&
-      pawnDistance < drawingDistance
+      pawnDistance < drawingPawnDistance
     ) {
-      drawing = pawn;
-      drawingDistance = pawnDistance;
+      drawingPawn = pawn;
+      drawingPawnDistance = pawnDistance;
     }
   }
-  return drawing ?? nearest;
+  return drawingPawn ?? nearest;
 }

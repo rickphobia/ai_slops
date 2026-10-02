@@ -11,13 +11,12 @@ import { SHOP_RULES } from "../catalog/shop-rules";
 import type { Wave } from "../catalog/waves";
 import {
   type RecruitBlocker,
+  listingOf,
   recruitBlocker,
-  recruitPrice,
+  recruitCost,
   type RerollBlocker,
   rerollBlocker,
   rerollPrice,
-  SHOP_LISTINGS,
-  ShopError,
   type ShopState,
 } from "./shop";
 
@@ -75,21 +74,15 @@ export function describeShop(
     }),
     offers: shop.offers.map((offer, index) => {
       const stats = PAWN_TYPES[offer.type];
-      const listing = SHOP_LISTINGS[offer.type];
-      if (listing === undefined) {
-        throw new ShopError(
-          `The ${offer.type} pawn is on offer but not for sale.`,
-        );
-      }
       return {
         type: offer.type,
         name: stats.name,
-        rarity: listing.rarity,
+        rarity: listingOf(offer.type).rarity,
         hp: stats.hp,
         attack: stats.attack,
         passive: stats.passive,
         skill: stats.skill,
-        plainPawnsUsed: recruitPrice(offer.type, shop.wave) + 1,
+        plainPawnsUsed: recruitCost(offer.type, shop.wave),
         recruited: shop.recruited[offer.type] ?? 0,
         maxRecruits: SHOP_RULES.maxRecruitsPerTypePerWave,
         locked: offer.locked,

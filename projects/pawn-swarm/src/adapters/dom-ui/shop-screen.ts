@@ -9,8 +9,8 @@ export interface ShopScreen {
   hide(): void;
 }
 
-/** "♟" stands for plain pawns, the shop's money. */
-const PAWNS = "♟";
+/** Plain pawns are the shop's money; prices show them as "♟". */
+const PLAIN_PAWN_SYMBOL = "♟";
 
 /**
  * The shop between waves. It lays out what `describeShop` worked out and
@@ -81,13 +81,13 @@ export function createShopScreen(
   };
 
   const offerElement = (offer: OfferView, index: number): HTMLElement => {
-    const card = element("article", "offer");
-    card.dataset.rarity = offer.rarity;
-    if (offer.blocker === "max-this-wave") card.classList.add("offer-full");
+    const box = element("article", "offer");
+    box.dataset.rarity = offer.rarity;
+    if (offer.blocker === "max-this-wave") box.classList.add("offer-full");
 
     const name = element("h3", "offer-name", offer.name);
     name.style.color = PAWN_TYPE_COLOURS[offer.type];
-    const recruited = element("p", "offer-count", "Recruited this wave ");
+    const recruited = element("p", "offer-count", "Recruited this wave: ");
     recruited.append(
       element(
         "strong",
@@ -101,7 +101,7 @@ export function createShopScreen(
       "shop-button shop-button-main",
       offer.blocker === "max-this-wave"
         ? "Max this wave"
-        : `Recruit 1 (${String(offer.plainPawnsUsed)} ${PAWNS})`,
+        : `Recruit 1 (${String(offer.plainPawnsUsed)} ${PLAIN_PAWN_SYMBOL})`,
     );
     recruitButton.type = "button";
     recruitButton.dataset.action = "recruit";
@@ -135,7 +135,7 @@ export function createShopScreen(
       `: ${offer.skill.text}`,
     );
 
-    card.append(
+    box.append(
       portrait("offer-portrait", offer.type, offer.name),
       element("p", "offer-rarity", offer.rarity),
       name,
@@ -149,7 +149,7 @@ export function createShopScreen(
       recruited,
     );
     if (offer.blocker === "too-few-plain-pawns") {
-      card.append(
+      box.append(
         element(
           "p",
           "offer-note",
@@ -157,8 +157,8 @@ export function createShopScreen(
         ),
       );
     }
-    card.append(buttons);
-    return card;
+    box.append(buttons);
+    return box;
   };
 
   return {
@@ -201,7 +201,7 @@ export function createShopScreen(
 
       offers.replaceChildren(...view.offers.map(offerElement));
 
-      rerollButton.textContent = `Reroll (${String(view.reroll.price)} ${PAWNS})`;
+      rerollButton.textContent = `Reroll (${String(view.reroll.price)} ${PLAIN_PAWN_SYMBOL})`;
       rerollButton.disabled = view.reroll.blocker !== undefined;
       rerollButton.title =
         view.reroll.blocker === "all-locked"

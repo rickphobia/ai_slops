@@ -13,13 +13,13 @@ import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
 import {
   actInShop,
   advanceRun,
-  RunError,
+  armySize,
   type RunState,
   type ShopAction,
+  shopView,
   startRun,
 } from "./run/run";
 import { ShopError } from "./shop/shop";
-import { describeShop, type ShopView } from "./shop/shop-view";
 import { StartupError } from "./startup-error";
 import { createTickClock } from "./tick-clock";
 
@@ -46,22 +46,10 @@ function hudStatus(run: RunState): HudStatus {
     wave: run.wave,
     waveCount: run.waves.length,
     whitePawns:
-      run.phase === "shop"
-        ? Object.values(run.army).reduce((total, count) => total + count, 0)
-        : run.battle.pawns.length,
+      run.phase === "shop" ? armySize(run.army) : run.battle.pawns.length,
     blackLeft: blackPiecesLeft(run.battle),
     seed: run.seed,
   };
-}
-
-function shopView(run: RunState & { phase: "shop" }): ShopView {
-  const nextWave = run.waves[run.shop.wave - 1];
-  if (nextWave === undefined) {
-    throw new RunError(
-      `The shop leads into wave ${String(run.shop.wave)}, which is not in the wave table.`,
-    );
-  }
-  return describeShop(run.shop, run.army, nextWave);
 }
 
 function logShopAction(
@@ -86,6 +74,7 @@ function logShopAction(
       log.info("shop rerolled", {
         wave: previous.shop.wave,
         rerolls: previous.shop.rerolls + 1,
+        plainPawnsBefore: plainPawns(previous),
         plainPawnsAfter: plainPawns(next),
       });
       break;

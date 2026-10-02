@@ -17,6 +17,7 @@ import {
   type ShopState,
   toggleLock,
 } from "../shop/shop";
+import { describeShop, type ShopView } from "../shop/shop-view";
 
 export class RunError extends Error {
   override name = "RunError";
@@ -187,6 +188,22 @@ function startNextWave(run: RunState & { phase: "shop" }): RunState {
     peakSwarm: Math.max(run.peakSwarm, battle.pawns.length),
     piecesTaken: run.piecesTaken,
   };
+}
+
+/** What the shop screen shows for this run's shop visit. */
+export function shopView(run: RunState & { phase: "shop" }): ShopView {
+  const nextWave = run.waves[run.shop.wave - 1];
+  if (nextWave === undefined) {
+    throw new RunError(
+      `The shop leads into wave ${String(run.shop.wave)}, which is not in the wave table.`,
+    );
+  }
+  return describeShop(run.shop, run.army, nextWave);
+}
+
+/** Pawns in the army, all types together. */
+export function armySize(army: Army): number {
+  return Object.values(army).reduce((total, count) => total + count, 0);
 }
 
 function armyOf(pawns: readonly { readonly type: keyof Army }[]): Army {

@@ -14,6 +14,13 @@ export interface SkillText {
   readonly text: string;
 }
 
+/** How the shop sells a pawn type. */
+export interface ShopListing {
+  readonly rarity: Rarity;
+  /** Plain pawns sacrificed per recruit in wave 1, before it grows with the wave. */
+  readonly basePrice: number;
+}
+
 export interface PawnStats {
   readonly name: string;
   readonly hp: number;
@@ -32,11 +39,7 @@ export interface PawnStats {
   readonly passive: string;
   readonly skill: SkillText;
   /** How the shop sells it; the plain pawn is money, not for sale. */
-  readonly shop?: {
-    readonly rarity: Rarity;
-    /** Plain pawns sacrificed per recruit in wave 1, before it grows with the wave. */
-    readonly basePrice: number;
-  };
+  readonly shop?: ShopListing;
 }
 
 export type PawnTypeId = "plain" | "shield" | "spear" | "twin";
@@ -70,7 +73,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
     skill: {
       name: "Hold the line",
       cooldown: 20,
-      text: "Shields take no damage for 4s and pull enemies from further away.",
+      text: "Shields take no damage for 4s and pull black pieces from further away.",
     },
     shop: { rarity: "common", basePrice: 3 },
   },
@@ -87,7 +90,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
     skill: {
       name: "Volley",
       cooldown: 15,
-      text: "Each spear hits every enemy within 4 squares in its row and column for 3.",
+      text: "Each spear hits every black piece within 4 squares in its row and column for 3.",
     },
     shop: { rarity: "common", basePrice: 3 },
   },
@@ -103,7 +106,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
     skill: {
       name: "Fork",
       cooldown: 12,
-      text: "Each twin hits every enemy around it for 2.",
+      text: "Each twin hits every black piece around it for 2.",
     },
     shop: { rarity: "common", basePrice: 3 },
   },

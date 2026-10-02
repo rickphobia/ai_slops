@@ -2,7 +2,7 @@ import {
   type Army,
   PAWN_TYPES,
   type PawnTypeId,
-  type Rarity,
+  type ShopListing,
 } from "../catalog/pieces";
 import { SHOP_RULES } from "../catalog/shop-rules";
 import { createRandom, type Random, type RngState } from "../rng";
@@ -28,11 +28,6 @@ export interface ShopState {
   /** Pawns recruited this visit, per type, for the per-wave cap. */
   readonly recruited: Army;
   readonly rng: RngState;
-}
-
-export interface ShopListing {
-  readonly rarity: Rarity;
-  readonly basePrice: number;
 }
 
 /** The pawn types for sale. Tests pass their own to try other rarities. */
@@ -91,6 +86,15 @@ export function recruitPrice(
   );
 }
 
+/** Plain pawns one recruit takes from the army: the one that turns plus the price. */
+export function recruitCost(
+  type: PawnTypeId,
+  wave: number,
+  listings: ShopListings = SHOP_LISTINGS,
+): number {
+  return recruitPrice(type, wave, listings) + 1;
+}
+
 export function recruitBlocker(
   shop: ShopState,
   army: Army,
@@ -103,7 +107,7 @@ export function recruitBlocker(
   ) {
     return "max-this-wave";
   }
-  const used = recruitPrice(offer.type, shop.wave, listings) + 1;
+  const used = recruitCost(offer.type, shop.wave, listings);
   if (!keepsAPlainPawn(army, used)) return "too-few-plain-pawns";
   return undefined;
 }
@@ -122,7 +126,7 @@ export function recruit(
       `Can recruit at most ${String(SHOP_RULES.maxRecruitsPerTypePerWave)} ${type} pawns per wave.`,
     );
   }
-  const used = recruitPrice(type, shop.wave, listings) + 1;
+  const used = recruitCost(type, shop.wave, listings);
   if (blocker === "too-few-plain-pawns") {
     throw new ShopError(
       `Recruiting a ${type} pawn uses ${String(used)} plain pawns and must leave one; the army has ${String(army.plain ?? 0)}.`,
@@ -262,7 +266,10 @@ function pickWeighted(
   return types.at(-1);
 }
 
-function listingOf(type: PawnTypeId, listings: ShopListings): ShopListing {
+export function listingOf(
+  type: PawnTypeId,
+  listings: ShopListings = SHOP_LISTINGS,
+): ShopListing {
   const listing = listings[type];
   if (listing === undefined) {
     throw new ShopError(`The ${type} pawn is not for sale.`);

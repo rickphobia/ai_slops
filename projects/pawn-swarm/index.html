@@ -19,6 +19,10 @@
         --blood: #8e1b1b;
         --blood-bright: #c4302a;
         --ember: #ff8a3c;
+        /* Shop rarities: common uses --muted. */
+        --rare: #6fb0ff;
+        --epic: #c58bff;
+        --black-edge: #4a1a16;
         --font-display: "Cinzel", Georgia, serif;
         --font-body: "Crimson Pro", Georgia, serif;
         /* The board is 16 × 11 squares; leave room above it for the HUD. */
@@ -265,7 +269,7 @@
         font-variant-numeric: tabular-nums;
       }
       .chip-black {
-        border-color: #4a1a16;
+        border-color: var(--black-edge);
       }
       .chip-icon svg {
         display: block;
@@ -290,10 +294,10 @@
         background: linear-gradient(var(--panel-raised), var(--panel));
       }
       .offer[data-rarity="rare"] {
-        --rarity: #6fb0ff;
+        --rarity: var(--rare);
       }
       .offer[data-rarity="epic"] {
-        --rarity: #c58bff;
+        --rarity: var(--epic);
       }
       .offer-full {
         opacity: 0.55;

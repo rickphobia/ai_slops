@@ -5,8 +5,10 @@ import type { Wave } from "../../src/catalog/waves";
 import {
   actInShop,
   advanceRun,
+  armySize,
   RunError,
   type RunState,
+  shopView,
   startRun,
 } from "../../src/run/run";
 import { ShopError } from "../../src/shop/shop";
@@ -114,6 +116,20 @@ describe("run", () => {
     expect(run.shop.recruited).toEqual({});
     expect(run.shop.offers[0]).toEqual({ type: lockedType, locked: true });
     expect(run.army[lockedType ?? "plain"]).toBeGreaterThanOrEqual(1);
+  });
+
+  it("describes the shop with the next wave's pieces, and counts the army", () => {
+    const run = playToShop(
+      startRun({ seed: 3, plainPawns: 20, waves: [knights(2), knights(4)] }),
+    );
+    if (run.phase !== "shop") throw new Error("expected the shop");
+    const view = shopView(run);
+    expect(view.wave).toBe(2);
+    expect(view.nextWave).toEqual([
+      { kind: "knight", name: "Knight", count: 4 },
+    ]);
+    expect(view.plainPawns).toBe(run.army.plain);
+    expect(armySize({ plain: 4, shield: 2, twin: 1 })).toBe(7);
   });
 
   it("refuses shop actions outside the shop, and passes on the shop's own refusals", () => {

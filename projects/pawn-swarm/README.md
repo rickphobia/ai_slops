@@ -135,7 +135,7 @@ docs/
 - Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every battle event (strike, hurt, death, drop, landing, stomp) with its step. That is a lot of logging in a big fight.
 - Add `?pawns=300` to start every run with that many plain pawns (1–1000), to see how a big swarm plays and performs. Combine with `?debug=1` as `?pawns=300&debug=1`.
 - Wave starts and ends, each push landing ("more black pieces incoming"), pause, resume and speed changes are logged at `info` with the step they happened on. The run's end logs the wave, biggest swarm and pieces taken.
-- The shop logs at `info` when it opens (offers and army), and each recruit, reroll and lock with the plain pawns before and after. Use `?pawns=60` to reach the shop with pawns to spend.
+- The shop logs at `info` when it opens (offers and army), each recruit and reroll with the plain pawns before and after, and each lock toggle. Use `?pawns=60` to reach the shop with pawns to spend.
 - **"shop action refused" in the console** — the shop screen offered a button the shop rules refuse, so the screen and `shop/shop.ts` disagree. The log has the action and the reason; nothing changed in the run.
 - **"BoardFullError: Every square … is taken"** — a push or the wave table holds more black pieces than the 176 squares can fit. Lower the counts in `catalog/waves.ts`.
 - **"RunStuckError" from `npm run balance`** — a run went on for over a million steps, so a rule is stuck (for example a piece that can never be reached). Replay that seed in the browser to watch it.

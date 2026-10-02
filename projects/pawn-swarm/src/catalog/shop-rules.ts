@@ -7,7 +7,7 @@ import type { Rarity } from "./pieces";
 export const SHOP_RULES = {
   /** Offers on show at once, never the same pawn type twice. */
   offerSlots: 3,
-  /** Pawns of one type the player can recruit per shop visit, rerolls or not. */
+  /** Pawns of one type the player can recruit per wave (one shop visit), rerolls or not. */
   maxRecruitsPerTypePerWave: 5,
   /** How likely each rarity is to fill an offer slot, relative to the others. */
   rarityWeights: { common: 6, rare: 3, epic: 1.4 } satisfies Record<
