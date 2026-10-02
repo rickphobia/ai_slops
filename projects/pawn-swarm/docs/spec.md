@@ -195,4 +195,5 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 
 - All numbers are first guesses tuned with the prototype's bot (fires every skill when ready, recruits greedily): it reaches waves 6–10, rarely wins, and peaks at 45–185 pawns. A human who plays well should win some runs. One pawn wins wave 1 about 92% of the time.
 - White pawns don't avoid red squares yet. If that feels unfair in play, add dodging (automatic or as a skill).
+- Hands-off battles (auto-firing skills, as in How Many Dudes) were considered and turned down: the owner wants to fire skills by hand.
 - If the demo is fun, the plan is a rebuild in Unreal; pure, data-driven rule modules make that port easier.
