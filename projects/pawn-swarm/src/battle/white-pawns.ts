@@ -1,7 +1,8 @@
-import { boardCentre, centreOf, type Point } from "../board/square";
+import { boardCentre, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
 import { killBlackPiece } from "./drops";
+import { blackPiecePosition } from "./piece-position";
 import { buildSpatialGrid } from "./spatial-grid";
 import {
   hasRunOut,
@@ -13,7 +14,8 @@ import {
 
 /**
  * Every pawn alive at the start of the step drifts with its drop burst, then
- * walks toward the nearest black piece and strikes it once in range and off cooldown.
+ * walks toward the nearest black piece (where it is now, even mid-move) and
+ * strikes it once in range and off cooldown.
  * Pawns dropped during this phase start acting next step.
  */
 export function actPawns(context: StepContext): void {
@@ -41,7 +43,7 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
     return;
   }
 
-  const targetCentre = centreOf(target.square);
+  const targetCentre = blackPiecePosition(target);
   const reach = stats.range + BLACK_PIECES[target.kind].bodyRadius;
   if (distance(pawn, targetCentre) > reach) {
     walkStraight(pawn, targetCentre, stats.speed * context.seconds, 0);
@@ -145,7 +147,7 @@ function nearestBlackPiece(
   let nearestDistance = Infinity;
   for (const piece of pieces) {
     if (!isAlive(piece)) continue;
-    const pieceDistance = distance(from, centreOf(piece.square));
+    const pieceDistance = distance(from, blackPiecePosition(piece));
     if (pieceDistance < nearestDistance) {
       nearest = piece;
       nearestDistance = pieceDistance;

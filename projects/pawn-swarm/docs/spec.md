@@ -60,7 +60,7 @@ From wave 3, pieces can spawn as special types with a power, shown by a coloured
 ### Waves
 - **Each wave lands in 3 pushes.** A push lands all at once; the king always comes in the last push. The next push lands when the current one is down to 25% or after 25 game seconds, with a "More black pieces incoming" toast.
 - Each piece in a push gets its own free square: half in a ring 3–7 squares around the swarm's centre, half anywhere, never within 3 squares of a white pawn. Red squares warn for 1.2s before they land.
-- Wave 1 is 3 knights, so one pawn can win it.
+- Wave 1 is 2 knights, so one pawn can win it.
 
 | Wave | Knights | Bishops | Rooks | Queens | King |
 |---|---|---|---|---|---|

@@ -18,12 +18,12 @@
         font-family: system-ui, sans-serif;
       }
       :root {
-        /* The board is 20 × 14 squares; leave room above it for the HUD. */
-        --board-width: min(94vw, calc((94vh - 72px) * 20 / 14));
+        /* The board is 16 × 11 squares; leave room above it for the HUD. */
+        --board-width: min(94vw, calc((94vh - 72px) * 16 / 11));
       }
       #board {
         width: var(--board-width);
-        aspect-ratio: 20 / 14;
+        aspect-ratio: 16 / 11;
         border-radius: 4px;
         box-shadow:
           0 0 0 1px #3b3226,

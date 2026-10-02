@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { BattleSetupError, createBattle } from "../../src/battle/create-battle";
-import { centreOf } from "../../src/board/square";
-import { BATTLE_RULES } from "../../src/catalog/battle-rules";
+import { createBattle } from "../../src/battle/create-battle";
+import { BoardFullError } from "../../src/battle/landing-squares";
+import { centreOf, type Square } from "../../src/board/square";
 import { PAWN_TYPES } from "../../src/catalog/pieces";
 import type { Wave } from "../../src/catalog/waves";
 
 const knights = (count: number): Wave => ({
   blackPieces: [{ kind: "knight", count }],
 });
-const CENTRE = { x: 10, y: 7 };
+const CENTRE = { x: 8, y: 5.5 };
+const setup = { waveNumber: 1, seed: 1 };
+const key = (square: Square): string =>
+  `${String(square.file)},${String(square.rank)}`;
 
 describe("createBattle", () => {
-  it("starts a single pawn in the middle of the 20×14 board", () => {
-    const battle = createBattle({ plainPawns: 1, wave: knights(3), seed: 1 });
-    expect(battle.board).toEqual({ files: 20, ranks: 14 });
+  it("starts a single pawn in the middle of the 16×11 board", () => {
+    const battle = createBattle({ ...setup, plainPawns: 1, wave: knights(3) });
+    expect(battle.board).toEqual({ files: 16, ranks: 11 });
     expect(battle.pawns).toHaveLength(1);
     expect(battle.pawns[0]).toMatchObject({
       type: "plain",
@@ -22,13 +25,14 @@ describe("createBattle", () => {
     });
     expect(battle).toMatchObject({
       stepNumber: 0,
+      wave: 1,
       outcome: "ongoing",
       events: [],
     });
   });
 
   it("places the army in a tight spiral around the centre, no two pawns on one spot", () => {
-    const battle = createBattle({ plainPawns: 60, wave: knights(3), seed: 1 });
+    const battle = createBattle({ ...setup, plainPawns: 60, wave: knights(3) });
     const distances = battle.pawns.map((pawn) =>
       Math.hypot(pawn.x - CENTRE.x, pawn.y - CENTRE.y),
     );
@@ -50,10 +54,10 @@ describe("createBattle", () => {
     expect(quadrants.size).toBe(4);
   });
 
-  it("schedules the whole wave to land at once after a 1.2s warning", () => {
-    const battle = createBattle({ plainPawns: 1, wave: knights(8), seed: 5 });
+  it("splits the wave into 3 pushes and starts the first one landing after a 1.2s warning", () => {
+    const battle = createBattle({ ...setup, plainPawns: 1, wave: knights(9) });
     expect(battle.blackPieces).toEqual([]);
-    expect(battle.landings).toHaveLength(8);
+    expect(battle.landings).toHaveLength(3);
     for (const landing of battle.landings) {
       expect(landing).toMatchObject({
         kind: "knight",
@@ -61,43 +65,55 @@ describe("createBattle", () => {
         warningSeconds: 1.2,
       });
     }
+    expect(battle.pushes).toEqual([
+      ["knight", "knight", "knight"],
+      ["knight", "knight", "knight"],
+    ]);
+    expect(battle).toMatchObject({ pushSize: 3, pushSecondsLeft: 25 });
   });
 
-  it("lands every piece on its own square, away from the centre", () => {
+  it("lands every piece of the push on its own square, at least 3 squares from the pawns", () => {
     for (let seed = 0; seed < 30; seed++) {
-      const battle = createBattle({ plainPawns: 1, wave: knights(60), seed });
+      const battle = createBattle({
+        plainPawns: 1,
+        wave: knights(60),
+        waveNumber: 1,
+        seed,
+      });
       const squares = battle.landings.map((landing) => landing.square);
-      expect(
-        new Set(
-          squares.map(
-            (square) => `${String(square.file)},${String(square.rank)}`,
-          ),
-        ).size,
-      ).toBe(60);
+      expect(squares).toHaveLength(20);
+      expect(new Set(squares.map(key)).size).toBe(20);
       for (const square of squares) {
         const centre = centreOf(square);
         expect(
-          Math.hypot(centre.x - CENTRE.x, centre.y - CENTRE.y),
-        ).toBeGreaterThan(BATTLE_RULES.landing.keepClearOfCentre);
+          Math.max(
+            Math.abs(centre.x - CENTRE.x),
+            Math.abs(centre.y - CENTRE.y),
+          ),
+        ).toBeGreaterThanOrEqual(3);
         expect(square.file).toBeGreaterThanOrEqual(0);
-        expect(square.file).toBeLessThan(20);
+        expect(square.file).toBeLessThan(16);
         expect(square.rank).toBeGreaterThanOrEqual(0);
-        expect(square.rank).toBeLessThan(14);
+        expect(square.rank).toBeLessThan(11);
       }
     }
   });
 
-  it("fails clearly when the wave has more pieces than free squares", () => {
+  it("fails clearly when a push has more pieces than the board has squares", () => {
+    // 600 knights make pushes of 200; the board has 176 squares.
     expect(() =>
-      createBattle({ plainPawns: 1, wave: knights(280), seed: 1 }),
-    ).toThrow(BattleSetupError);
+      createBattle({ ...setup, plainPawns: 1, wave: knights(600) }),
+    ).toThrow(BoardFullError);
   });
 
   it("gives different landing squares for different seeds and the same for the same seed", () => {
     const squaresFor = (seed: number) =>
-      createBattle({ plainPawns: 1, wave: knights(8), seed }).landings.map(
-        (landing) => landing.square,
-      );
+      createBattle({
+        plainPawns: 1,
+        wave: knights(8),
+        waveNumber: 1,
+        seed,
+      }).landings.map((landing) => landing.square);
     expect(squaresFor(3)).toEqual(squaresFor(3));
     expect(squaresFor(3)).not.toEqual(squaresFor(4));
   });

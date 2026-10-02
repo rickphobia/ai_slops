@@ -1,4 +1,5 @@
 import type { BoardSize } from "../board/square";
+import type { BlackKind } from "../catalog/pieces";
 import type { Random } from "../rng";
 import type {
   BattleEvent,
@@ -20,6 +21,7 @@ export type WorkingLanding = Mutable<Landing>;
  */
 export interface StepContext {
   readonly board: BoardSize;
+  readonly wave: number;
   /** Game seconds one step covers. */
   readonly seconds: number;
   readonly random: Random;
@@ -27,7 +29,12 @@ export interface StepContext {
   readonly pawns: WorkingPawn[];
   readonly blackPieces: WorkingBlackPiece[];
   landings: WorkingLanding[];
+  pushes: readonly (readonly BlackKind[])[];
+  pushSize: number;
+  pushSecondsLeft: number;
   nextId: number;
+  /** Set when the king dies: the battle is won at the end of the step. */
+  kingDown: boolean;
 }
 
 export function takeId(context: StepContext): number {

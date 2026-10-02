@@ -9,7 +9,11 @@ import {
 import { step } from "../../src/battle/step";
 import type { Square } from "../../src/board/square";
 import { BATTLE_RULES } from "../../src/catalog/battle-rules";
-import { BLACK_PIECES, PAWN_TYPES } from "../../src/catalog/pieces";
+import {
+  BLACK_PIECES,
+  type BlackKind,
+  PAWN_TYPES,
+} from "../../src/catalog/pieces";
 
 /** Test setups: exact pieces at exact places, with catalog stats. */
 
@@ -36,43 +40,66 @@ export function pawnAt(
   };
 }
 
-/** A knight that stands still and touches nothing unless a test sets its timers. */
-export function knightOn(
+/** A black piece that stands still and touches nothing unless a test sets its timers. */
+export function blackOn(
+  kind: BlackKind,
   id: number,
   square: Square,
   overrides: Partial<BlackPiece> = {},
 ): BlackPiece {
-  const stats = BLACK_PIECES.knight;
+  const stats = BLACK_PIECES[kind];
   return {
     id,
-    kind: "knight",
+    kind,
     square,
     hp: stats.hp,
     maxHp: stats.hp,
     actLeft: 99,
     contactLeft: 99,
+    summonLeft: 99,
     move: undefined,
     ...overrides,
   };
 }
 
-export function landingOn(square: Square, secondsLeft = 99): Landing {
-  return { kind: "knight", square, secondsLeft, warningSeconds: 1.2 };
+export function knightOn(
+  id: number,
+  square: Square,
+  overrides: Partial<BlackPiece> = {},
+): BlackPiece {
+  return blackOn("knight", id, square, overrides);
 }
 
+export function landingOn(
+  square: Square,
+  secondsLeft = 99,
+  kind: BlackKind = "knight",
+): Landing {
+  return { kind, square, secondsLeft, warningSeconds: 1.2 };
+}
+
+/** A battle with no pushes still to come, unless a test gives some. */
 export function battleWith(parts: {
   pawns: readonly WhitePawn[];
   blackPieces?: readonly BlackPiece[];
   landings?: readonly Landing[];
+  pushes?: readonly (readonly BlackKind[])[];
+  pushSize?: number;
+  pushSecondsLeft?: number;
+  wave?: number;
   rng?: number;
 }): BattleState {
   const pieces = [...parts.pawns, ...(parts.blackPieces ?? [])];
   return {
     stepNumber: 0,
     board: BATTLE_RULES.board,
+    wave: parts.wave ?? 1,
     pawns: parts.pawns,
     blackPieces: parts.blackPieces ?? [],
     landings: parts.landings ?? [],
+    pushes: parts.pushes ?? [],
+    pushSize: parts.pushSize ?? 0,
+    pushSecondsLeft: parts.pushSecondsLeft ?? 99,
     nextId: Math.max(0, ...pieces.map((piece) => piece.id)) + 1,
     rng: parts.rng ?? 1,
     outcome: "ongoing",

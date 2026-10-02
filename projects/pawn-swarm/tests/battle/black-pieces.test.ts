@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { BlackMove } from "../../src/battle/battle-state";
-import { knightHitSquares, knightJumps } from "../../src/board/moves";
+import { blockAround, pieceMoves } from "../../src/board/moves";
 import { isSameSquare } from "../../src/board/square";
 import { BATTLE_RULES } from "../../src/catalog/battle-rules";
+import { BLACK_PIECES } from "../../src/catalog/pieces";
+import { blackHp } from "../../src/battle/black-pieces";
 import {
   after,
   battleWith,
+  blackOn,
   blackPieceById,
   eventsOfType,
   knightOn,
@@ -36,13 +39,16 @@ describe("knight moves", () => {
     expect(move?.phase).toBe("warning");
     const to = move?.to ?? { file: -1, rank: -1 };
     expect(
-      knightJumps({ file: 10, rank: 6 }, BOARD, () => false).some((jump) =>
-        isSameSquare(jump, to),
-      ),
+      pieceMoves(
+        { file: 10, rank: 6 },
+        BLACK_PIECES.knight.move,
+        BOARD,
+        () => false,
+      ).some((jump) => isSameSquare(jump.to, to)),
     ).toBe(true);
     // Of the eight jumps, (9,4) and (11,4) land closest to the pawn at (9.5, 2.5).
     expect(to).toEqual({ file: 9, rank: 4 });
-    expect(move?.hitSquares).toEqual(knightHitSquares(to, BOARD));
+    expect(move?.hitSquares).toEqual(blockAround(to, BOARD));
 
     // Still warning until 0.4s have passed, still on its square while moving.
     expect(knightAt(stepsIn(0.4))?.move?.phase).toBe("warning");
@@ -97,7 +103,7 @@ describe("knight landing hits", () => {
   const landingMove: BlackMove = {
     phase: "moving",
     to: { file: 8, rank: 6 },
-    hitSquares: knightHitSquares({ file: 8, rank: 6 }, BOARD),
+    hitSquares: blockAround({ file: 8, rank: 6 }, BOARD),
     secondsLeft: 0.001,
     phaseSeconds: 0.28,
   };
@@ -114,7 +120,7 @@ describe("knight landing hits", () => {
         pawnAt(14, 10.5, 6.5, asleep), // one square right of the block
         pawnAt(15, 8.5, 9.5, asleep), // two squares above
       ],
-      blackPieces: [knight, knightOn(2, { file: 19, rank: 0 })],
+      blackPieces: [knight, knightOn(2, { file: 15, rank: 0 })],
     });
     const next = after(start, 1);
     const hpOf = (id: number) => pawnById(next, id)?.hp;
@@ -221,7 +227,7 @@ describe("wave landings", () => {
       pawns: [pawnAt(1, 10, 7)],
       landings: [
         landingOn({ file: 2, rank: 2 }, 1.2),
-        landingOn({ file: 17, rank: 11 }, 1.2),
+        landingOn({ file: 15, rank: 10 }, 1.2),
       ],
     });
     const states = playSteps(start, stepsIn(1.2));
@@ -231,8 +237,231 @@ describe("wave landings", () => {
     expect(landed?.landings).toEqual([]);
     expect(landed?.blackPieces.map((piece) => piece.square)).toEqual([
       { file: 2, rank: 2 },
-      { file: 17, rank: 11 },
+      { file: 15, rank: 10 },
     ]);
     expect(eventsOfType([landed ?? start], "landed")).toHaveLength(2);
+  });
+});
+
+describe("slider moves", () => {
+  const asleep = { strikeCooldownLeft: 99 };
+
+  it("warns on every square of the path toward the nearest pawn", () => {
+    const start = battleWith({
+      pawns: [pawnAt(1, 9.5, 5.5, asleep)],
+      blackPieces: [
+        blackOn("bishop", 2, { file: 5, rank: 1 }, { actLeft: 0.001 }),
+      ],
+    });
+    const move = blackPieceById(after(start, 1), 2)?.move;
+    // Up-right is the only diagonal toward the pawn; 4 squares is as close as it can get.
+    expect(move).toMatchObject({
+      phase: "warning",
+      to: { file: 9, rank: 5 },
+      hitSquares: [
+        { file: 6, rank: 2 },
+        { file: 7, rank: 3 },
+        { file: 8, rank: 4 },
+        { file: 9, rank: 5 },
+      ],
+      secondsLeft: 0.4,
+    });
+  });
+
+  it("hits every pawn on the path when it lands, for its attack", () => {
+    const path = pieceMoves(
+      { file: 2, rank: 5 },
+      BLACK_PIECES.rook.move,
+      BOARD,
+      () => false,
+    ).find((move) => isSameSquare(move.to, { file: 6, rank: 5 }));
+    if (path === undefined) throw new Error("no rook move to (6,5)");
+    const rook = blackOn(
+      "rook",
+      1,
+      { file: 2, rank: 5 },
+      {
+        move: {
+          phase: "moving",
+          to: path.to,
+          hitSquares: path.hitSquares,
+          secondsLeft: 0.001,
+          phaseSeconds: 0.3,
+        },
+      },
+    );
+    const start = battleWith({
+      pawns: [
+        pawnAt(10, 3.5, 5.5, asleep), // passed through
+        pawnAt(11, 6.5, 5.5, asleep), // landing square
+        pawnAt(12, 4.5, 6.5, asleep), // beside the path
+        pawnAt(13, 7.5, 5.5, asleep), // past the landing square
+      ],
+      blackPieces: [rook],
+    });
+    const next = after(start, 1);
+    const hpOf = (id: number) => pawnById(next, id)?.hp;
+    // A rook hits for 2.
+    expect([10, 11].map(hpOf)).toEqual([1, 1]);
+    expect([12, 13].map(hpOf)).toEqual([3, 3]);
+    expect(blackPieceById(next, 1)?.square).toEqual({ file: 6, rank: 5 });
+    // Only jumpers stomp.
+    expect(eventsOfType([next], "stomp")).toEqual([]);
+  });
+
+  it("never slides through another black piece", () => {
+    // The pawn is straight right of the rook, past a knight in the way.
+    const start = battleWith({
+      pawns: [pawnAt(1, 9.5, 5.5, asleep)],
+      blackPieces: [
+        blackOn("rook", 2, { file: 3, rank: 5 }, { actLeft: 0.001 }),
+        knightOn(3, { file: 6, rank: 5 }),
+      ],
+    });
+    const move = blackPieceById(after(start, 1), 2)?.move;
+    expect(move?.to.file).toBeLessThan(6);
+  });
+});
+
+describe("the king", () => {
+  it("steps one square and stomps the 3×3 block for 4", () => {
+    const start = battleWith({
+      pawns: [pawnAt(1, 9.5, 5.5, { strikeCooldownLeft: 99, hp: 10 })],
+      blackPieces: [
+        blackOn("king", 2, { file: 5, rank: 5 }, { actLeft: 0.001 }),
+      ],
+    });
+    const warned = blackPieceById(after(start, 1), 2)?.move;
+    expect(warned?.to).toEqual({ file: 6, rank: 5 });
+    expect(warned?.hitSquares).toEqual(
+      blockAround({ file: 6, rank: 5 }, BOARD),
+    );
+
+    const onBlock = battleWith({
+      pawns: [pawnAt(1, 7.5, 6.5, { strikeCooldownLeft: 99, hp: 10 })],
+      blackPieces: [
+        blackOn(
+          "king",
+          2,
+          { file: 5, rank: 5 },
+          {
+            move: {
+              phase: "moving",
+              to: { file: 6, rank: 5 },
+              hitSquares: blockAround({ file: 6, rank: 5 }, BOARD),
+              secondsLeft: 0.001,
+              phaseSeconds: 0.35,
+            },
+          },
+        ),
+      ],
+    });
+    const next = after(onBlock, 1);
+    expect(pawnById(next, 1)?.hp).toBe(6);
+    expect(eventsOfType([next], "stomp")).toHaveLength(1);
+  });
+
+  it("calls 3 knights next to him every 6s, with a 0.8s warning", () => {
+    const king = blackOn(
+      "king",
+      2,
+      { file: 8, rank: 5 },
+      { summonLeft: 0.001 },
+    );
+    const start = battleWith({
+      // A pawn the knights can't kill, so the battle runs on.
+      pawns: [pawnAt(1, 1, 1, { strikeCooldownLeft: 99, hp: 1000 })],
+      blackPieces: [king],
+    });
+    const states = playSteps(start, stepsIn(6.5));
+    const first = states[0];
+    if (first === undefined) throw new Error("no step played");
+
+    expect(first.landings).toHaveLength(3);
+    for (const landing of first.landings) {
+      expect(landing).toMatchObject({
+        kind: "knight",
+        secondsLeft: 0.8,
+        warningSeconds: 0.8,
+      });
+      expect(Math.abs(landing.square.file - 8)).toBeLessThanOrEqual(2);
+      expect(Math.abs(landing.square.rank - 5)).toBeLessThanOrEqual(2);
+      expect(isSameSquare(landing.square, king.square)).toBe(false);
+    }
+    expect(
+      new Set(first.landings.map((landing) => JSON.stringify(landing.square)))
+        .size,
+    ).toBe(3);
+    expect(eventsOfType([first], "summon")).toEqual([
+      { type: "summon", id: 2, count: 3, at: { x: 8.5, y: 5.5 } },
+    ]);
+
+    // They land as knights 0.8s later.
+    const landed = states[stepsIn(0.8)];
+    expect(
+      landed?.blackPieces.filter((piece) => piece.kind === "knight"),
+    ).toHaveLength(3);
+    // The next call comes 6s after the first.
+    const summonSteps = states
+      .filter((state) => eventsOfType([state], "summon").length > 0)
+      .map((state) => state.stepNumber);
+    expect(summonSteps).toEqual([1, 1 + stepsIn(6)]);
+  });
+
+  it("wins the battle when he dies, even with other black pieces left", () => {
+    const start = battleWith({
+      pawns: [pawnAt(1, 5.5, 4.6)],
+      blackPieces: [
+        blackOn("king", 2, { file: 5, rank: 5 }, { hp: 1 }),
+        knightOn(3, { file: 15, rank: 10 }),
+      ],
+      pushes: [["knight"]],
+    });
+    const next = after(start, 1);
+    expect(next.outcome).toBe("won");
+    expect(next.blackPieces).toHaveLength(1);
+  });
+
+  it("drops no pawns", () => {
+    const start = battleWith({
+      pawns: [pawnAt(1, 5.5, 4.6)],
+      blackPieces: [
+        blackOn("king", 2, { file: 5, rank: 5 }, { hp: 1 }),
+        knightOn(3, { file: 15, rank: 10 }),
+      ],
+    });
+    expect(eventsOfType([after(start, 1)], "drop")).toEqual([]);
+  });
+});
+
+describe("black HP", () => {
+  it.each([
+    ["knight", 1, 2],
+    ["bishop", 1, 5],
+    ["rook", 1, 12],
+    ["queen", 1, 26],
+    ["king", 1, 220],
+    // 2 × (1 + 0.35 × 2) = 3.4, rounded up
+    ["knight", 3, 4],
+    // 26 × (1 + 0.35 × 6) = 80.6
+    ["queen", 7, 81],
+    // 220 × (1 + 0.35 × 9) = 913
+    ["king", 10, 913],
+  ] as const)("a %s in wave %i has %i HP", (kind, wave, hp) => {
+    expect(blackHp(kind, wave)).toBe(hp);
+  });
+
+  it("lands pieces with the HP of the battle's wave", () => {
+    const start = battleWith({
+      pawns: [pawnAt(1, 8, 5.5)],
+      landings: [landingOn({ file: 2, rank: 2 }, 0.001, "rook")],
+      wave: 5,
+    });
+    // 12 × (1 + 0.35 × 4) = 28.8
+    expect(after(start, 1).blackPieces[0]).toMatchObject({
+      kind: "rook",
+      hp: 29,
+      maxHp: 29,
+    });
   });
 });

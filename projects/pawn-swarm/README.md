@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`in progress` — the battle is the real-time swarm from the prototype (`docs/prototype/`, decision 0002), with knights only: one pawn in the middle of a 20×14 board, waves 1 (3 knights) and 2 (8 knights), drops that snowball the swarm, pause and 0.5×–2× speed. Tickets 05–11 in `docs/tickets/` add the rest of the black army, the shop, skills and power-ups.
+`in progress` — the battle is the real-time swarm from the prototype (`docs/prototype/`, decision 0002): one pawn in the middle of a 16×11 board against all 10 waves of knights, bishops, rooks, queens and finally the king, each wave landing in 3 pushes. Kills drop pawns that snowball the swarm; killing the king wins. Pause and 0.5×–2× speed. Tickets 06–11 in `docs/tickets/` add the shop, skills, pawn types, black types and power-ups.
 
 ## Requirements
 
@@ -41,6 +41,15 @@ npx vitest             # Vitest, watch mode
 
 CI runs `npm run check` and `npm run build` on every push that touches this folder (`.github/workflows/pawn-swarm.yml`).
 
+## Balance check
+
+```bash
+npm run balance                        # 20 headless runs from seed 1
+npm run balance -- --runs 100 --seed 7 # 100 runs from seed 7
+```
+
+Plays whole runs without a browser using a simple bot and prints each run's result, the win rate, how many runs ended in each wave, and the biggest swarm. Use it to see what a change to `catalog/` does to the game. It is not a CI gate. There is no shop or skills yet, so the bot only watches; it learns to recruit and fire skills in tickets 06 and 07. Today it wins no runs and mostly dies in waves 6–7 with at most ~70 pawns.
+
 ## Configuration
 
 Vite reads these from `.env` and bakes them into the build. The game checks them on page load and shows an error on the page if one is missing or invalid.
@@ -53,22 +62,24 @@ Vite reads these from `.env` and bakes them into the build. The game checks them
 
 `src/main.ts` loads the config, starts a run and drives it: every animation frame it asks the clock how many steps are due, advances the run that many steps, feeds each step's battle events to the effects, updates the HUD and redraws the board.
 
-The battle runs at a fixed 60 steps per game second. `tick-clock.ts` turns real time into steps: at 1× a step is due every 1/60 s, at 2× twice as often, while paused never. Speed only changes *when* steps run, never what a step does, so a seed plays out the same at every speed (tested in `tests/tick-clock.test.ts`).
+The battle runs at a fixed 60 steps per game second. The game plays at a pace of 0.65 game seconds per real second, so at 1× a step is due every 1/39 s. `tick-clock.ts` turns real time into steps: at 2× twice as often, while paused never. Pace and speed only change *when* steps run, never what a step does, so a seed plays out the same at every speed (tested in `tests/tick-clock.test.ts`).
 
 The rules are pure functions with no DOM, so tests drive them directly:
 
-- `run/` — the run state machine (`battle → next battle | won | lost`). `advanceRun` plays one step; the call after a cleared wave starts the next wave with the survivors at full HP.
+- `run/` — the run state machine (`battle → next battle | won | lost`). `advanceRun` plays one step and keeps the biggest swarm and the pieces taken; the call after a cleared wave starts the next wave with the survivors at full HP. Killing the king, or clearing the last wave, wins.
 - `battle/` — `step(state, inputs)` plays one step:
-  1. `black-pieces.ts` lands the wave's pieces whose warning ran out.
-  2. `white-pawns.ts` moves each pawn toward the nearest black piece, one axis at a time, and strikes when in reach and off cooldown. A kill calls `drops.ts`, which spawns plain pawns on the square (fewer as the swarm grows: crowding).
+  1. `black-pieces.ts` lands the pieces whose warning ran out, with the wave's HP (35% more of the wave-1 HP per wave).
+  2. `white-pawns.ts` moves each pawn toward the nearest black piece (where it is now, even mid-move: `piece-position.ts`), one axis at a time, and strikes when in reach and off cooldown. A kill calls `drops.ts`, which spawns plain pawns on the square (fewer as the swarm grows: crowding).
   3. Pawns push apart and stay on the board.
-  4. Each black piece hurts the pawns touching it, then carries on with its move: pick the L-jump closest to the nearest pawn, warn on the 3×3 block for 0.4 s, jump, and hit every pawn on those squares.
-  `create-battle.ts` sets up a wave: the army in a spiral around the centre and every black piece's landing square. `spatial-grid.ts` answers "which pawns are near this point" without checking every pawn.
-- `board/` — squares, positions in board units (1 square = 1), knight jumps and hit squares.
-- `catalog/` — stats, rule numbers and waves as data. Rebalance here.
+  4. Each black piece hurts the pawns touching it; the king calls 3 knights next to him every 6 s (`landing-squares.ts` picks free squares, with a 0.8 s warning). Then `black-moves.ts` carries on with its move: pick the legal move closest to the nearest pawn, warn on its hit squares for 0.4 s, move, and hit every pawn on them (`pawn-hits.ts`).
+  5. `pushes.ts` lands the wave's next push once the last one is down to 25%, or after 25 s.
+  `create-battle.ts` sets up a wave: the army in a spiral around the centre, the wave split into 3 pushes (the king in the last), and the first push's landing squares. `landing-squares.ts` puts each piece on a free square, half in a ring around the swarm, never within 3 squares of a pawn while there is room. `spatial-grid.ts` answers "which pawns are near this point" without checking every pawn.
+- `board/` — squares, positions in board units (1 square = 1), and each piece's chess moves with the squares they hit: sliders (bishop, rook, queen) hit their whole path and can't pass through other black pieces; the knight and king hit the 3×3 block where they land.
+- `catalog/` — stats, rule numbers and the 10-wave table as data. Rebalance here, then run `npm run balance`.
+- `balance/` — plays headless runs with the bot and formats the report for `npm run balance`.
 - `rng.ts` — the seeded RNG. Its state lives inside the battle state, so the same seed always plays out the same battle. Rule code never uses `Math.random`.
 
-Each step also lists what happened in it (`strike`, `pawn-hurt`, `death`, `drop`, `landed`, `stomp`). The rules never read these; they drive the logs and the on-screen effects.
+Each step also lists what happened in it (`strike`, `pawn-hurt`, `death`, `drop`, `landed`, `stomp`, `push`, `summon`). The rules never read these; they drive the logs and the on-screen effects.
 
 The `adapters/` only draw state and report clicks; they never change rules:
 
@@ -91,15 +102,18 @@ src/
   rng.ts                    # seeded RNG for rule code
   tick-clock.ts             # real time → steps due, with speed and pause
   catalog/                  # pieces.ts (stats), battle-rules.ts (rule numbers), waves.ts
-  board/                    # square.ts (squares, points), moves.ts (knight jumps, hit squares)
+  board/                    # square.ts (squares, points), moves.ts (chess moves, hit squares)
   battle/                   # battle-state.ts, create-battle.ts, step.ts and one file per phase
   run/                      # run.ts (run state machine)
+  balance/                  # headless bot runs and their report
+scripts/
+  balance.mjs               # `npm run balance`: loads src/balance through Vite and prints the report
   adapters/
     canvas-renderer/        # canvas-renderer.ts, piece-art.ts, effects.ts, draw-effect.ts
     dom-ui/
       hud.ts                # pawn count, wave, black pieces left, seed
       battle-controls.ts    # pause and speed buttons
-      end-screen.ts         # win / game-over screen with "new run"
+      end-screen.ts         # win / game-over screen: wave, biggest swarm, pieces taken, seed, "new run"
 tests/                      # mirrors src/
 docs/
   spec.md, tickets/, decisions/, screenshots/, prototype/
@@ -110,7 +124,9 @@ docs/
 - Logs go to the browser console, prefixed `[pawn-swarm]`. Default level is `info`.
 - Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every battle event (strike, hurt, death, drop, landing, stomp) with its step. That is a lot of logging in a big fight.
 - Add `?pawns=300` to start every run with that many plain pawns (1–1000), to see how a big swarm plays and performs. Combine with `?debug=1` as `?pawns=300&debug=1`.
-- Wave starts and ends, pause, resume and speed changes are logged at `info` with the step they happened on.
+- Wave starts and ends, each push landing ("more black pieces incoming"), pause, resume and speed changes are logged at `info` with the step they happened on. The run's end logs the wave, biggest swarm and pieces taken.
+- **"BoardFullError: Every square … is taken"** — a push or the wave table holds more black pieces than the 176 squares can fit. Lower the counts in `catalog/waves.ts`.
+- **"RunStuckError" from `npm run balance`** — a run went on for over a million steps, so a rule is stuck (for example a piece that can never be reached). Replay that seed in the browser to watch it.
 - **Replaying a battle** — the HUD and the end screen show the run's seed. Put it in `VITE_DEFAULT_SEED`, restart `npm run dev`, and the first run plays out exactly the same. "New run" picks a random seed. Speed and pauses don't change the result, so you can replay at 0.5× to watch a hard moment.
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
 - **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and step; replay that seed with `?debug=1` to see the steps before it.

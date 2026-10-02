@@ -50,10 +50,12 @@ export interface BlackPiece {
   readonly actLeft: number;
   /** Seconds until it next hurts the pawns touching it. */
   readonly contactLeft: number;
+  /** Seconds until it next calls knights; only counts for pieces that summon (the king). */
+  readonly summonLeft: number;
   readonly move: BlackMove | undefined;
 }
 
-/** A black piece about to land at wave start, shown as a warning square. */
+/** A black piece about to land (from a push or a summon), shown as a warning square. */
 export interface Landing {
   readonly kind: BlackKind;
   readonly square: Square;
@@ -78,7 +80,7 @@ export type BattleEvent =
       readonly type: "pawn-hurt";
       readonly pawnId: number;
       readonly damage: number;
-      readonly cause: "stomp" | "contact";
+      readonly cause: "hit" | "contact";
       readonly at: Point;
     }
   | {
@@ -94,18 +96,39 @@ export type BattleEvent =
       readonly kind: BlackKind;
       readonly at: Point;
     }
-  | { readonly type: "stomp"; readonly id: number; readonly at: Point };
+  /** A knight or the king landed its jump: a ring on the 3×3 block. */
+  | { readonly type: "stomp"; readonly id: number; readonly at: Point }
+  /** The next push of the wave started its landing warnings. */
+  | {
+      readonly type: "push";
+      readonly count: number;
+      readonly pushesLeft: number;
+    }
+  | {
+      readonly type: "summon";
+      readonly id: number;
+      readonly count: number;
+      readonly at: Point;
+    };
 
 export interface BattleState {
   /** Steps played so far. */
   readonly stepNumber: number;
   readonly board: BoardSize;
+  /** 1-based wave number: black HP grows with it. */
+  readonly wave: number;
   /** Living white pawns. */
   readonly pawns: readonly WhitePawn[];
   /** Living black pieces on the board. */
   readonly blackPieces: readonly BlackPiece[];
   /** Black pieces still to land. */
   readonly landings: readonly Landing[];
+  /** The wave's pushes that haven't started landing yet, in order. */
+  readonly pushes: readonly (readonly BlackKind[])[];
+  /** How many pieces the last push brought: the next lands once few enough are left. */
+  readonly pushSize: number;
+  /** Seconds until the next push lands anyway. */
+  readonly pushSecondsLeft: number;
   /** The id the next new piece gets. */
   readonly nextId: number;
   readonly rng: RngState;
