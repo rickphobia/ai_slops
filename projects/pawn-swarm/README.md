@@ -24,7 +24,7 @@ cp .env.example .env   # the example values work as they are
 
 ```bash
 npm run dev       # dev server at http://localhost:5173
-npm run build     # static build in dist/
+npm run build     # static build in dist/ (relative paths: works from any folder or preview link)
 npm run preview   # serve dist/ locally
 ```
 
