@@ -15,7 +15,7 @@ Experienced engineers all land on the same loop: **spec → plan → build in sm
 | 5 | Split into tickets | `/to-tickets` | `docs/tickets/01-…md`, `02-…md`, each with **Blocked by** and **Touches**, plus which can run in parallel. You approve the breakdown |
 | 6 | Build the skeleton | New session: `/implement projects/<name>/docs/tickets/01-…md` | Project runs, one test passes, CI green. One PR |
 | 7 | Build in parallel | One new session per unblocked ticket: `/implement <ticket path>` | One PR per ticket |
-| 8 | Review and merge | Read each PR's code, then merge | Tickets marked `done` on `main` |
+| 8 | Review and merge | Try the PR's `▶ Try this version` link if it has one, read the code, then merge | Tickets marked `done` on `main` |
 | 9 | Repeat 7–8 | Until all tickets are `done` | — |
 
 New feature on an existing project: start again at step 2 — `/to-spec` writes `docs/specs/<feature>.md` and `/to-tickets` continues the numbering.
