@@ -107,6 +107,15 @@ describe("tick clock", () => {
     expect(steps / STEPS_PER_SECOND).toBeCloseTo(39, 1);
   });
 
+  it("runs slower under a time scale without changing the player's speed", () => {
+    const clock = clockAt();
+    clock.setTimeScale(0.25);
+    expect(clock.takeDueTicks(1000)).toBe(1); // 1000 ms × 0.25 = 250 ms = one tick
+    expect(clock.state().speed).toBe(1);
+    clock.setTimeScale(1);
+    expect(clock.takeDueTicks(2000)).toBe(4);
+  });
+
   it("gives the same battle result at every speed and with pauses", () => {
     let reference = startRun({ seed: 7, plainPawns: 20, waves: EARLY_WAVES });
     while (reference.phase === "battle") {

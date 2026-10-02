@@ -1,9 +1,23 @@
+import {
+  loadAudioSettings,
+  saveAudioSettings,
+} from "./adapters/audio/audio-settings";
+import { createSoundPlayer } from "./adapters/audio/sound-player";
+import {
+  moodFor,
+  soundForEvent,
+  soundForRunEnd,
+  soundForShopAction,
+} from "./adapters/audio/sounds-for";
+import { createWebAudioOutput } from "./adapters/audio/web-audio-output";
 import { createCanvasRenderer } from "./adapters/canvas-renderer/canvas-renderer";
 import { createEffects } from "./adapters/canvas-renderer/effects";
+import { createPieceMotion } from "./adapters/canvas-renderer/piece-motion";
 import { loadPieceArt } from "./adapters/canvas-renderer/piece-art";
 import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
+import { createSettingsPanel } from "./adapters/dom-ui/settings-panel";
 import { createShopScreen } from "./adapters/dom-ui/shop-screen";
 import { createSkillBar } from "./adapters/dom-ui/skill-bar";
 import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
@@ -28,6 +42,10 @@ import { createTickClock } from "./tick-clock";
 /** At 2× speed a 60 fps frame needs 2 steps; this leaves room for a slow frame without a long catch-up. */
 const MAX_STEPS_PER_FRAME = 8;
 
+/** The king's death plays at this fraction of the game's speed, for this long (real time). */
+const SLOW_MOTION_SCALE = 0.25;
+const SLOW_MOTION_MS = 1600;
+
 const logger = createConsoleLogger(logLevelFromQuery(window.location.search));
 
 function showFatalError(message: string): void {
@@ -41,6 +59,15 @@ function showFatalError(message: string): void {
 /** A fresh seed for "new run". Only the entrypoint may use browser randomness; rules use the seeded RNG. */
 function randomSeed(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0;
+}
+
+/** Browser storage throws when blocked (some private windows), so asking for it is guarded. */
+function storageOrUndefined(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function hudStatus(run: RunState): HudStatus {
@@ -166,6 +193,37 @@ async function start(): Promise<void> {
     () => window.devicePixelRatio,
   );
   const effects = createEffects((piece) => art.tint(piece), Math.random);
+  const motion = createPieceMotion();
+
+  // Sound: the synth stays silent until the first click or key press, which is when browsers allow it.
+  const audio = createWebAudioOutput(logger);
+  let settings = loadAudioSettings(storageOrUndefined(), (message) => {
+    logger.warn(message);
+  });
+  const player = createSoundPlayer(
+    audio,
+    settings,
+    () => performance.now(),
+    Math.random,
+  );
+  createSettingsPanel(document, settings, (next) => {
+    settings = next;
+    player.applySettings(next);
+    saveAudioSettings(storageOrUndefined(), next, (message) => {
+      logger.warn(message);
+    });
+  });
+  const unlockAudio = (): void => {
+    audio.unlock();
+    for (const type of ["pointerdown", "keydown"]) {
+      window.removeEventListener(type, unlockAudio);
+    }
+  };
+  for (const type of ["pointerdown", "keydown"]) {
+    window.addEventListener(type, unlockAudio);
+  }
+  /** Real time until which the game runs in slow motion (after the king dies). */
+  let slowMotionUntilMs = 0;
 
   const beginRun = (seed: number): RunState => {
     const run = startRun({
@@ -175,8 +233,11 @@ async function start(): Promise<void> {
       }),
     });
     effects.clear();
+    motion.clear();
+    slowMotionUntilMs = 0;
     logger.info("run started", { seed, pawns: run.battle.pawns.length });
     logger.info("wave started", { wave: run.wave });
+    player.play("wave-start");
     return run;
   };
 
@@ -242,6 +303,8 @@ async function start(): Promise<void> {
       return;
     }
     logShopAction(previous, run, action, logger);
+    const sound = soundForShopAction(action);
+    if (sound !== undefined) player.play(sound);
     if (run.phase === "shop") shopScreen.show(shopView(run));
     else shopScreen.hide();
   });
@@ -258,6 +321,8 @@ async function start(): Promise<void> {
   // Only the clock knows the speed, so the same seed plays the same steps at any speed.
   // Effects age with the steps, so they freeze on pause and speed up with the game.
   const runDueSteps = (nowMs: number): void => {
+    // Checked each frame so slow motion ends on time even while nothing is dying.
+    clock.setTimeScale(nowMs < slowMotionUntilMs ? SLOW_MOTION_SCALE : 1);
     const dueSteps = clock.takeDueTicks(nowMs);
     for (let index = 0; index < dueSteps && run.phase === "battle"; index++) {
       const previous = run;
@@ -265,7 +330,22 @@ async function start(): Promise<void> {
       queuedSkills = [];
       logStep(previous, run, logger);
       effects.advance(STEP_SECONDS);
+      motion.advance(STEP_SECONDS);
       effects.add(run.battle.events);
+      motion.add(run.battle.events);
+      for (const event of run.battle.events) {
+        const sound = soundForEvent(event);
+        if (sound !== undefined) player.play(sound);
+        if (
+          event.type === "death" &&
+          event.piece.side === "black" &&
+          event.piece.kind === "king"
+        ) {
+          slowMotionUntilMs = nowMs + SLOW_MOTION_MS;
+        }
+      }
+      const endSound = soundForRunEnd(previous, run);
+      if (endSound !== undefined) player.play(endSound);
       if (run.battle.events.some((event) => event.type === "drop")) hud.bump();
       if (run.phase === "shop") shopScreen.show(shopView(run));
       if (run.phase === "won" || run.phase === "lost") {
@@ -294,7 +374,17 @@ async function start(): Promise<void> {
       } else {
         skillBar.hide();
       }
-      renderer.draw(run.battle, effects.list(), nowMs / 1000);
+      player.setMood(moodFor(run));
+      renderer.draw(
+        run.battle,
+        {
+          effects: effects.list(),
+          particles: effects.particles,
+          motion,
+          shake: settings.screenShake ? effects.shake() : 0,
+        },
+        nowMs / 1000,
+      );
       requestAnimationFrame(frame);
     } catch (error) {
       // Stop the loop: a broken rule would otherwise throw again every frame.
