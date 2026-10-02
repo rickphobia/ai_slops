@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextInt, pickOne } from "../src/rng";
+import { createRandom, nextInt, pickOne } from "../src/rng";
 
 describe("seeded RNG", () => {
   it("gives the same sequence for the same seed", () => {
@@ -33,5 +33,29 @@ describe("seeded RNG", () => {
 
   it("refuses to pick from an empty list", () => {
     expect(() => pickOne(1, [])).toThrow(/empty/);
+  });
+});
+
+describe("createRandom", () => {
+  it("rolls the same numbers in [0, 1) for the same start and reports where it got to", () => {
+    const rollFive = (start: number): { values: number[]; end: number } => {
+      const random = createRandom(start);
+      const values = Array.from({ length: 5 }, () => random.next());
+      return { values, end: random.state() };
+    };
+    const first = rollFive(9);
+    expect(rollFive(9)).toEqual(first);
+    expect(first.end).not.toBe(9);
+    for (const value of first.values) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
+
+  it("carries on from a stored state exactly where it stopped", () => {
+    const random = createRandom(9);
+    random.next();
+    const resumed = createRandom(random.state());
+    expect(resumed.next()).toBe(random.next());
   });
 });

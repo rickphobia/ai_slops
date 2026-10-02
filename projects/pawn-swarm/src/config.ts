@@ -1,9 +1,5 @@
 /** Settings read once at startup. Vite bakes `VITE_*` env vars into the build. */
 export interface Config {
-  /** Length of one tick at 1x speed, in milliseconds. */
-  tickMs: number;
-  /** Files and ranks on the (square) board. */
-  boardSize: number;
   /** Seed for a new run when none is given. */
   defaultSeed: number;
 }
@@ -18,8 +14,6 @@ const MAX_SEED = 2 ** 32 - 1;
 
 export function loadConfig(env: Env): Config {
   return {
-    tickMs: readInteger(env, "VITE_TICK_MS", 1, 10_000),
-    boardSize: readInteger(env, "VITE_BOARD_SIZE", 4, 64),
     defaultSeed: readInteger(env, "VITE_DEFAULT_SEED", 0, MAX_SEED),
   };
 }

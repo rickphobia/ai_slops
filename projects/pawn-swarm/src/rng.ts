@@ -37,3 +37,25 @@ export function pickOne<T>(state: RngState, items: readonly T[]): Roll<T> {
   }
   return { value, state: roll.state };
 }
+
+/**
+ * A mutable view of an RNG state, for rule code that rolls many times in one
+ * step. Start it from the state's `rng` and store `state()` back in the next state.
+ */
+export interface Random {
+  /** A number in [0, 1). */
+  next(): number;
+  state(): RngState;
+}
+
+export function createRandom(start: RngState): Random {
+  let current = start;
+  return {
+    next: () => {
+      const roll = nextFloat(current);
+      current = roll.state;
+      return roll.value;
+    },
+    state: () => current,
+  };
+}

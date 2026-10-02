@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`in progress` — the game was redesigned around a real-time swarm after a prototype (`docs/prototype/`, decision 0002). The current build is still the old tick-based battle: one plain pawn fights wave 1 (a single knight), with pause, 0.5×–2× speed and a HUD showing wave, pawn count and seed. Tickets 04–11 in `docs/tickets/` rebuild it to the new spec.
+`in progress` — the battle is the real-time swarm from the prototype (`docs/prototype/`, decision 0002), with knights only: one pawn in the middle of a 20×14 board, waves 1 (3 knights) and 2 (8 knights), drops that snowball the swarm, pause and 0.5×–2× speed. Tickets 05–11 in `docs/tickets/` add the rest of the black army, the shop, skills and power-ups.
 
 ## Requirements
 
@@ -47,25 +47,36 @@ Vite reads these from `.env` and bakes them into the build. The game checks them
 
 | Variable | Required | What it does |
 |----------|----------|--------------|
-| `VITE_TICK_MS` | yes | Length of one tick at 1× speed, in milliseconds (1–10000). Spec value: 250. |
-| `VITE_BOARD_SIZE` | yes | Files and ranks on the board (4–64). Spec value: 16. |
 | `VITE_DEFAULT_SEED` | yes | Seed for a new run when none is given (0–4294967295). |
 
 ## How it works
 
-`src/main.ts` loads the config, starts a run and drives it: every animation frame it asks the tick clock how many ticks are due, advances the run that many ticks, updates the HUD and redraws the board.
+`src/main.ts` loads the config, starts a run and drives it: every animation frame it asks the clock how many steps are due, advances the run that many steps, feeds each step's battle events to the effects, updates the HUD and redraws the board.
 
-`tick-clock.ts` turns real time into ticks. At 1× a tick is due every `VITE_TICK_MS`; at 2× every half of that; while paused, never. Speed only changes *when* ticks run, never what a tick does, so a seed plays out the same at every speed (tested in `tests/tick-clock.test.ts`).
+The battle runs at a fixed 60 steps per game second. `tick-clock.ts` turns real time into steps: at 1× a step is due every 1/60 s, at 2× twice as often, while paused never. Speed only changes *when* steps run, never what a step does, so a seed plays out the same at every speed (tested in `tests/tick-clock.test.ts`).
 
 The rules are pure functions with no DOM, so tests drive them directly:
 
-- `run/` — the run state machine (`battle → won | lost`). `advanceRun` moves it one tick.
-- `battle/` — `createBattle` sets up the pieces; `step` plays one tick: each piece counts down its cooldown, then moves or captures. A capture deals the attacker's attack as damage; the attacker stays on its square.
-- `board/` — legal moves per piece kind.
-- `catalog/` — stats and waves as data. Rebalance here.
+- `run/` — the run state machine (`battle → next battle | won | lost`). `advanceRun` plays one step; the call after a cleared wave starts the next wave with the survivors at full HP.
+- `battle/` — `step(state, inputs)` plays one step:
+  1. `black-pieces.ts` lands the wave's pieces whose warning ran out.
+  2. `white-pawns.ts` moves each pawn toward the nearest black piece, one axis at a time, and strikes when in reach and off cooldown. A kill calls `drops.ts`, which spawns plain pawns on the square (fewer as the swarm grows: crowding).
+  3. Pawns push apart and stay on the board.
+  4. Each black piece hurts the pawns touching it, then carries on with its move: pick the L-jump closest to the nearest pawn, warn on the 3×3 block for 0.4 s, jump, and hit every pawn on those squares.
+  `create-battle.ts` sets up a wave: the army in a spiral around the centre and every black piece's landing square. `spatial-grid.ts` answers "which pawns are near this point" without checking every pawn.
+- `board/` — squares, positions in board units (1 square = 1), knight jumps and hit squares.
+- `catalog/` — stats, rule numbers and waves as data. Rebalance here.
 - `rng.ts` — the seeded RNG. Its state lives inside the battle state, so the same seed always plays out the same battle. Rule code never uses `Math.random`.
 
-The `adapters/` only draw state and report clicks; they never change rules. See `docs/spec.md`.
+Each step also lists what happened in it (`strike`, `pawn-hurt`, `death`, `drop`, `landed`, `stomp`). The rules never read these; they drive the logs and the on-screen effects.
+
+The `adapters/` only draw state and report clicks; they never change rules:
+
+- `canvas-renderer/piece-art.ts` — the one place that decides how a piece looks (chess glyphs for now). An art pass replaces this file.
+- `canvas-renderer/effects.ts` — turns battle events into damage numbers, death bursts, "+n ♟" pop-ups, strike lines and landing rings, and ages them with game time (so they freeze on pause).
+- `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more, warning squares, pieces, HP bars and effects.
+
+See `docs/spec.md`.
 
 ## Folder layout
 
@@ -74,33 +85,35 @@ index.html                  # page shell: HUD, canvas, end screen, startup error
 src/
   main.ts                   # entrypoint: config, game loop, wiring
   config.ts                 # reads and validates VITE_* env vars
+  debug-options.ts          # ?pawns= for a big starting swarm
   logger.ts                 # level-based console logger
   startup-error.ts          # error type for a page that cannot start
   rng.ts                    # seeded RNG for rule code
-  tick-clock.ts             # real time → ticks due, with speed and pause
-  catalog/                  # pieces.ts (stats), waves.ts (enemies per wave)
-  board/                    # square.ts, moves.ts (move generation)
-  battle/                   # battle-state.ts, create-battle.ts, step.ts
+  tick-clock.ts             # real time → steps due, with speed and pause
+  catalog/                  # pieces.ts (stats), battle-rules.ts (rule numbers), waves.ts
+  board/                    # square.ts (squares, points), moves.ts (knight jumps, hit squares)
+  battle/                   # battle-state.ts, create-battle.ts, step.ts and one file per phase
   run/                      # run.ts (run state machine)
   adapters/
-    canvas-renderer.ts      # draws the board, pieces and HP bars on a <canvas>
+    canvas-renderer/        # canvas-renderer.ts, piece-art.ts, effects.ts
     dom-ui/
-      hud.ts                # wave, white pawn count, seed
+      hud.ts                # pawn count, wave, black pieces left, seed
       battle-controls.ts    # pause and speed buttons
       end-screen.ts         # win / game-over screen with "new run"
 tests/                      # mirrors src/
 docs/
-  spec.md, tickets/, decisions/, screenshots/
+  spec.md, tickets/, decisions/, screenshots/, prototype/
 ```
 
 ## Debugging
 
 - Logs go to the browser console, prefixed `[pawn-swarm]`. Default level is `info`.
-- Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every hit and death with its tick.
-- Pause, resume and speed changes are logged at `info` with the tick they happened on.
+- Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every battle event (strike, hurt, death, drop, landing, stomp) with its step. That is a lot of logging in a big fight.
+- Add `?pawns=300` to start every run with that many plain pawns (1–1000), to see how a big swarm plays and performs. Combine with `?debug=1` as `?pawns=300&debug=1`.
+- Wave starts and ends, pause, resume and speed changes are logged at `info` with the step they happened on.
 - **Replaying a battle** — the HUD and the end screen show the run's seed. Put it in `VITE_DEFAULT_SEED`, restart `npm run dev`, and the first run plays out exactly the same. "New run" picks a random seed. Speed and pauses don't change the result, so you can replay at 0.5× to watch a hard moment.
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
-- **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and tick; replay that seed (below) with `?debug=1` to see the ticks before it.
+- **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and step; replay that seed with `?debug=1` to see the steps before it.
 - **Blank page, no error** — open the console; a script error before startup would show there.
 
 ## Decisions
@@ -108,7 +121,8 @@ docs/
 See `docs/decisions/` for why things are the way they are:
 
 - [0001](docs/decisions/0001-browser-canvas-no-engine.md) — browser demo in TypeScript + Canvas, no game engine
-- [0002](docs/decisions/0002-capture-is-an-attack.md) — a capture is an attack; the attacker stays put
+- [0002](docs/decisions/0002-capture-is-an-attack.md) — a capture is an attack; the attacker stays put (tick-based battle, replaced by the one below)
+- [0002](docs/decisions/0002-real-time-fixed-step-battle.md) — real-time fixed-step battle instead of a tick-by-tick board game
 
 ## Docs
 
