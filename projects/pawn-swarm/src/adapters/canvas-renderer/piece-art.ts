@@ -1,5 +1,6 @@
 import type { PieceIdentity } from "../../battle/battle-state";
 import type { BlackKind, PawnTypeId } from "../../catalog/pieces";
+import { StartupError } from "../../startup-error";
 
 /**
  * How pieces are drawn. This is the one place that maps a piece to its look,
@@ -69,26 +70,25 @@ export function createGlyphArt(): PieceArt {
     const sprite = document.createElement("canvas");
     sprite.width = sprite.height = Math.ceil(glyphPx * SPRITE_PADDING);
     const context = sprite.getContext("2d");
-    if (context !== null) {
-      const middle = sprite.width / 2;
-      context.font = `${String(glyphPx)}px ${GLYPH_FONTS}`;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.lineJoin = "round";
-      context.lineWidth = Math.max(2, glyphPx / 9);
-      context.strokeStyle = style.outline;
-      context.strokeText(
-        style.glyph + TEXT_FORM,
-        middle,
-        middle + glyphPx * 0.04,
-      );
-      context.fillStyle = style.fill;
-      context.fillText(
-        style.glyph + TEXT_FORM,
-        middle,
-        middle + glyphPx * 0.04,
+    if (context === null) {
+      throw new StartupError(
+        "Canvas 2D context is not available for piece sprites.",
       );
     }
+    const middle = sprite.width / 2;
+    context.font = `${String(glyphPx)}px ${GLYPH_FONTS}`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.lineJoin = "round";
+    context.lineWidth = Math.max(2, glyphPx / 9);
+    context.strokeStyle = style.outline;
+    context.strokeText(
+      style.glyph + TEXT_FORM,
+      middle,
+      middle + glyphPx * 0.04,
+    );
+    context.fillStyle = style.fill;
+    context.fillText(style.glyph + TEXT_FORM, middle, middle + glyphPx * 0.04);
     sprites.set(key, sprite);
     return sprite;
   };

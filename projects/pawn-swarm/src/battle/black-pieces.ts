@@ -63,15 +63,17 @@ export function actBlackPieces(context: StepContext): void {
   }
 }
 
-/** Touching a black piece hurts, on the piece's own timer. A moving piece is in the air and touches nothing. */
+/**
+ * Touching a black piece hurts, on the piece's own timer. A moving piece is in
+ * the air and touches nothing: a hurt that comes due mid-move waits for the landing.
+ */
 function hurtTouchingPawns(
   context: StepContext,
   pawns: SpatialGrid<WorkingPawn>,
   piece: WorkingBlackPiece,
 ): void {
-  if (piece.move?.phase === "moving") return;
   piece.contactLeft -= context.seconds;
-  if (!hasRunOut(piece.contactLeft)) return;
+  if (!hasRunOut(piece.contactLeft) || piece.move?.phase === "moving") return;
   piece.contactLeft = BATTLE_RULES.contactEverySeconds;
   pawns.forEachNear(
     centreOf(piece.square),

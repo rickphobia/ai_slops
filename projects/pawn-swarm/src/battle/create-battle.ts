@@ -2,6 +2,7 @@ import {
   type BoardSize,
   boardCentre,
   centreOf,
+  isSameSquare,
   type Point,
   type Square,
   squareAt,
@@ -95,9 +96,7 @@ function planLandings(
   const centre = boardCentre(board);
   const taken: Square[] = [];
   const isFree = (square: Square): boolean =>
-    !taken.some(
-      (other) => other.file === square.file && other.rank === square.rank,
-    ) &&
+    !taken.some((other) => isSameSquare(other, square)) &&
     Math.hypot(centreOf(square).x - centre.x, centreOf(square).y - centre.y) >
       rules.keepClearOfCentre;
 

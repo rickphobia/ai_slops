@@ -3,8 +3,8 @@ import {
   createEffects,
   EFFECT_COLOURS,
   type Effect,
-} from "../../src/adapters/canvas-renderer/effects";
-import type { BattleEvent } from "../../src/battle/battle-state";
+} from "../../../src/adapters/canvas-renderer/effects";
+import type { BattleEvent } from "../../../src/battle/battle-state";
 
 const at = { x: 4.5, y: 6.5 };
 const tintOf = (piece: { side: "white" | "black" }): string =>

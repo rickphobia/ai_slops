@@ -10,6 +10,11 @@ import { actBlackPieces, landPieces } from "./black-pieces";
 import { isAlive, type StepContext } from "./step-context";
 import { actPawns, separatePawns } from "./white-pawns";
 
+/** The inputs ask for something this build of the battle cannot do. */
+export class BattleInputError extends Error {
+  override name = "BattleInputError";
+}
+
 /** The simulation runs at 60 steps per game second, whatever the speed setting. */
 export const STEPS_PER_SECOND = 60;
 export const STEP_SECONDS = 1 / STEPS_PER_SECOND;
@@ -21,8 +26,9 @@ export const STEP_SECONDS = 1 / STEPS_PER_SECOND;
  */
 export function step(state: BattleState, inputs: StepInputs): BattleState {
   if (state.outcome !== "ongoing") return state;
+  // A recorded replay from a later build may hold skill uses; refuse them rather than replay a different battle.
   if (inputs.skillUses.length > 0) {
-    throw new RangeError("Skills are not part of the battle yet.");
+    throw new BattleInputError("This build cannot play skill inputs yet.");
   }
 
   const context: StepContext = {

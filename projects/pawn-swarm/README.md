@@ -74,7 +74,7 @@ The `adapters/` only draw state and report clicks; they never change rules:
 
 - `canvas-renderer/piece-art.ts` — the one place that decides how a piece looks (chess glyphs for now). An art pass replaces this file.
 - `canvas-renderer/effects.ts` — turns battle events into damage numbers, death bursts, "+n ♟" pop-ups, strike lines and landing rings, and ages them with game time (so they freeze on pause).
-- `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more, warning squares, pieces, HP bars and effects.
+- `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more, warning squares, pieces and HP bars; `draw-effect.ts` draws each effect.
 
 See `docs/spec.md`.
 
@@ -95,7 +95,7 @@ src/
   battle/                   # battle-state.ts, create-battle.ts, step.ts and one file per phase
   run/                      # run.ts (run state machine)
   adapters/
-    canvas-renderer/        # canvas-renderer.ts, piece-art.ts, effects.ts
+    canvas-renderer/        # canvas-renderer.ts, piece-art.ts, effects.ts, draw-effect.ts
     dom-ui/
       hud.ts                # pawn count, wave, black pieces left, seed
       battle-controls.ts    # pause and speed buttons

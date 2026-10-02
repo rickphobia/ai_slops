@@ -3,9 +3,15 @@ import type {
   BlackPiece,
   WhitePawn,
 } from "../../battle/battle-state";
-import { type BoardSize, centreOf, type Point } from "../../board/square";
+import {
+  type BoardSize,
+  centreOf,
+  type Point,
+  type Square,
+} from "../../board/square";
 import { StartupError } from "../../startup-error";
-import { type Effect, TEXT_RISE_SPEED } from "./effects";
+import { drawEffect } from "./draw-effect";
+import type { Effect } from "./effects";
 import type { PieceArt } from "./piece-art";
 
 const LIGHT_SQUARE = "#4a3c2b";
@@ -53,6 +59,13 @@ export function createCanvasRenderer(
     y: (board.ranks - point.y) * squarePx,
   });
 
+  /** A square's top-left corner in canvas pixels. */
+  const cornerOf = (
+    square: Square,
+    board: BoardSize,
+    squarePx: number,
+  ): Point => toCanvas({ x: square.file, y: square.rank + 1 }, board, squarePx);
+
   const resize = (board: BoardSize): number => {
     const ratio = Math.max(MIN_PIXEL_RATIO, getPixelRatio());
     const width = Math.floor(canvas.clientWidth * ratio);
@@ -72,13 +85,17 @@ export function createCanvasRenderer(
       boardImage.width = canvas.width;
       boardImage.height = canvas.height;
       const squares = boardImage.getContext("2d");
-      if (squares === null) return;
+      if (squares === null) {
+        throw new StartupError(
+          "Canvas 2D context is not available for the board.",
+        );
+      }
       for (let rank = 0; rank < board.ranks; rank++) {
         for (let file = 0; file < board.files; file++) {
           // a1 (bottom-left) is dark, as on a real chess board.
           squares.fillStyle =
             (file + rank) % 2 === 0 ? DARK_SQUARE : LIGHT_SQUARE;
-          const corner = toCanvas({ x: file, y: rank + 1 }, board, squarePx);
+          const corner = cornerOf({ file, rank }, board, squarePx);
           squares.fillRect(
             Math.floor(corner.x),
             Math.floor(corner.y),
@@ -99,11 +116,7 @@ export function createCanvasRenderer(
       const progress = 1 - move.secondsLeft / move.phaseSeconds;
       context.fillStyle = `rgb(${WARNING_RED} / ${String(0.18 + 0.3 * progress)})`;
       for (const square of move.hitSquares) {
-        const corner = toCanvas(
-          { x: square.file, y: square.rank + 1 },
-          battle.board,
-          squarePx,
-        );
+        const corner = cornerOf(square, battle.board, squarePx);
         context.fillRect(
           corner.x + 1,
           corner.y + 1,
@@ -119,11 +132,7 @@ export function createCanvasRenderer(
     context.lineWidth = Math.max(2, squarePx * 0.06);
     for (const landing of battle.landings) {
       context.globalAlpha = 0.4 + 0.4 * Math.sin(landing.secondsLeft * 20);
-      const corner = toCanvas(
-        { x: landing.square.file, y: landing.square.rank + 1 },
-        battle.board,
-        squarePx,
-      );
+      const corner = cornerOf(landing.square, battle.board, squarePx);
       const inset = squarePx * 0.06;
       context.strokeRect(
         corner.x + inset,
@@ -226,73 +235,6 @@ export function createCanvasRenderer(
     );
   };
 
-  const drawEffect = (
-    effect: Effect,
-    board: BoardSize,
-    squarePx: number,
-  ): void => {
-    const fade = 1 - effect.age / effect.life;
-    context.globalAlpha = Math.max(0, fade);
-    switch (effect.kind) {
-      case "slash": {
-        const from = toCanvas(effect.from, board, squarePx);
-        const to = toCanvas(effect.to, board, squarePx);
-        context.strokeStyle = effect.colour;
-        context.lineWidth = Math.max(2, squarePx * 0.06);
-        context.beginPath();
-        context.moveTo(from.x, from.y);
-        context.lineTo(to.x, to.y);
-        context.stroke();
-        return;
-      }
-      case "ring": {
-        const centre = toCanvas(effect.at, board, squarePx);
-        context.strokeStyle = effect.colour;
-        context.lineWidth = Math.max(3, squarePx * 0.09);
-        context.beginPath();
-        context.arc(
-          centre.x,
-          centre.y,
-          effect.radius * squarePx * (1 - fade),
-          0,
-          Math.PI * 2,
-        );
-        context.stroke();
-        return;
-      }
-      case "spark": {
-        const centre = toCanvas(
-          {
-            x: effect.at.x + effect.velocity.x * effect.age,
-            y: effect.at.y + effect.velocity.y * effect.age,
-          },
-          board,
-          squarePx,
-        );
-        const size = Math.max(3, squarePx * 0.09);
-        context.fillStyle = effect.colour;
-        context.fillRect(centre.x - size / 2, centre.y - size / 2, size, size);
-        return;
-      }
-      case "text": {
-        const centre = toCanvas(
-          { x: effect.at.x, y: effect.at.y + effect.age * TEXT_RISE_SPEED },
-          board,
-          squarePx,
-        );
-        context.font = `700 ${String(Math.round(effect.size * squarePx))}px system-ui, sans-serif`;
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.lineWidth = Math.max(2, squarePx * 0.08);
-        context.strokeStyle = "#15120e";
-        context.strokeText(effect.text, centre.x, centre.y);
-        context.fillStyle = effect.colour;
-        context.fillText(effect.text, centre.x, centre.y);
-        return;
-      }
-    }
-  };
-
   return {
     draw: (battle, effects) => {
       const squarePx = resize(battle.board);
@@ -304,7 +246,11 @@ export function createCanvasRenderer(
         drawBlackPiece(piece, battle.board, squarePx);
       }
       drawLandingWarnings(battle, squarePx);
-      for (const effect of effects) drawEffect(effect, battle.board, squarePx);
+      const toPixels = (point: Point): Point =>
+        toCanvas(point, battle.board, squarePx);
+      for (const effect of effects) {
+        drawEffect(context, effect, toPixels, squarePx);
+      }
       context.globalAlpha = 1;
     },
   };

@@ -171,6 +171,41 @@ describe("contact damage", () => {
     expect(stepsWithHurt).toEqual([1, 1 + stepsIn(1.5), 1 + stepsIn(3)]);
   });
 
+  it("keeps its timer running through a jump and hurts on the step after landing", () => {
+    // The timer runs out mid-jump (0.04s); the jump lands on step 3 (0.05s).
+    const start = battleWith({
+      pawns: [
+        pawnAt(1, 7.5, 6.5, { strikeCooldownLeft: 99, hp: 10, maxHp: 10 }),
+      ],
+      blackPieces: [
+        knightOn(
+          2,
+          { file: 5, rank: 5 },
+          {
+            contactLeft: 0.04,
+            move: {
+              phase: "moving",
+              to: { file: 7, rank: 6 },
+              hitSquares: [],
+              secondsLeft: 0.05,
+              phaseSeconds: 0.28,
+            },
+          },
+        ),
+      ],
+    });
+    const states = playSteps(start, 6);
+    const contactSteps = states
+      .filter((state) =>
+        eventsOfType([state], "pawn-hurt").some(
+          (event) => event.cause === "contact",
+        ),
+      )
+      .map((state) => state.stepNumber);
+    expect(eventsOfType(states.slice(0, 3), "stomp")).toHaveLength(1);
+    expect(contactSteps).toEqual([4]);
+  });
+
   it("doesn't hurt a pawn that isn't touching", () => {
     const start = battleWith({
       pawns: [pawnAt(1, 5.5, 6.5, { strikeCooldownLeft: 99 })],
