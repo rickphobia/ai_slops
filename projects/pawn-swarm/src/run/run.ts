@@ -4,6 +4,10 @@ import { step } from "../battle/step";
 import { WAVES, type Wave } from "../catalog/waves";
 import type { RngState } from "../rng";
 
+export class RunError extends Error {
+  override name = "RunError";
+}
+
 /** A run starts with this many plain pawns. */
 const STARTING_PLAIN_PAWNS = 1;
 
@@ -39,7 +43,7 @@ export function startRun(setup: RunSetup): RunState {
   const waves = setup.waves ?? WAVES;
   const firstWave = waves[0];
   if (firstWave === undefined) {
-    throw new RangeError("Cannot start a run with no waves.");
+    throw new RunError("Cannot start a run with no waves.");
   }
   return {
     phase: "battle",
@@ -69,7 +73,7 @@ export function advanceRun(run: RunState): RunState {
         return { phase: "won", seed: run.seed, wave: run.wave, battle };
       }
       // Moving on to the next wave comes with the full wave table (ticket 04).
-      throw new RangeError(
+      throw new RunError(
         `Wave ${String(run.wave)} is cleared but moving to the next wave is not built yet.`,
       );
   }

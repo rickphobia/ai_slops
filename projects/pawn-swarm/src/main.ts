@@ -10,7 +10,7 @@ const MAX_TICKS_PER_FRAME = 5;
 
 const logger = createConsoleLogger(logLevelFromQuery(window.location.search));
 
-function showStartupError(message: string): void {
+function showFatalError(message: string): void {
   const errorBox = document.getElementById("startup-error");
   if (errorBox !== null) {
     errorBox.textContent = message;
@@ -67,7 +67,7 @@ function start(): void {
   // Ticks run on game time, not frames: each frame runs however many ticks are due.
   let lastFrameMs = performance.now();
   let pendingMs = 0;
-  const frame = (nowMs: number): void => {
+  const runDueTicks = (nowMs: number): void => {
     pendingMs += nowMs - lastFrameMs;
     lastFrameMs = nowMs;
     let ticksThisFrame = 0;
@@ -79,14 +79,30 @@ function start(): void {
       const previous = run;
       run = advanceRun(run);
       logTick(previous, run, logger);
-      if (run.phase !== "battle")
+      if (run.phase !== "battle") {
         endScreen.show({ outcome: run.phase, wave: run.wave, seed: run.seed });
+      }
       pendingMs -= config.tickMs;
       ticksThisFrame++;
     }
     if (run.phase !== "battle") pendingMs = 0;
-    renderer.draw(run.battle.pieces);
-    requestAnimationFrame(frame);
+  };
+  const frame = (nowMs: number): void => {
+    try {
+      runDueTicks(nowMs);
+      renderer.draw(run.battle.pieces);
+      requestAnimationFrame(frame);
+    } catch (error) {
+      // Stop the loop: a broken rule would otherwise throw again every frame.
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error("game loop stopped", {
+        error: message,
+        seed: run.seed,
+        wave: run.wave,
+        tick: run.battle.tick,
+      });
+      showFatalError(`Pawn Swarm stopped: ${message}`);
+    }
   };
   requestAnimationFrame(frame);
 }
@@ -102,5 +118,5 @@ try {
         ? error.name
         : "unexpected",
   });
-  showStartupError(`Pawn Swarm could not start: ${message}`);
+  showFatalError(`Pawn Swarm could not start: ${message}`);
 }

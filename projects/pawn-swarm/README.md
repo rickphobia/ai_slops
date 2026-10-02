@@ -93,6 +93,7 @@ docs/
 - Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every hit and death with its tick.
 - **Replaying a battle** — the end screen shows the run's seed. Put it in `VITE_DEFAULT_SEED`, restart `npm run dev`, and the first run plays out exactly the same. "New run" picks a random seed.
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
+- **"Pawn Swarm stopped: …"** — a rule threw during a battle and the game loop stopped. The console error has the seed, wave and tick; replay that seed (below) with `?debug=1` to see the ticks before it.
 - **Blank page, no error** — open the console; a script error before startup would show there.
 
 ## Decisions
@@ -100,6 +101,7 @@ docs/
 See `docs/decisions/` for why things are the way they are:
 
 - [0001](docs/decisions/0001-browser-canvas-no-engine.md) — browser demo in TypeScript + Canvas, no game engine
+- [0002](docs/decisions/0002-capture-is-an-attack.md) — a capture is an attack; the attacker stays put
 
 ## Docs
 

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Wave } from "../../src/catalog/waves";
-import { advanceRun, type RunState, startRun } from "../../src/run/run";
+import {
+  advanceRun,
+  RunError,
+  type RunState,
+  startRun,
+} from "../../src/run/run";
 
 function playRun(start: RunState, maxTicks = 5000): RunState {
   let run = start;
@@ -52,8 +57,9 @@ describe("run", () => {
   });
 
   it("refuses to start without any waves", () => {
-    expect(() => startRun({ seed: 1, boardSize: 16, waves: [] })).toThrow(
-      /no waves/,
-    );
+    const start = (): RunState =>
+      startRun({ seed: 1, boardSize: 16, waves: [] });
+    expect(start).toThrow(RunError);
+    expect(start).toThrow(/no waves/);
   });
 });

@@ -22,16 +22,17 @@ import type {
 export function step(state: BattleState): BattleState {
   if (state.outcome !== "ongoing") return state;
 
-  const pieces = state.pieces.map((piece) => ({ ...piece }));
+  const pieces: WorkingPiece[] = state.pieces.map((piece) => ({ ...piece }));
   const events: BattleEvent[] = [];
   let rng = state.rng;
   const isAlive = (piece: Piece): boolean => piece.hp > 0;
+  const livingPieceAt = (square: Square): WorkingPiece | undefined =>
+    pieces.find(
+      (piece) => isAlive(piece) && isSameSquare(piece.square, square),
+    );
   const board: BoardView = {
     size: state.boardSize,
-    occupantAt: (square) =>
-      pieces.find(
-        (piece) => isAlive(piece) && isSameSquare(piece.square, square),
-      )?.side,
+    occupantAt: (square) => livingPieceAt(square)?.side,
   };
 
   for (const piece of pieces) {
@@ -44,26 +45,12 @@ export function step(state: BattleState): BattleState {
     if (choice.move === undefined) continue;
 
     piece.cooldownLeft = piece.cooldownTicks;
-    const { to } = choice.move;
     if (!choice.move.isCapture) {
-      piece.square = to;
+      piece.square = choice.move.to;
       continue;
     }
-    // A capture is an attack: the target loses HP and the attacker stays where it is.
-    const target = pieces.find(
-      (other) => isAlive(other) && isSameSquare(other.square, to),
-    );
-    if (target === undefined) continue;
-    target.hp = Math.max(0, target.hp - piece.attack);
-    events.push({
-      type: "hit",
-      attackerId: piece.id,
-      targetId: target.id,
-      damage: piece.attack,
-    });
-    if (target.hp === 0) {
-      events.push({ type: "death", pieceId: target.id, square: target.square });
-    }
+    const target = livingPieceAt(choice.move.to);
+    if (target !== undefined) events.push(...resolveCapture(piece, target));
   }
 
   const survivors = pieces.filter(isAlive);
@@ -75,6 +62,26 @@ export function step(state: BattleState): BattleState {
     outcome: outcomeOf(survivors),
     events,
   };
+}
+
+/** A copy of a piece that this tick may change. */
+type WorkingPiece = { -readonly [Key in keyof Piece]: Piece[Key] };
+
+/** A capture is an attack: the target loses HP and the attacker stays where it is. */
+function resolveCapture(attacker: Piece, target: WorkingPiece): BattleEvent[] {
+  target.hp = Math.max(0, target.hp - attacker.attack);
+  const events: BattleEvent[] = [
+    {
+      type: "hit",
+      attackerId: attacker.id,
+      targetId: target.id,
+      damage: attacker.attack,
+    },
+  ];
+  if (target.hp === 0) {
+    events.push({ type: "death", pieceId: target.id, square: target.square });
+  }
+  return events;
 }
 
 interface MoveChoice {
