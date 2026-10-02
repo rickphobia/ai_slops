@@ -76,8 +76,12 @@ export function createCanvasRenderer(
     );
   }
   let boardImage: HTMLCanvasElement | undefined;
-  const drawPosed = createPoseDrawer(context, () =>
-    document.createElement("canvas"),
+  /** Where the shake has moved the canvas origin this frame, in pixels. */
+  const origin = { x: 0, y: 0 };
+  const drawPosed = createPoseDrawer(
+    context,
+    () => document.createElement("canvas"),
+    origin,
   );
 
   /** Board units (y up) to canvas pixels (y down). */
@@ -337,15 +341,12 @@ export function createCanvasRenderer(
       const toPixels = (point: Point): Point =>
         toCanvas(point, battle.board, squarePx);
       context.clearRect(0, 0, canvas.width, canvas.height);
-      context.save();
-      if (scene.shake > 0) {
-        // Only the board shakes: the HUD and shop are page elements outside this canvas.
-        const strength = scene.shake * MAX_SHAKE_SQUARES * squarePx;
-        context.translate(
-          Math.sin(nowSeconds * 97) * strength,
-          Math.cos(nowSeconds * 83) * strength,
-        );
-      }
+      // Only the board shakes: the HUD and shop are page elements outside this canvas.
+      const strength = scene.shake * MAX_SHAKE_SQUARES * squarePx;
+      // Whole pixels: a fractional offset makes the canvas resample every sprite, which is slow.
+      origin.x = Math.round(Math.sin(nowSeconds * 97) * strength);
+      origin.y = Math.round(Math.cos(nowSeconds * 83) * strength);
+      context.setTransform(1, 0, 0, 1, origin.x, origin.y);
       drawBoard(battle.board, squarePx);
       for (const effect of scene.effects) {
         if (effect.kind === "blood-pool") {
@@ -384,7 +385,7 @@ export function createCanvasRenderer(
         }
       }
       context.globalAlpha = 1;
-      context.restore();
+      context.setTransform(1, 0, 0, 1, 0, 0);
     },
   };
 }
