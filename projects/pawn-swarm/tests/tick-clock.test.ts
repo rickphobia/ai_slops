@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { NO_INPUTS } from "../src/battle/battle-state";
+import { STEPS_PER_SECOND } from "../src/battle/step";
 import { advanceRun, type RunState, startRun } from "../src/run/run";
 import {
   createTickClock,
@@ -15,16 +17,20 @@ function clockAt(maxTicksPerFrame = 100): TickClock {
 
 /** Plays a run the way the game loop does: frames of real time, ticks as the clock allows. */
 function playByClock(speed: Speed, pauseEveryFrames?: number): RunState {
-  const clock = clockAt(5);
+  const clock = createTickClock({
+    tickMs: 1000 / STEPS_PER_SECOND,
+    startMs: 0,
+    maxTicksPerFrame: 5,
+  });
   clock.setSpeed(speed);
-  let run = startRun({ seed: 7, boardSize: 16 });
+  let run = startRun({ seed: 7 });
   for (let frame = 1; frame < 100_000 && run.phase === "battle"; frame++) {
     if (pauseEveryFrames !== undefined) {
       clock.setPaused(frame % pauseEveryFrames < pauseEveryFrames / 2);
     }
     const due = clock.takeDueTicks(frame * FRAME_MS);
     for (let tick = 0; tick < due && run.phase === "battle"; tick++) {
-      run = advanceRun(run);
+      run = advanceRun(run, NO_INPUTS);
     }
   }
   return run;
@@ -84,8 +90,10 @@ describe("tick clock", () => {
   });
 
   it("gives the same battle result at every speed and with pauses", () => {
-    let reference = startRun({ seed: 7, boardSize: 16 });
-    while (reference.phase === "battle") reference = advanceRun(reference);
+    let reference = startRun({ seed: 7 });
+    while (reference.phase === "battle") {
+      reference = advanceRun(reference, NO_INPUTS);
+    }
 
     for (const speed of SPEEDS) {
       expect(playByClock(speed)).toEqual(reference);

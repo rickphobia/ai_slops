@@ -1,60 +1,135 @@
-import type { BattleState, Piece } from "../../src/battle/battle-state";
+import {
+  type BattleEvent,
+  type BattleState,
+  type BlackPiece,
+  type Landing,
+  NO_INPUTS,
+  type WhitePawn,
+} from "../../src/battle/battle-state";
+import { step } from "../../src/battle/step";
 import type { Square } from "../../src/board/square";
-import { ENEMY_TYPES, PAWN_TYPES } from "../../src/catalog/pieces";
+import { BATTLE_RULES } from "../../src/catalog/battle-rules";
+import { BLACK_PIECES, PAWN_TYPES } from "../../src/catalog/pieces";
 
-/** Test setups: exact pieces on exact squares, with catalog stats. */
+/** Test setups: exact pieces at exact places, with catalog stats. */
 
-export function plainPawn(
+/** A plain pawn that is ready to strike and has no drop burst. */
+export function pawnAt(
   id: number,
-  square: Square,
-  overrides: Partial<Piece> = {},
-): Piece {
+  x: number,
+  y: number,
+  overrides: Partial<WhitePawn> = {},
+): WhitePawn {
   const stats = PAWN_TYPES.plain;
   return {
     id,
-    side: "white",
-    kind: "pawn",
-    square,
+    type: "plain",
+    x,
+    y,
     hp: stats.hp,
     maxHp: stats.hp,
-    attack: stats.attack,
-    cooldownTicks: stats.cooldownTicks,
-    cooldownLeft: 1,
+    strikeCooldownLeft: 0,
+    axis: "y",
+    burstX: 0,
+    burstY: 0,
     ...overrides,
   };
 }
 
-export function knight(
+/** A knight that stands still and touches nothing unless a test sets its timers. */
+export function knightOn(
   id: number,
   square: Square,
-  overrides: Partial<Piece> = {},
-): Piece {
-  const stats = ENEMY_TYPES.knight;
+  overrides: Partial<BlackPiece> = {},
+): BlackPiece {
+  const stats = BLACK_PIECES.knight;
   return {
     id,
-    side: "black",
     kind: "knight",
     square,
     hp: stats.hp,
     maxHp: stats.hp,
-    attack: stats.attack,
-    cooldownTicks: stats.cooldownTicks,
-    cooldownLeft: 1,
+    actLeft: 99,
+    contactLeft: 99,
+    move: undefined,
     ...overrides,
   };
 }
 
-export function battleWith(
-  pieces: readonly Piece[],
-  overrides: Partial<BattleState> = {},
-): BattleState {
+export function landingOn(square: Square, secondsLeft = 99): Landing {
+  return { kind: "knight", square, secondsLeft, warningSeconds: 1.2 };
+}
+
+export function battleWith(parts: {
+  pawns: readonly WhitePawn[];
+  blackPieces?: readonly BlackPiece[];
+  landings?: readonly Landing[];
+  rng?: number;
+}): BattleState {
+  const pieces = [...parts.pawns, ...(parts.blackPieces ?? [])];
   return {
-    tick: 0,
-    boardSize: 8,
-    pieces,
-    rng: 1,
+    stepNumber: 0,
+    board: BATTLE_RULES.board,
+    pawns: parts.pawns,
+    blackPieces: parts.blackPieces ?? [],
+    landings: parts.landings ?? [],
+    nextId: Math.max(0, ...pieces.map((piece) => piece.id)) + 1,
+    rng: parts.rng ?? 1,
     outcome: "ongoing",
     events: [],
-    ...overrides,
   };
+}
+
+/** Plays `count` steps and returns every state after the start, in order. */
+export function playSteps(start: BattleState, count: number): BattleState[] {
+  const states: BattleState[] = [];
+  let state = start;
+  for (let index = 0; index < count; index++) {
+    state = step(state, NO_INPUTS);
+    states.push(state);
+  }
+  return states;
+}
+
+export function after(start: BattleState, count: number): BattleState {
+  return playSteps(start, count).at(-1) ?? start;
+}
+
+export function playToEnd(start: BattleState, maxSteps = 20_000): BattleState {
+  let state = start;
+  while (state.outcome === "ongoing" && state.stepNumber < maxSteps) {
+    state = step(state, NO_INPUTS);
+  }
+  return state;
+}
+
+export function pawnById(
+  state: BattleState,
+  id: number,
+): WhitePawn | undefined {
+  return state.pawns.find((pawn) => pawn.id === id);
+}
+
+export function blackPieceById(
+  state: BattleState,
+  id: number,
+): BlackPiece | undefined {
+  return state.blackPieces.find((piece) => piece.id === id);
+}
+
+export function eventsOfType<Type extends BattleEvent["type"]>(
+  states: readonly BattleState[],
+  type: Type,
+): Extract<BattleEvent, { type: Type }>[] {
+  return states.flatMap((state) =>
+    state.events.filter(
+      (event): event is Extract<BattleEvent, { type: Type }> =>
+        event.type === type,
+    ),
+  );
+}
+
+/** Steps in `seconds` of game time. */
+export function stepsIn(seconds: number): number {
+  return Math.round(seconds * 60);
 }

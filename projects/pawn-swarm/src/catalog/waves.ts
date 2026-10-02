@@ -1,13 +1,14 @@
-import type { EnemyKind } from "./pieces";
+import type { BlackKind } from "./pieces";
 
 export interface Wave {
-  readonly enemies: readonly {
-    readonly kind: EnemyKind;
+  readonly blackPieces: readonly {
+    readonly kind: BlackKind;
     readonly count: number;
   }[];
 }
 
-/** The enemies of each wave, in order. Wave 1 is a single knight so one pawn can win it. */
+/** The black pieces of each wave, in order. Wave 1 is 3 knights so one pawn can win it. */
 export const WAVES: readonly Wave[] = [
-  { enemies: [{ kind: "knight", count: 1 }] },
+  { blackPieces: [{ kind: "knight", count: 3 }] },
+  { blackPieces: [{ kind: "knight", count: 8 }] },
 ];

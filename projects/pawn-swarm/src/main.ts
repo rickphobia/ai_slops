@@ -1,14 +1,20 @@
-import { createCanvasRenderer } from "./adapters/canvas-renderer";
+import { createCanvasRenderer } from "./adapters/canvas-renderer/canvas-renderer";
+import { createEffects } from "./adapters/canvas-renderer/effects";
+import { createGlyphArt } from "./adapters/canvas-renderer/piece-art";
 import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
+import { NO_INPUTS } from "./battle/battle-state";
+import { STEP_SECONDS, STEPS_PER_SECOND } from "./battle/step";
 import { ConfigError, loadConfig } from "./config";
+import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
 import { advanceRun, type RunState, startRun } from "./run/run";
 import { StartupError } from "./startup-error";
 import { createTickClock } from "./tick-clock";
 
-const MAX_TICKS_PER_FRAME = 5;
+/** At 2× speed a 60 fps frame needs 2 steps; this leaves room for a slow frame without a long catch-up. */
+const MAX_STEPS_PER_FRAME = 8;
 
 const logger = createConsoleLogger(logLevelFromQuery(window.location.search));
 
@@ -28,22 +34,35 @@ function randomSeed(): number {
 function hudStatus(run: RunState): HudStatus {
   return {
     wave: run.wave,
-    whitePawns: run.battle.pieces.filter((piece) => piece.side === "white")
-      .length,
+    waveCount: run.waves.length,
+    whitePawns: run.battle.pawns.length,
+    blackLeft: run.battle.blackPieces.length + run.battle.landings.length,
     seed: run.seed,
   };
 }
 
-function logTick(previous: RunState, next: RunState, log: Logger): void {
+function logStep(previous: RunState, next: RunState, log: Logger): void {
+  const stepNumber = next.battle.stepNumber;
   for (const event of next.battle.events) {
-    log.debug(`battle ${event.type}`, { tick: next.battle.tick, ...event });
+    log.debug(`battle ${event.type}`, { step: stepNumber, ...event });
   }
-  if (previous.phase === "battle" && next.phase !== "battle") {
+  if (next.wave !== previous.wave) {
+    log.info("wave started", {
+      wave: next.wave,
+      pawns: next.battle.pawns.length,
+    });
+  } else if (
+    previous.battle.outcome === "ongoing" &&
+    next.battle.outcome !== "ongoing"
+  ) {
     log.info("wave ended", {
       wave: next.wave,
-      result: next.phase,
-      ticks: next.battle.tick,
+      result: next.battle.outcome,
+      steps: stepNumber,
+      pawns: next.battle.pawns.length,
     });
+  }
+  if (previous.phase === "battle" && next.phase !== "battle") {
     log.info("run ended", { result: next.phase, seed: next.seed });
   }
 }
@@ -51,37 +70,46 @@ function logTick(previous: RunState, next: RunState, log: Logger): void {
 function start(): void {
   const config = loadConfig(import.meta.env);
   logger.info("config loaded", { ...config });
+  const startingPawns = startingPawnsFromQuery(window.location.search);
+  if ("error" in startingPawns) throw new StartupError(startingPawns.error);
 
   const canvas = document.getElementById("board");
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new StartupError('index.html is missing <canvas id="board">.');
   }
+  const art = createGlyphArt();
   const renderer = createCanvasRenderer(
     canvas,
-    config.boardSize,
+    art,
     () => window.devicePixelRatio,
   );
+  const effects = createEffects((piece) => art.tint(piece), Math.random);
 
   const beginRun = (seed: number): RunState => {
-    const run = startRun({ seed, boardSize: config.boardSize });
-    logger.info("run started", { seed });
+    const run = startRun({
+      seed,
+      ...(startingPawns.pawns !== undefined && {
+        plainPawns: startingPawns.pawns,
+      }),
+    });
+    effects.clear();
+    logger.info("run started", { seed, pawns: run.battle.pawns.length });
     logger.info("wave started", { wave: run.wave });
     return run;
   };
 
   const hud = createHud(document);
   let run = beginRun(config.defaultSeed);
-  hud.update(hudStatus(run));
   const clock = createTickClock({
-    tickMs: config.tickMs,
+    tickMs: 1000 / STEPS_PER_SECOND,
     startMs: performance.now(),
-    maxTicksPerFrame: MAX_TICKS_PER_FRAME,
+    maxTicksPerFrame: MAX_STEPS_PER_FRAME,
   });
   const setPaused = (paused: boolean): void => {
     clock.setPaused(paused);
     controls.show(clock.state());
     logger.info(paused ? "battle paused" : "battle resumed", {
-      tick: run.battle.tick,
+      step: run.battle.stepNumber,
     });
   };
   const controls = createBattleControls(document, {
@@ -91,27 +119,29 @@ function start(): void {
     onSpeed: (speed) => {
       clock.setSpeed(speed);
       controls.show(clock.state());
-      logger.info("battle speed set", { speed, tick: run.battle.tick });
+      logger.info("battle speed set", { speed, step: run.battle.stepNumber });
     },
   });
   controls.show(clock.state());
   const endScreen = createEndScreen(document, () => {
     run = beginRun(randomSeed());
-    hud.update(hudStatus(run));
     // The speed carries over to the next run; a pause doesn't.
     if (clock.state().paused) setPaused(false);
     endScreen.hide();
   });
 
-  // Ticks run on game time, not frames: each frame runs however many ticks are due.
-  // Only the clock knows the speed, so the same seed plays the same ticks at any speed.
-  const runDueTicks = (nowMs: number): void => {
-    const dueTicks = clock.takeDueTicks(nowMs);
-    for (let tick = 0; tick < dueTicks && run.phase === "battle"; tick++) {
+  // Steps run on game time, not frames: each frame runs however many steps are due.
+  // Only the clock knows the speed, so the same seed plays the same steps at any speed.
+  // Effects age with the steps, so they freeze on pause and speed up with the game.
+  const runDueSteps = (nowMs: number): void => {
+    const dueSteps = clock.takeDueTicks(nowMs);
+    for (let index = 0; index < dueSteps && run.phase === "battle"; index++) {
       const previous = run;
-      run = advanceRun(run);
-      logTick(previous, run, logger);
-      hud.update(hudStatus(run));
+      run = advanceRun(run, NO_INPUTS);
+      logStep(previous, run, logger);
+      effects.advance(STEP_SECONDS);
+      effects.add(run.battle.events);
+      if (run.battle.events.some((event) => event.type === "drop")) hud.bump();
       if (run.phase !== "battle") {
         endScreen.show({ outcome: run.phase, wave: run.wave, seed: run.seed });
       }
@@ -119,8 +149,9 @@ function start(): void {
   };
   const frame = (nowMs: number): void => {
     try {
-      runDueTicks(nowMs);
-      renderer.draw(run.battle.pieces);
+      runDueSteps(nowMs);
+      hud.update(hudStatus(run));
+      renderer.draw(run.battle, effects.list());
       requestAnimationFrame(frame);
     } catch (error) {
       // Stop the loop: a broken rule would otherwise throw again every frame.
@@ -129,7 +160,7 @@ function start(): void {
         error: message,
         seed: run.seed,
         wave: run.wave,
-        tick: run.battle.tick,
+        step: run.battle.stepNumber,
       });
       showFatalError(`Pawn Swarm stopped: ${message}`);
     }

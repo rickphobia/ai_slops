@@ -158,7 +158,7 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 - **Stack (unchanged):** TypeScript (strict), Vite, Vitest, ESLint + Prettier, Canvas 2D for the board, plain DOM for HUD, shop and skills. See decision 0001.
 - **Simulation:** fixed-step real time (decision 0002). Positions are continuous numbers in board units (1 square = 1 unit). Black pieces stay on square centres. The battle is a pure function: `step(state, inputs) → state` advances one 1/60s step. No `Math.random` and no wall-clock time in rule code; one seeded RNG lives in the state.
 - **Modules:**
-  - `config`: env settings (default seed, steps per second, board size).
+  - `config`: env settings (default seed). Steps per second and board size are rules, not settings: changing either would change how a seed plays, so they live in `battle` and `catalog`.
   - `catalog`: data only — pawn types, black pieces, black types, waves, power-ups, prices, balance knobs.
   - `board`: square geometry and chess move generation; attack squares for a move.
   - `battle`: the simulation (white movement, black moves with warnings, square hits, contact damage, drops, crowding, passives, skills, power-ups, black type powers). Split by feature inside the folder (e.g. white AI, black AI, effects) so no file passes ~300 lines.

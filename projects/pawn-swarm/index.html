@@ -13,20 +13,24 @@
         align-items: center;
         justify-content: center;
         gap: 16px;
-        background: #302e2b;
-        color: #f0f0f0;
+        background: #15120e;
+        color: #efe6d4;
         font-family: system-ui, sans-serif;
       }
       :root {
-        /* Leaves room above the board for the HUD. */
-        --board-size: min(90vw, calc(90vh - 56px));
+        /* The board is 20 × 14 squares; leave room above it for the HUD. */
+        --board-width: min(94vw, calc((94vh - 72px) * 20 / 14));
       }
       #board {
-        width: var(--board-size);
-        height: var(--board-size);
+        width: var(--board-width);
+        aspect-ratio: 20 / 14;
+        border-radius: 4px;
+        box-shadow:
+          0 0 0 1px #3b3226,
+          0 20px 60px rgb(0 0 0 / 50%);
       }
       #hud {
-        width: var(--board-size);
+        width: var(--board-width);
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -36,11 +40,38 @@
       #hud-status {
         margin: 0;
         display: flex;
-        gap: 16px;
-        font-size: 1.1rem;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 20px;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #a99b81;
       }
       #hud-status strong {
+        margin-left: 6px;
+        font-size: 1.75rem;
+        letter-spacing: 0;
+        color: #efe6d4;
         font-variant-numeric: tabular-nums;
+      }
+      #hud-status #hud-pawns {
+        display: inline-block;
+        font-size: 2.6rem;
+        color: #e8b04a;
+      }
+      #hud-pawns.bump {
+        animation: bump 0.25s ease-out;
+      }
+      @keyframes bump {
+        50% {
+          transform: scale(1.18);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #hud-pawns.bump {
+          animation: none;
+        }
       }
       #battle-controls,
       #speed-buttons {
@@ -50,27 +81,27 @@
       #battle-controls button {
         min-width: 3.5rem;
         padding: 6px 10px;
-        border: 1px solid #5c5a57;
+        border: 1px solid #3b3226;
         border-radius: 6px;
-        background: #3d3b38;
-        color: #f0f0f0;
+        background: #211c15;
+        color: #efe6d4;
         font-size: 1rem;
         cursor: pointer;
       }
       #battle-controls button[aria-pressed="true"] {
-        border-color: #81b64c;
-        background: #81b64c;
-        color: #ffffff;
+        border-color: #e8b04a;
+        background: #e8b04a;
+        color: #15120e;
         font-weight: bold;
       }
       #pause {
         min-width: 5.5rem;
       }
-      /* Amber, not the speed green, so "paused" doesn't read as a fifth speed. */
+      /* Red, not the speed gold, so "paused" doesn't read as a fifth speed. */
       #battle-controls #pause[aria-pressed="true"] {
-        border-color: #e0a84f;
-        background: #e0a84f;
-        color: #1a1a1a;
+        border-color: #e0614f;
+        background: #e0614f;
+        color: #15120e;
       }
       #end-screen {
         position: fixed;
@@ -94,8 +125,8 @@
         padding: 10px 24px;
         border: none;
         border-radius: 6px;
-        background: #81b64c;
-        color: #ffffff;
+        background: #e8b04a;
+        color: #15120e;
         font-size: 1.25rem;
         font-weight: bold;
         cursor: pointer;
@@ -113,8 +144,9 @@
     <p id="startup-error" role="alert" hidden></p>
     <header id="hud">
       <p id="hud-status">
-        <span>Wave <strong id="hud-wave"></strong></span>
         <span>Pawns <strong id="hud-pawns"></strong></span>
+        <span>Wave <strong id="hud-wave"></strong></span>
+        <span>Black left <strong id="hud-black-left"></strong></span>
         <span>Seed <strong id="hud-seed"></strong></span>
       </p>
       <div id="battle-controls">

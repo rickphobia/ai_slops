@@ -18,7 +18,7 @@ _Avoid_: tick, frame, turn
 How many steps run per second of real time, relative to normal: 0.5×, 1×, 1.5× or 2×. Changes how fast a battle plays, never how it ends.
 
 **HUD**:
-The bar above the board during a battle: wave, pawn count (the army's size), seed, pause and speed buttons.
+The bar above the board during a battle: pawn count (the army's size), wave, black pieces left, seed, pause and speed buttons.
 
 **Army**:
 All white pawns the player owns.
@@ -52,6 +52,12 @@ _Avoid_: elite, variant
 **Warning square**:
 A red square showing where a black move or a landing piece is about to hit.
 _Avoid_: telegraph, danger zone
+
+**Landing**:
+A black piece arriving at wave start: its square shows a warning, then the piece appears there.
+
+**Contact**:
+A white pawn touching a black piece. It hurts the pawn on the piece's own timer.
 
 **Drop**:
 Plain pawns that appear where a black piece dies, joining the battle at once.

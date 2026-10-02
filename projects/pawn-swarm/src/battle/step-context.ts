@@ -1,0 +1,49 @@
+import type { BoardSize } from "../board/square";
+import type { Random } from "../rng";
+import type {
+  BattleEvent,
+  BlackPiece,
+  Landing,
+  WhitePawn,
+} from "./battle-state";
+
+type Mutable<T> = { -readonly [Key in keyof T]: T[Key] };
+
+export type WorkingPawn = Mutable<WhitePawn>;
+export type WorkingBlackPiece = Mutable<BlackPiece>;
+export type WorkingLanding = Mutable<Landing>;
+
+/**
+ * The battle while one step is being worked out. `step` copies every piece into
+ * here first, so the phases can change them in place without touching the old state.
+ * A piece with 0 HP or less is dead and is left out of the next state.
+ */
+export interface StepContext {
+  readonly board: BoardSize;
+  /** Game seconds one step covers. */
+  readonly seconds: number;
+  readonly random: Random;
+  readonly events: BattleEvent[];
+  readonly pawns: WorkingPawn[];
+  readonly blackPieces: WorkingBlackPiece[];
+  landings: WorkingLanding[];
+  nextId: number;
+}
+
+export function takeId(context: StepContext): number {
+  const id = context.nextId;
+  context.nextId += 1;
+  return id;
+}
+
+export function isAlive(piece: { readonly hp: number }): boolean {
+  return piece.hp > 0;
+}
+
+/**
+ * Whether a countdown timer has run out. Subtracting 1/60 over and over drifts
+ * a hair above 0 (0.4 s would take 25 steps, not 24), so allow for that.
+ */
+export function hasRunOut(secondsLeft: number): boolean {
+  return secondsLeft <= 1e-9;
+}
