@@ -1,6 +1,10 @@
 import type { BattleState, Piece } from "../../src/battle/battle-state";
 import type { Square } from "../../src/board/square";
-import { ENEMY_TYPES, PAWN_TYPES } from "../../src/catalog/pieces";
+import {
+  ENEMY_TYPES,
+  type EnemyKind,
+  PAWN_TYPES,
+} from "../../src/catalog/pieces";
 
 /** Test setups: exact pieces on exact squares, with catalog stats. */
 
@@ -15,6 +19,29 @@ export function plainPawn(
     side: "white",
     kind: "pawn",
     square,
+    forward: 1,
+    hp: stats.hp,
+    maxHp: stats.hp,
+    attack: stats.attack,
+    cooldownTicks: stats.cooldownTicks,
+    cooldownLeft: 1,
+    ...overrides,
+  };
+}
+
+export function enemy(
+  kind: EnemyKind,
+  id: number,
+  square: Square,
+  overrides: Partial<Piece> = {},
+): Piece {
+  const stats = ENEMY_TYPES[kind];
+  return {
+    id,
+    side: "black",
+    kind,
+    square,
+    forward: -1,
     hp: stats.hp,
     maxHp: stats.hp,
     attack: stats.attack,
@@ -29,19 +56,7 @@ export function knight(
   square: Square,
   overrides: Partial<Piece> = {},
 ): Piece {
-  const stats = ENEMY_TYPES.knight;
-  return {
-    id,
-    side: "black",
-    kind: "knight",
-    square,
-    hp: stats.hp,
-    maxHp: stats.hp,
-    attack: stats.attack,
-    cooldownTicks: stats.cooldownTicks,
-    cooldownLeft: 1,
-    ...overrides,
-  };
+  return enemy("knight", id, square, overrides);
 }
 
 export function battleWith(
@@ -52,6 +67,7 @@ export function battleWith(
     tick: 0,
     boardSize: 8,
     pieces,
+    nextPieceId: Math.max(0, ...pieces.map((piece) => piece.id)) + 1,
     rng: 1,
     outcome: "ongoing",
     events: [],
