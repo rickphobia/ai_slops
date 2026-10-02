@@ -21,6 +21,11 @@ export interface TickClock {
   takeDueTicks(nowMs: number): number;
   /** Takes effect from the last `takeDueTicks` call, at most one frame early. */
   setSpeed(speed: Speed): void;
+  /**
+   * Slows everything by a fraction of the chosen speed (1 = normal), e.g. for
+   * the king's death. It is not a player speed, so `state()` ignores it.
+   */
+  setTimeScale(scale: number): void;
   /** While paused no time builds up, so resuming carries on from the same point. */
   setPaused(paused: boolean): void;
   state(): TickClockState;
@@ -31,11 +36,12 @@ export function createTickClock(setup: TickClockSetup): TickClock {
   let lastMs = setup.startMs;
   let speed: Speed = 1;
   let paused = false;
+  let timeScale = 1;
   // Battle time not yet spent on a tick: real time scaled by the speed it passed at.
   let pendingMs = 0;
   return {
     takeDueTicks: (nowMs) => {
-      if (!paused) pendingMs += (nowMs - lastMs) * speed;
+      if (!paused) pendingMs += (nowMs - lastMs) * speed * timeScale;
       lastMs = nowMs;
       const due = Math.floor(pendingMs / setup.tickMs);
       if (due > setup.maxTicksPerFrame) {
@@ -47,6 +53,9 @@ export function createTickClock(setup: TickClockSetup): TickClock {
     },
     setSpeed: (next) => {
       speed = next;
+    },
+    setTimeScale: (next) => {
+      timeScale = next;
     },
     setPaused: (next) => {
       paused = next;

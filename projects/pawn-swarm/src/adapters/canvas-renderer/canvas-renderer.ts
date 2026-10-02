@@ -9,12 +9,16 @@ import {
   type Point,
   type Square,
 } from "../../board/square";
+import type { BlackKind } from "../../catalog/pieces";
 import { StartupError } from "../../startup-error";
 import { frameIndexAt } from "../art/animation";
 import type { ArtId } from "../art/drawings";
 import { paintBoard } from "./board-art";
-import { drawEffect } from "./draw-effect";
+import { drawEffect, drawParticles } from "./draw-effect";
+import { createPoseDrawer } from "./draw-pose";
 import type { Effect } from "./effects";
+import type { ParticlePool } from "./particles";
+import type { PieceMotion, Pose } from "./piece-motion";
 import { artIdOf, drawSpriteCentred, type PieceArt } from "./piece-art";
 
 const WARNING_RED = "224 97 79";
@@ -26,16 +30,33 @@ const SHADOW = "rgb(0 0 0 / 40%)";
 const TYPE_DISC_ALPHA = 0.45;
 /** The board, and so every piece sprite, is drawn at least at 2× the CSS size so the art stays sharp. */
 const MIN_PIXEL_RATIO = 2;
-/** How high a knight's jump arcs, in squares. */
-const JUMP_HEIGHT = 0.56;
+/**
+ * How high a black piece hops while it moves, in squares. Knights jump; the
+ * king steps with a small hop; bishops, rooks and queens slide along their line.
+ */
+const HOP_HEIGHT: Readonly<Record<BlackKind, number>> = {
+  knight: 0.56,
+  king: 0.18,
+  bishop: 0,
+  rook: 0,
+  queen: 0,
+};
+/** The biggest screen shake, in squares, at full strength. */
+const MAX_SHAKE_SQUARES = 0.28;
+const DYING_ROTATION = 0.7;
+
+/** Everything drawn besides the battle itself: made from events, aged with game time. */
+export interface Scene {
+  readonly effects: readonly Effect[];
+  readonly particles: ParticlePool;
+  readonly motion: PieceMotion;
+  /** Screen shake strength, 0–1; the caller sends 0 when the player turned shake off. */
+  readonly shake: number;
+}
 
 export interface BoardRenderer {
   /** `nowSeconds` drives the pieces' idle animations (eyes, hearts, blood); it is real time, so they keep moving while paused. */
-  draw(
-    battle: BattleState,
-    effects: readonly Effect[],
-    nowSeconds: number,
-  ): void;
+  draw(battle: BattleState, scene: Scene, nowSeconds: number): void;
 }
 
 /**
@@ -56,6 +77,13 @@ export function createCanvasRenderer(
     );
   }
   let boardImage: HTMLCanvasElement | undefined;
+  /** Where the shake has moved the canvas origin this frame, in pixels. */
+  const origin = { x: 0, y: 0 };
+  const drawPosed = createPoseDrawer(
+    context,
+    () => document.createElement("canvas"),
+    origin,
+  );
 
   /** Board units (y up) to canvas pixels (y down). */
   const toCanvas = (
@@ -108,13 +136,45 @@ export function createCanvasRenderer(
     centre: Point,
     squarePx: number,
     frame: number,
+    pose: Pose | undefined,
   ): void => {
-    drawSpriteCentred(
-      context,
-      art.sprite(id, squarePx, frame),
-      centre.x,
-      centre.y,
+    const sprite = art.sprite(id, squarePx, frame);
+    if (pose === undefined) {
+      drawSpriteCentred(context, sprite, centre.x, centre.y);
+    } else {
+      drawPosed(sprite, centre, pose, squarePx);
+    }
+  };
+
+  /** A piece that just died, tipping over and flattening as it fades. */
+  const drawDying = (
+    id: ArtId,
+    at: Point,
+    progress: number,
+    seed: number,
+    board: BoardSize,
+    squarePx: number,
+  ): void => {
+    const centre = toCanvas(at, board, squarePx);
+    const sprite = art.sprite(id, squarePx, 0);
+    const half = sprite.size / 2;
+    context.save();
+    context.globalAlpha = Math.max(0, 1 - progress * progress);
+    context.translate(centre.x, centre.y + half * 0.55);
+    context.rotate((seed % 2 === 0 ? 1 : -1) * DYING_ROTATION * progress);
+    context.scale(1 + 0.3 * progress, 1 - 0.75 * progress);
+    context.drawImage(
+      sprite.sheet,
+      sprite.sourceX,
+      0,
+      sprite.size,
+      sprite.size,
+      -half,
+      -half * 1.55,
+      sprite.size,
+      sprite.size,
     );
+    context.restore();
   };
 
   const drawMoveWarnings = (battle: BattleState, squarePx: number): void => {
@@ -241,6 +301,7 @@ export function createCanvasRenderer(
     board: BoardSize,
     squarePx: number,
     nowSeconds: number,
+    motion: PieceMotion,
   ): void => {
     const centre = toCanvas(pawn, board, squarePx);
     if (pawn.type !== "plain") drawTypeDisc(pawn, centre, squarePx);
@@ -249,6 +310,7 @@ export function createCanvasRenderer(
       centre,
       squarePx,
       frameIndexAt(nowSeconds, pawn.id),
+      motion.poseOf(pawn.id),
     );
     if (pawn.promoted) drawCrown(pawn, centre, squarePx);
     if (pawn.stunLeft > 0) drawStunMark(centre, squarePx, nowSeconds, pawn.id);
@@ -269,6 +331,7 @@ export function createCanvasRenderer(
     board: BoardSize,
     squarePx: number,
     nowSeconds: number,
+    motion: PieceMotion,
   ): void => {
     let at = centreOf(piece.square);
     let lift = 0;
@@ -279,10 +342,10 @@ export function createCanvasRenderer(
         x: at.x + (to.x - at.x) * progress,
         y: at.y + (to.y - at.y) * progress,
       };
-      lift = Math.sin(progress * Math.PI) * JUMP_HEIGHT * squarePx;
+      lift = Math.sin(progress * Math.PI) * HOP_HEIGHT[piece.kind] * squarePx;
     }
     const centre = toCanvas(at, board, squarePx);
-    if (lift > 0) {
+    if (lift > 0 || piece.move?.phase === "moving") {
       context.fillStyle = SHADOW;
       context.beginPath();
       context.ellipse(
@@ -302,6 +365,7 @@ export function createCanvasRenderer(
       raised,
       squarePx,
       frameIndexAt(nowSeconds, piece.id),
+      motion.poseOf(piece.id),
     );
     drawHpBar(
       raised,
@@ -314,13 +378,38 @@ export function createCanvasRenderer(
   };
 
   return {
-    draw: (battle, effects, nowSeconds) => {
+    draw: (battle, scene, nowSeconds) => {
       const squarePx = resize(battle.board);
+      const toPixels = (point: Point): Point =>
+        toCanvas(point, battle.board, squarePx);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      // Only the board shakes: the HUD and shop are page elements outside this canvas.
+      const strength = scene.shake * MAX_SHAKE_SQUARES * squarePx;
+      // Whole pixels: a fractional offset makes the canvas resample every sprite, which is slow.
+      origin.x = Math.round(Math.sin(nowSeconds * 97) * strength);
+      origin.y = Math.round(Math.cos(nowSeconds * 83) * strength);
+      context.setTransform(1, 0, 0, 1, origin.x, origin.y);
       drawBoard(battle.board, squarePx);
+      for (const effect of scene.effects) {
+        if (effect.kind === "blood-pool") {
+          drawEffect(context, effect, toPixels, squarePx);
+        }
+      }
+      context.globalAlpha = 1;
+      for (const ghost of scene.motion.dying()) {
+        drawDying(
+          artIdOf(ghost.piece),
+          ghost.at,
+          ghost.progress,
+          ghost.id,
+          battle.board,
+          squarePx,
+        );
+      }
       // Back to front (board y grows upward), so nearer pieces overlap the ones behind them.
       const pawns = [...battle.pawns].sort((a, b) => b.y - a.y);
       for (const pawn of pawns) {
-        drawPawn(pawn, battle.board, squarePx, nowSeconds);
+        drawPawn(pawn, battle.board, squarePx, nowSeconds, scene.motion);
       }
       // Over the pawns, so a pawn standing in danger is tinted red.
       drawMoveWarnings(battle, squarePx);
@@ -328,15 +417,17 @@ export function createCanvasRenderer(
         (a, b) => b.square.rank - a.square.rank,
       );
       for (const piece of blackPieces) {
-        drawBlackPiece(piece, battle.board, squarePx, nowSeconds);
+        drawBlackPiece(piece, battle.board, squarePx, nowSeconds, scene.motion);
       }
       drawLandingWarnings(battle, squarePx);
-      const toPixels = (point: Point): Point =>
-        toCanvas(point, battle.board, squarePx);
-      for (const effect of effects) {
-        drawEffect(context, effect, toPixels, squarePx);
+      drawParticles(context, scene.particles, toPixels, squarePx);
+      for (const effect of scene.effects) {
+        if (effect.kind !== "blood-pool") {
+          drawEffect(context, effect, toPixels, squarePx);
+        }
       }
       context.globalAlpha = 1;
+      context.setTransform(1, 0, 0, 1, 0, 0);
     },
   };
 }

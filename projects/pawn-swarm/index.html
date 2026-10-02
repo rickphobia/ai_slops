@@ -558,6 +558,55 @@
         border-radius: 3px;
         background: #2a0c0a;
       }
+      #settings-toggle {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        z-index: 100;
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--panel);
+        color: var(--fg);
+        font-family: var(--font-display);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      #settings-panel {
+        position: fixed;
+        right: 12px;
+        bottom: 56px;
+        z-index: 100;
+        width: min(18rem, calc(100vw - 24px));
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: var(--panel-raised);
+        color: var(--fg);
+      }
+      #settings-panel[hidden] {
+        display: none;
+      }
+      #settings-panel h2 {
+        margin: 0 0 8px;
+        font-family: var(--font-display);
+        font-size: 1rem;
+      }
+      #settings-panel label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 6px 0;
+      }
+      #settings-panel input[type="range"] {
+        width: 8rem;
+      }
+      #settings-toggle:focus-visible,
+      #settings-panel input:focus-visible {
+        outline: 2px solid var(--bone);
+        outline-offset: 2px;
+      }
     </style>
   </head>
   <body>
@@ -635,6 +684,37 @@
       <h2 id="end-title"></h2>
       <p id="end-detail"></p>
       <button id="new-run" type="button">New run</button>
+    </section>
+    <button
+      id="settings-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="settings-panel"
+    >
+      Settings
+    </button>
+    <section id="settings-panel" aria-labelledby="settings-title" hidden>
+      <h2 id="settings-title">Settings</h2>
+      <label
+        >Master volume
+        <input id="setting-master" type="range" min="0" max="100" />
+      </label>
+      <label
+        >Music volume
+        <input id="setting-music" type="range" min="0" max="100" />
+      </label>
+      <label
+        >Effects volume
+        <input id="setting-effects" type="range" min="0" max="100" />
+      </label>
+      <label
+        >Mute all sound
+        <input id="setting-muted" type="checkbox" />
+      </label>
+      <label
+        >Screen shake
+        <input id="setting-shake" type="checkbox" />
+      </label>
     </section>
     <script type="module" src="/src/main.ts"></script>
   </body>

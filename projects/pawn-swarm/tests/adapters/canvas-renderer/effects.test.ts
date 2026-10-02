@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   createEffects,
   EFFECT_COLOURS,
+  MAX_PARTICLES,
   type Effect,
 } from "../../../src/adapters/canvas-renderer/effects";
-import type { BattleEvent } from "../../../src/battle/battle-state";
+import type {
+  BattleEvent,
+  PieceIdentity,
+} from "../../../src/battle/battle-state";
 
 const at = { x: 4.5, y: 6.5 };
 const tintOf = (piece: { side: "white" | "black" }): string =>
@@ -51,17 +55,63 @@ describe("effects from battle events", () => {
     });
   });
 
-  it("bursts sparks in the dead piece's colour, more for a black piece", () => {
-    const black = effectsFor([
-      { type: "death", id: 2, piece: { side: "black", kind: "knight" }, at },
+  it("sprays blood, gibs in the piece's colour and a pool when a piece dies, more for a black piece", () => {
+    const death = (piece: PieceIdentity): ReturnType<typeof createEffects> => {
+      const effects = createEffects(tintOf, () => 0.5);
+      effects.add([{ type: "death", id: 2, piece, at }]);
+      return effects;
+    };
+    const black = death({ side: "black", kind: "knight" });
+    const white = death({ side: "white", type: "plain" });
+    expect(kinds(black.list())).toEqual(["blood-pool"]);
+    expect(black.particles.count).toBeGreaterThan(white.particles.count);
+    const colours = new Set<string>();
+    black.particles.forEach((kind, colour) => {
+      if (kind === "gib") colours.add(colour);
+    });
+    expect([...colours]).toEqual(["black-tint"]);
+  });
+
+  it("sprays blood from a strike", () => {
+    const effects = createEffects(tintOf, () => 0.5);
+    effects.add([
+      {
+        type: "strike",
+        pawnId: 1,
+        pawnType: "plain",
+        targetId: 2,
+        damage: 3,
+        from: { x: 4.5, y: 5.5 },
+        at,
+      },
     ]);
-    const white = effectsFor([
+    expect(effects.particles.count).toBe(5);
+  });
+
+  it("shakes the screen for big pieces, more for the king, and settles", () => {
+    const shakeAfter = (kind: "knight" | "king"): number => {
+      const effects = createEffects(tintOf, () => 0.5);
+      effects.add([
+        { type: "death", id: 2, piece: { side: "black", kind }, at },
+      ]);
+      return effects.shake();
+    };
+    expect(shakeAfter("king")).toBeGreaterThan(shakeAfter("knight"));
+    expect(shakeAfter("knight")).toBeGreaterThan(0);
+    const effects = createEffects(tintOf, () => 0.5);
+    effects.add([
+      { type: "death", id: 2, piece: { side: "black", kind: "king" }, at },
+    ]);
+    effects.advance(2);
+    expect(effects.shake()).toBe(0);
+  });
+
+  it("does not shake for a dying pawn", () => {
+    const effects = createEffects(tintOf, () => 0.5);
+    effects.add([
       { type: "death", id: 1, piece: { side: "white", type: "plain" }, at },
     ]);
-    expect(kinds(black)).toEqual(Array<string>(14).fill("spark"));
-    expect(black[0]).toMatchObject({ colour: "black-tint", at });
-    expect(white).toHaveLength(8);
-    expect(white[0]).toMatchObject({ colour: "white-tint" });
+    expect(effects.shake()).toBe(0);
   });
 
   it("pops up '+n ♟' where a drop lands", () => {
@@ -73,10 +123,12 @@ describe("effects from battle events", () => {
     });
   });
 
-  it("marks landings with a burst and knight stomps with a ring", () => {
-    expect(
-      kinds(effectsFor([{ type: "landed", id: 3, kind: "knight", at }])),
-    ).toEqual(Array<string>(8).fill("spark"));
+  it("marks landings with a burst, a ring and a shake, and knight stomps with a ring", () => {
+    const landing = createEffects(tintOf, () => 0.5);
+    landing.add([{ type: "landed", id: 3, kind: "knight", at }]);
+    expect(kinds(landing.list())).toEqual(["ring"]);
+    expect(landing.particles.count).toBe(8);
+    expect(landing.shake()).toBeGreaterThan(0);
     expect(effectsFor([{ type: "stomp", id: 3, at }])).toEqual([
       expect.objectContaining({ kind: "ring", at }),
     ]);
@@ -133,10 +185,27 @@ describe("effect lifetimes", () => {
     ]);
   });
 
+  it("keeps particles within the pool size however big the fight", () => {
+    const effects = createEffects(tintOf, () => 0.5);
+    const deaths = Array.from({ length: 400 }, (_, index): BattleEvent => ({
+      type: "death",
+      id: index,
+      piece: { side: "black", kind: "queen" },
+      at,
+    }));
+    effects.add(deaths);
+    expect(effects.particles.count).toBe(MAX_PARTICLES);
+    expect(effects.list().length).toBeLessThanOrEqual(150);
+  });
+
   it("can be cleared for a new run", () => {
     const effects = createEffects(tintOf, () => 0.5);
-    effects.add([{ type: "stomp", id: 3, at }]);
+    effects.add([
+      { type: "stomp", id: 3, at },
+      { type: "death", id: 1, piece: { side: "white", type: "plain" }, at },
+    ]);
     effects.clear();
     expect(effects.list()).toEqual([]);
+    expect(effects.particles.count).toBe(0);
   });
 });
