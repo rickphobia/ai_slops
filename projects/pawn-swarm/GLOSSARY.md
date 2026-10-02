@@ -10,9 +10,9 @@ One game from the first wave to a win or a loss.
 **Wave**:
 One battle against a set of black pieces. A run has 10.
 
-**Tick**:
-One step of the battle simulation.
-_Avoid_: frame, turn
+**Step**:
+One 1/60 s update of the battle simulation.
+_Avoid_: tick, frame, turn
 
 **Army**:
 All white pawns the player owns.
@@ -25,18 +25,40 @@ _Avoid_: coin, gold, basic pawn
 A kind of white pawn with its own stats and ability (Shield, Medic, ...).
 _Avoid_: class, unit type
 
-**Capture**:
-A piece attacking an enemy on a square it could move to by capturing. It deals the attacker's attack as damage; the attacker stays where it is.
-_Avoid_: kill (the target only dies at 0 HP)
+**Strike**:
+A white pawn hitting a black piece in its range for its attack in damage. The target only dies at 0 HP.
+_Avoid_: capture, kill
+
+**Hit**:
+A black move landing: every white pawn on its warning squares takes the piece's attack in damage.
 
 **Cooldown**:
-Ticks a piece waits between moves.
+Seconds a piece waits between actions, or before a skill can be used again.
 
-**Enemy**:
-A black piece: knight, bishop, rook, queen or king.
+**Black piece**:
+An enemy: knight, bishop, rook, queen or king.
+_Avoid_: enemy unit, mob
+
+**Black type**:
+A special version of a black piece with a power, such as a Priest bishop or a Cannon rook.
+_Avoid_: elite, variant
+
+**Warning square**:
+A red square showing where a black move or a landing piece is about to hit.
+_Avoid_: telegraph, danger zone
 
 **Drop**:
-Plain pawns gained when an enemy dies.
+Plain pawns that appear where a black piece dies, joining the battle at once.
+
+**Crowding**:
+The rule that shrinks drops as the swarm grows.
+
+**Power-up**:
+A coloured orb a kill can drop; the first pawn to touch it triggers its effect for the whole swarm.
+_Avoid_: pickup, buff orb
+
+**Stun**:
+A white pawn knocked out for a moment (by a bomb blast): it can't move or strike, but takes no damage from it.
 
 **Shop**:
 The screen between waves where the player buys pawn types.
@@ -45,9 +67,9 @@ The screen between waves where the player buys pawn types.
 One pawn type for sale in the shop.
 _Avoid_: card, item
 
-**Buy**:
-Sacrifice plain pawns to turn one plain pawn into a pawn type.
-_Avoid_: purchase, upgrade
+**Recruit**:
+Sacrifice plain pawns to turn one plain pawn into a pawn type. At most 5 per type per wave.
+_Avoid_: buy, purchase, upgrade
 
 **Reroll**:
 Pay plain pawns to replace the shop's offers.
@@ -59,7 +81,7 @@ Keep an offer for the next shop visit.
 How rare and strong a pawn type is: common, rare or epic. Gates which wave it can first appear.
 
 **Promote**:
-A pawn turning into a stronger piece on reaching black's back rank.
+A Promoter pawn turning into a white queen on reaching a board edge.
 
 **Passive**:
 A pawn type's always-on ability.

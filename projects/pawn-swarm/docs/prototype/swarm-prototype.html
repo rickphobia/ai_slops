@@ -1,0 +1,710 @@
+<title>Pawn Swarm Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600&family=Barlow:wght@400;600;700&display=swap">
+<style>
+/* Layout: one-screen game. HUD strip on top, board fills the middle, skill bar at the bottom; shop and end screens overlay the board. Single dark look on purpose (a walnut chess table under a lamp). */
+:root {
+  color-scheme: dark;
+  --bg: #15120e;
+  --panel: #211c15;
+  --line: #3b3226;
+  --fg: #efe6d4;
+  --muted: #a99b81;
+  --accent: #e8b04a;
+  --danger: #e0614f;
+  --good: #8fcf6b;
+  --common: #b8c4cf;
+  --rare: #6fb0ff;
+  --epic: #c58bff;
+  --font-display: "Teko", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; overflow: hidden; }
+button { font-family: var(--font-body); color: var(--fg); cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#app { height: 100%; display: flex; flex-direction: column; padding-inline: 16px; padding-block: 8px; gap: 8px; box-sizing: border-box; }
+#hud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+.stat { display: flex; align-items: baseline; gap: 6px; }
+.stat .label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stat .value { font-family: var(--font-display); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+#pawnCount { color: var(--accent); font-size: 44px; }
+#pawnCount.bump { animation: bump .25s ease-out; }
+@keyframes bump { 50% { transform: scale(1.18); } }
+.spacer { flex: 1; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 6px 10px; font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+#stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; border-radius: 4px; box-shadow: 0 0 0 1px var(--line), 0 20px 60px #0008; }
+#skills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; min-height: 52px; }
+.skill { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 112px; padding: 6px 22px 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; text-align: left; }
+.skill .k { position: absolute; top: 4px; right: 7px; font-size: 11px; color: var(--muted); }
+.skill .n { font-weight: 700; font-size: 13px; }
+.skill .t { font-size: 11px; color: var(--muted); }
+.skill .cd { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+.skill:disabled { opacity: .55; cursor: default; }
+.skill.ready { border-color: var(--accent); }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #15120ecc; backdrop-filter: blur(2px); padding: 16px; box-sizing: border-box; overflow-y: auto; }
+.sheet { width: min(860px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.sheet h2 { font-family: var(--font-display); font-weight: 600; font-size: 44px; line-height: .9; margin: 0; text-wrap: balance; }
+.sheet p { margin: 0; color: var(--muted); max-width: 62ch; }
+.offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.offer { display: flex; flex-direction: column; gap: 6px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--rarity); border-radius: 6px; min-width: 0; }
+.offer .rar { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--rarity); }
+.offer h3 { margin: 0; font-size: 18px; }
+.offer .stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.offer .desc { font-size: 13px; }
+.offer .sk { font-size: 13px; color: var(--accent); }
+.offer .row { margin-top: auto; display: flex; gap: 6px; }
+.btn { background: var(--accent); color: var(--bg); border: 0; border-radius: 5px; padding: 8px 12px; font-weight: 700; font-size: 13px; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.big { font-size: 17px; padding: 10px 22px; }
+.offer.sold { opacity: .4; }
+.shopbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.army { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.chip { padding: 3px 8px; border: 1px solid var(--line); border-radius: 99px; font-variant-numeric: tabular-nums; }
+#toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: 40px; color: var(--accent); pointer-events: none; text-shadow: 0 2px 12px #000; }
+@media (max-width: 600px) { .stat .value { font-size: 24px; } #pawnCount { font-size: 34px; } .skill { min-width: 92px; } }
+@media (prefers-reduced-motion: reduce) { #pawnCount.bump { animation: none; } }
+</style>
+
+<div id="app">
+  <div id="hud">
+    <div class="stat"><span class="label">Pawns</span><span class="value" id="pawnCount">1</span></div>
+    <div class="stat"><span class="label">Plain</span><span class="value" id="plainCount">1</span></div>
+    <div class="stat"><span class="label">Wave</span><span class="value" id="waveNum">1/10</span></div>
+    <div class="stat"><span class="label">Black left</span><span class="value" id="enemyCount">0</span></div>
+    <div class="spacer"></div>
+    <div class="seg" id="speed" role="group" aria-label="Battle speed">
+      <button data-s="0.5">0.5×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="1.5">1.5×</button><button data-s="2">2×</button>
+    </div>
+    <div class="seg"><button id="pauseBtn">Pause</button></div>
+  </div>
+  <div id="stage">
+    <canvas id="cv" aria-label="Battle board"></canvas>
+    <div id="toast"></div>
+    <div class="overlay" id="startScreen">
+      <div class="sheet">
+        <h2>Pawn Swarm</h2>
+        <p>You start with one white pawn in the middle of the board. The whole black army lands around you at once; red squares warn you where. Every black piece you kill drops more pawns, and they join the fight on the spot. Some kills also drop power-ups (coloured orbs): heal, haste, fury, freeze, bounty, reinforcements. From wave 3, black pieces come in special types with powers, marked by a coloured ring. The shop tells you which ones are coming next. Pawns are also your money: between waves, spend them to turn plain pawns into special types. Each type you own gives you a skill button (keys 1–9). Survive 10 waves and kill the king.</p>
+        <div><button class="btn big" id="startBtn">Start run</button></div>
+      </div>
+    </div>
+    <div class="overlay" id="shopScreen" hidden></div>
+    <div class="overlay" id="endScreen" hidden></div>
+  </div>
+  <div id="skills" aria-label="Skills"></div>
+</div>
+
+<script>
+"use strict";
+// ---------- data ----------
+// a smaller board shown larger: pieces read clearly on screen. RES renders at 2x for sharp glyphs.
+const SQ = 32, COLS = 20, ROWS = 14, W = COLS * SQ, H = ROWS * SQ, RES = 2;
+const TYPES = {
+  plain:     { name: "Pawn",       rarity: null,     hp: 3,  atk: 1, spd: 46, cd: .7,  range: 28, tint: "#f4efe4",
+               desc: "Moves up, down, left or right, never diagonally. Strikes anything in reach. Also your money.",
+               skill: { name: "Charge", cd: 12, text: "Plain pawns: double speed and +1 attack for 3s." } },
+  shield:    { name: "Shield pawn", rarity: "common", base: 3, hp: 10, atk: 1, spd: 34, cd: .9, range: 28, tint: "#7fb3ff",
+               desc: "10 HP. Black pieces nearby attack shields first.",
+               skill: { name: "Hold the line", cd: 20, text: "Shields take no damage for 4s and pull enemies in." } },
+  spear:     { name: "Spear pawn",  rarity: "common", base: 3, hp: 3,  atk: 2, spd: 44, cd: .8, range: 52, tint: "#f0d27a",
+               desc: "Strikes from twice as far, for 2 damage.",
+               skill: { name: "Volley", cd: 15, text: "Each spear hits every enemy within 4 squares in its row and column for 3." } },
+  twin:      { name: "Twin pawn",   rarity: "common", base: 3, hp: 3,  atk: 1, spd: 46, cd: .7, range: 30, tint: "#9be3c9",
+               desc: "Strikes two enemies at once.",
+               skill: { name: "Fork", cd: 12, text: "Each twin hits every enemy around it for 2." } },
+  medic:     { name: "Medic pawn",  rarity: "rare",   base: 5, hp: 4,  atk: 0, spd: 40, cd: 1.5, range: 66, tint: "#ff9fb2",
+               desc: "Doesn't fight. Heals pawns around it.",
+               skill: { name: "Triage", cd: 25, text: "Fully heal every white pawn." } },
+  banner:    { name: "Banner pawn", rarity: "rare",   base: 5, hp: 5,  atk: 1, spd: 40, cd: .8, range: 28, tint: "#ffb35c",
+               desc: "Pawns near it hit 1 harder.",
+               skill: { name: "Rally", cd: 25, text: "Every pawn moves and strikes faster for 5s." } },
+  bomb:      { name: "Bomb pawn",   rarity: "rare",   base: 4, hp: 2,  atk: 1, spd: 50, cd: .7, range: 28, tint: "#ff6b4a",
+               desc: "Explodes when it dies: 4 damage to black pieces around it. Nearby white pawns are stunned for 2s, not hurt.",
+               skill: { name: "Detonate", cd: 8, text: "Blow up every bomb pawn now." } },
+  recruiter: { name: "Recruiter pawn", rarity: "epic", base: 8, hp: 5, atk: 1, spd: 30, cd: .9, range: 28, tint: "#c58bff",
+               desc: "Spawns a plain pawn every 8s during battle.",
+               skill: { name: "Call to arms", cd: 25, text: "Each recruiter spawns 2 pawns now." } },
+  berserker: { name: "Berserker pawn", rarity: "epic", base: 7, hp: 6, atk: 2, spd: 52, cd: .6, range: 28, tint: "#ff4f7a",
+               desc: "+1 attack each time a pawn dies near it (this wave).",
+               skill: { name: "Frenzy", cd: 15, text: "Berserkers lose 1 HP, get +3 attack for 5s." } },
+  promoter:  { name: "Promoter pawn", rarity: "epic", base: 7, hp: 3, atk: 1, spd: 70, cd: .7, range: 28, tint: "#ffe066",
+               desc: "Fast. When it reaches any edge of the board it becomes a white queen.",
+               skill: { name: "Rush", cd: 18, text: "Promoters leap 5 squares toward the nearest enemy." } },
+  enpassant: { name: "En passant pawn", rarity: "epic", base: 6, hp: 4, atk: 2, spd: 56, cd: .6, range: 32, tint: "#7ef0ff",
+               desc: "Dodges the first hit each wave. Strikes sideways too.",
+               skill: { name: "Sidestep", cd: 15, text: "Refresh dodge and dash at the nearest enemy." } },
+};
+const TYPE_KEYS = Object.keys(TYPES);
+const ENEMY = {
+  knight: { glyph: "♞", hp: 1,  atk: 1, every: 1.1, drop: 1,  size: 26 },
+  bishop: { glyph: "♝", hp: 3,  atk: 1, every: 1.6, drop: 2,  size: 28 },
+  rook:   { glyph: "♜", hp: 8,  atk: 2, every: 2.0, drop: 3,  size: 30 },
+  queen:  { glyph: "♛", hp: 18, atk: 3, every: 1.3, drop: 5,  size: 34 },
+  king:   { glyph: "♚", hp: 160, atk: 4, every: .8, drop: 0,  size: 46 },
+};
+// enemy counts per wave: [knight, bishop, rook, queen, king]. The whole wave lands at once.
+const WAVES = [
+  [3,0,0,0,0],[8,0,0,0,0],[12,3,0,0,0],[16,6,0,0,0],[20,8,2,0,0],
+  [26,12,4,0,0],[30,14,6,1,0],[36,18,8,2,0],[42,20,10,3,0],[30,14,8,4,1],
+];
+// black piece types: each piece kind has special versions with their own power.
+// They unlock from wave `from`, and get more common each wave after that.
+const VARIANTS = {
+  stomper:  { kind: "knight", from: 3, name: "Stomper knight", color: "#ff9a3c", text: "Lands harder: bigger stomp, +1 damage." },
+  hunter:   { kind: "knight", from: 5, name: "Hunter knight",  color: "#ff4f7a", text: "Hops twice as often and hunts your special pawns." },
+  priest:   { kind: "bishop", from: 4, name: "Priest bishop",  color: "#8fcf6b", text: "Heals black pieces near it every 2s." },
+  sniper:   { kind: "bishop", from: 6, name: "Sniper bishop",  color: "#6fb0ff", text: "Dashes up to 8 squares in one move." },
+  tower:    { kind: "rook",   from: 5, name: "Tower rook",     color: "#9fb4c8", text: "3× HP, moves slower." },
+  cannon:   { kind: "rook",   from: 7, name: "Cannon rook",    color: "#e0614f", text: "Every 3s fires down its row and column." },
+  storm:    { kind: "queen",  from: 7, name: "Storm queen",    color: "#bff3ff", text: "Every 4s blasts every pawn around her." },
+  summoner: { kind: "queen",  from: 8, name: "Summoner queen", color: "#c58bff", text: "Every 6s calls 2 knights next to her." },
+};
+const VARIANT_KEYS = Object.keys(VARIANTS);
+// balance knobs
+const HP_GROWTH = .5;      // black HP grows this much per wave
+const CROWD_SIZE = 400;    // at this many white pawns, kills drop (almost) nothing
+const DROP_FLOOR = .15;    // ...but never less than this share of the normal drop
+// power-ups dropped by kills; any white pawn that touches one picks it up
+const POWERUPS = {
+  heal:   { label: "+", color: "#8fcf6b", name: "Heal",          text: "every pawn back to full HP" },
+  haste:  { label: "»", color: "#6fb0ff", name: "Haste",         text: "pawns 50% faster for 6s" },
+  fury:   { label: "!", color: "#ff5a4a", name: "Fury",          text: "+2 attack for 6s" },
+  freeze: { label: "*", color: "#bff3ff", name: "Freeze",        text: "black pieces stop for 3s" },
+  bounty: { label: "$", color: "#e8b04a", name: "Bounty",        text: "double drops for 8s" },
+  reinforce: { label: "3", color: "#f4efe4", name: "Reinforcements", text: "+3 pawns" },
+};
+const RARITY_GATE = { common: 1, rare: 3, epic: 6 };
+const RARITY_COLOR = { common: "var(--common)", rare: "var(--rare)", epic: "var(--epic)" };
+
+// ---------- rng ----------
+let seed = (Math.random() * 2 ** 32) >>> 0;
+function rnd() { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+const pick = a => a[Math.floor(rnd() * a.length)];
+
+// ---------- sprites ----------
+function glyphSprite(ch, size, fill, stroke) {
+  const c = document.createElement("canvas"); const s = Math.ceil(size * 1.4) * RES; c.width = c.height = s; size *= RES;
+  const g = c.getContext("2d"); g.font = `${size}px "DejaVu Sans","Segoe UI Symbol","Noto Sans Symbols 2",serif`;
+  g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+  g.lineWidth = Math.max(2, size / 9); g.strokeStyle = stroke; g.strokeText(ch + "︎", s / 2, s / 2 + size * .04);
+  g.fillStyle = fill; g.fillText(ch + "︎", s / 2, s / 2 + size * .04); return c;
+}
+const SPR = {};
+for (const k of TYPE_KEYS) SPR[k] = glyphSprite("♟", 28, TYPES[k].tint, "#1a140c");
+SPR.queenW = glyphSprite("♛", 36, "#fff6dc", "#1a140c");
+for (const k in ENEMY) SPR["e_" + k] = glyphSprite(ENEMY[k].glyph, ENEMY[k].size, "#141210", "#e9dcc2");
+
+// ---------- state ----------
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+let S; // run state
+function newRun() {
+  S = { wave: 1, phase: "start", army: { plain: 1 }, pawns: [], enemies: [], fx: [], texts: [], t: 0,
+        speed: S ? S.speed : 1, paused: false, spawnQueue: [], spawnTimer: 0, cds: {}, buffs: {},
+        locked: [], offers: [], recruited: {}, rerolls: 0, incoming: [], pickups: [], shake: 0, kills: 0, peak: 1 };
+}
+newRun();
+
+function makePawn(type, x, y) {
+  const T = TYPES[type];
+  return { type, x, y, hp: T.hp, maxHp: T.hp, atk: T.atk, cdLeft: rnd() * T.cd, dodge: type === "enpassant", rage: 0,
+           queen: false, spawnT: 5, healT: 1.5, vx: 0, vy: 0, pop: .25, dead: false };
+}
+function makeEnemy(kind, x, y) {
+  const E = ENEMY[kind]; let hp = Math.ceil(E.hp * (1 + HP_GROWTH * (S.wave - 1)));
+  const open = VARIANT_KEYS.filter(v => VARIANTS[v].kind === kind && VARIANTS[v].from <= S.wave);
+  let variant = null;
+  for (const v of open) if (rnd() < Math.min(.45, .18 + .07 * (S.wave - VARIANTS[v].from))) { variant = v; break; }
+  if (variant === "tower") hp *= 3;
+  const every = E.every * (variant === "hunter" ? .5 : variant === "tower" ? 1.5 : 1);
+  return { kind, x, y, hp, maxHp: hp, variant, every, t: rnd() * every, powerT: 1 + rnd() * 2, move: null, spawnT: 6, dead: false };
+}
+
+function placeArmy() {
+  S.pawns = [];
+  const order = ["shield", "berserker", "twin", "enpassant", "spear", "plain", "promoter", "bomb", "banner", "recruiter", "medic"];
+  // a sunflower spiral around the centre: the first types in the order end up in the middle
+  let i = 0;
+  for (const type of order) for (let n = 0; n < (S.army[type] || 0); n++, i++) {
+    const r = 9 * Math.sqrt(i), a = i * 2.39996;
+    S.pawns.push(makePawn(type, Math.max(10, Math.min(W - 10, W / 2 + Math.cos(a) * r)), Math.max(10, Math.min(H - 10, H / 2 + Math.sin(a) * r))));
+  }
+}
+function totalPawnsInArmy() { return Object.values(S.army).reduce((a, b) => a + b, 0); }
+
+function startWave() {
+  placeArmy(); S.enemies = []; S.incoming = []; S.pickups = []; S.fx = []; S.texts = []; S.cds = {}; S.buffs = {};
+  const [k, b, r, q, kg] = WAVES[S.wave - 1];
+  const q2 = [];
+  for (let i = 0; i < k; i++) q2.push("knight"); for (let i = 0; i < b; i++) q2.push("bishop");
+  for (let i = 0; i < r; i++) q2.push("rook"); for (let i = 0; i < q; i++) q2.push("queen");
+  for (let i = q2.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [q2[i], q2[j]] = [q2[j], q2[i]]; }
+  if (kg) q2.unshift("king");
+  // the whole wave lands at once, spread around the swarm: half in a ring, half anywhere, never on top of it
+  S.spawnQueue = []; const taken = new Set();
+  for (const kind of q2) {
+    let col, row;
+    for (let tries = 0; tries < 40; tries++) {
+      let x, y;
+      if (kind === "king") { x = W / 2; y = SQ * 1.5; }
+      else if (rnd() < .5) { const a = rnd() * 6.28, d = 150 + rnd() * 120; x = W / 2 + Math.cos(a) * d; y = H / 2 + Math.sin(a) * d; }
+      else { x = rnd() * W; y = rnd() * H; }
+      col = Math.max(0, Math.min(COLS - 1, Math.floor(x / SQ))); row = Math.max(0, Math.min(ROWS - 1, Math.floor(y / SQ)));
+      if (!taken.has(col + "," + row) && Math.hypot(col * SQ - W / 2, row * SQ - H / 2) > 120) break;
+    }
+    taken.add(col + "," + row);
+    S.incoming.push({ kind, x: col * SQ + SQ / 2, y: row * SQ + SQ / 2, t: 1.2 });
+  }
+  S.phase = "battle"; toast(`Wave ${S.wave}`);
+  renderSkills();
+}
+
+// ---------- spatial grid for pawns ----------
+const GC = 32; let grid = new Map();
+function buildGrid() { grid = new Map(); for (const p of S.pawns) { const k = ((p.x / GC) | 0) + ((p.y / GC) | 0) * 100; let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(p); } }
+function pawnsNear(x, y, r, fn) {
+  const x0 = ((x - r) / GC) | 0, x1 = ((x + r) / GC) | 0, y0 = ((y - r) / GC) | 0, y1 = ((y + r) / GC) | 0, r2 = r * r;
+  for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) { const a = grid.get(gx + gy * 100); if (!a) continue;
+    for (const p of a) if (!p.dead) { const dx = p.x - x, dy = p.y - y; if (dx * dx + dy * dy <= r2) fn(p); } }
+}
+
+// ---------- combat helpers ----------
+function hurtPawn(p, dmg) {
+  if (p.dead) return;
+  if (p.type === "shield" && S.buffs.hold > 0) { addText(p.x, p.y - 10, "block", "#7fb3ff"); return; }
+  if (p.dodge) { p.dodge = false; addText(p.x, p.y - 10, "dodge", "#7ef0ff"); return; }
+  p.hp -= dmg; addText(p.x, p.y - 12, "-" + dmg, "#e0614f");
+  if (p.hp <= 0) killPawn(p);
+}
+function killPawn(p) {
+  p.dead = true; burst(p.x, p.y, TYPES[p.type].tint, 8);
+  if (p.type === "bomb") explode(p.x, p.y);
+  pawnsNear(p.x, p.y, 80, q => { if (q.type === "berserker" && !q.dead) q.rage++; });
+}
+function explode(x, y) {
+  S.fx.push({ kind: "ring", x, y, r: 6, max: 64, life: .35, t: 0 }); S.shake = Math.min(10, S.shake + 5);
+  for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - x, e.y - y) < 64) hurtEnemy(e, 4);
+  // friendly fire never hurts: white pawns in the blast are knocked out for a moment instead
+  pawnsNear(x, y, 64, q => { if (!q.dead) { q.stun = 2; } });
+}
+function hurtEnemy(e, dmg) {
+  if (e.dead) return; e.hp -= dmg; e.flash = .1; addText(e.x, e.y - 18, String(dmg), "#efe6d4");
+  if (e.hp <= 0) {
+    e.dead = true; S.kills++; burst(e.x, e.y, "#e9dcc2", 14); S.shake = Math.min(10, S.shake + (e.kind === "king" ? 12 : 1.5));
+    // crowding: the bigger the swarm, the fewer pawns each kill drops, so growth slows down
+    const crowd = Math.max(DROP_FLOOR, 1 - S.pawns.length / CROWD_SIZE);
+    const raw = (ENEMY[e.kind].drop + (e.variant ? 1 : 0)) * crowd * (S.buffs.bounty > 0 ? 2 : 1);
+    const drop = Math.floor(raw) + (rnd() < raw % 1 ? 1 : 0);
+    const pChance = e.kind === "queen" || e.kind === "rook" ? .35 : e.variant ? .2 : .03;
+    if (rnd() < pChance) S.pickups.push({ kind: pick(Object.keys(POWERUPS)), x: e.x, y: e.y, t: 9 });
+    for (let i = 0; i < drop; i++) { const p = makePawn("plain", e.x, e.y); const a = rnd() * Math.PI * 2, v = 60 + rnd() * 90;
+      p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v; S.pawns.push(p); }
+    if (drop) { addText(e.x, e.y - 30, "+" + drop + " ♟", "#e8b04a", 1.1, 22); bumpCounter(); }
+    if (e.kind === "king") S.kingDead = true;
+  }
+}
+function attackPower(p) {
+  let a = p.atk + p.rage + (p.queen ? 4 : 0);
+  if (p.type === "plain" && S.buffs.charge > 0) a += 1;
+  if (p.type === "berserker" && S.buffs.frenzy > 0) a += 3;
+  if (p.banner) a += 1;
+  if (S.buffs.fury > 0) a += 2;
+  return a;
+}
+
+// ---------- simulation step ----------
+function step(dt) {
+  S.t += dt;
+  for (const k in S.buffs) S.buffs[k] -= dt;
+  for (const k in S.cds) S.cds[k] = Math.max(0, S.cds[k] - dt);
+  for (const w of S.incoming) { w.t -= dt; if (w.t <= 0) { S.enemies.push(makeEnemy(w.kind, w.x, w.y)); burst(w.x, w.y, "#141210", 8); } }
+  S.incoming = S.incoming.filter(w => w.t > 0);
+  buildGrid();
+  // banner aura
+  for (const p of S.pawns) p.banner = false;
+  for (const b of S.pawns) if (b.type === "banner" && !b.dead) pawnsNear(b.x, b.y, 54, q => { if (q !== b) q.banner = true; });
+  const alive = S.enemies.filter(e => !e.dead);
+  const rally = S.buffs.rally > 0;
+  // pawns
+  for (const p of S.pawns) {
+    if (p.dead) continue;
+    const T = TYPES[p.type];
+    if (p.pop > 0) p.pop -= dt;
+    if (p.vx || p.vy) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= Math.pow(.02, dt); p.vy *= Math.pow(.02, dt); if (Math.abs(p.vx) + Math.abs(p.vy) < 4) p.vx = p.vy = 0; }
+    if (p.stun > 0) { p.stun -= dt; continue; }
+    // passives
+    if (p.type === "recruiter") { p.spawnT -= dt; if (p.spawnT <= 0) { p.spawnT = 8; const n = makePawn("plain", p.x, p.y + 10); n.vy = 40; S.pawns.push(n); bumpCounter(); } }
+    if (p.type === "medic") { p.healT -= dt; if (p.healT <= 0) { p.healT = 1.5; pawnsNear(p.x, p.y, 60, q => { if (q.hp < q.maxHp) { q.hp++; addText(q.x, q.y - 10, "+1", "#8fcf6b", .6, 12); } }); } }
+    if (p.type === "promoter" && !p.queen && (p.y < SQ * .8 || p.y > H - SQ * .8 || p.x < SQ * .8 || p.x > W - SQ * .8)) { p.queen = true; p.hp = p.maxHp = 14; toast("Promoted!"); burst(p.x, p.y, "#ffe066", 20); }
+    // find target
+    let best = null, bd = 1e9;
+    for (const e of alive) { if (e.dead) continue; const d = (e.x - p.x) ** 2 + (e.y - p.y) ** 2; if (d < bd) { bd = d; best = e; } }
+    let spd = T.spd * (p.queen ? 1.6 : 1);
+    if (p.type === "plain" && S.buffs.charge > 0) spd *= 2;
+    if (rally) spd *= 1.6;
+    if (S.buffs.haste > 0) spd *= 1.5;
+    p.cdLeft -= dt * (rally ? 1.6 : 1);
+    if (!best) { stepOrtho(p, W / 2, H / 2, spd * .3 * dt, 30); continue; }
+    const range = p.queen ? 40 : T.range; const dist = Math.sqrt(bd); const er = ENEMY[best.kind].size * .4;
+    if (p.type === "medic") { // keep behind the swarm
+      if (dist > 140) stepOrtho(p, best.x, best.y, spd * dt, 0);
+      continue;
+    }
+    if (dist > range + er) {
+      stepOrtho(p, best.x, best.y, spd * dt, 0);
+    } else if (p.cdLeft <= 0) {
+      p.cdLeft = T.cd;
+      const dmg = attackPower(p);
+      hurtEnemy(best, dmg); S.fx.push({ kind: "slash", x: p.x, y: p.y, tx: best.x, ty: best.y, life: .12, t: 0, c: T.tint });
+      if (p.type === "twin" || p.queen) { const other = alive.find(e => e !== best && !e.dead && Math.hypot(e.x - p.x, e.y - p.y) < range + 20); if (other) { hurtEnemy(other, dmg); S.fx.push({ kind: "slash", x: p.x, y: p.y, tx: other.x, ty: other.y, life: .12, t: 0, c: T.tint }); } }
+    }
+  }
+  // separation so the swarm spreads out
+  for (const p of S.pawns) { if (p.dead) continue; let n = 0;
+    pawnsNear(p.x, p.y, 15, q => { if (q === p || n > 6) return; n++; const dx = p.x - q.x || (rnd() - .5), dy = p.y - q.y || (rnd() - .5); const d = Math.hypot(dx, dy) || 1; const push = (15 - d) * .35; p.x += dx / d * push; p.y += dy / d * push; });
+    p.x = Math.max(8, Math.min(W - 8, p.x)); p.y = Math.max(8, Math.min(H - 8, p.y)); }
+  // enemies
+  const shields = S.pawns.filter(p => p.type === "shield" && !p.dead);
+  for (const e of alive) {
+    const E = ENEMY[e.kind];
+    if (e.flash > 0) e.flash -= dt;
+    if (S.buffs.freeze > 0) continue;
+    // touching a black piece hurts
+    e.touchT = (e.touchT || 0) - dt;
+    if (e.touchT <= 0) { e.touchT = 1.5; pawnsNear(e.x, e.y, E.size * .5 + 10, p => hurtPawn(p, 1)); }
+    if (e.windup) { e.windup.t -= dt; if (e.windup.t <= 0) { e.move = e.windup.move; e.windup = null; } continue; }
+    if (e.move) { // animate the chess move; every pawn on a marked square is hit on landing
+      const m = e.move; m.t += dt; const k = Math.min(1, m.t / m.d);
+      e.hop = e.kind === "knight" ? Math.sin(k * Math.PI) * 18 : 0;
+      e.x = m.fx + (m.tx - m.fx) * k; e.y = m.fy + (m.ty - m.fy) * k;
+      if (k >= 1) { e.move = null; e.hop = 0; const dmg = E.atk + (e.variant === "stomper" ? 1 : 0);
+        for (const [cx, cy] of m.squares) hitSquare(cx, cy, dmg);
+        if (e.kind === "knight" || e.kind === "king") { S.fx.push({ kind: "ring", x: e.x, y: e.y, r: 4, max: SQ * 1.4, life: .2, t: 0 }); S.shake = Math.min(10, S.shake + (e.variant === "stomper" ? 3 : 1)); } }
+      continue;
+    }
+    e.t -= dt;
+    if (e.kind === "king") { e.spawnT -= dt; if (e.spawnT <= 0) { e.spawnT = 6; summon(e, 3); } }
+    if (e.variant) blackPower(e, dt);
+    if (e.t > 0) continue;
+    e.t = e.every;
+    // target: shields in reach first (taunt), else nearest pawn
+    let tgt = null, bd = 1e9;
+    const taunt = S.buffs.hold > 0 ? 220 : 110;
+    for (const s of shields) { const d = Math.hypot(s.x - e.x, s.y - e.y); if (d < taunt && d < bd) { bd = d; tgt = s; } }
+    if (!tgt && e.variant === "hunter") for (const p of S.pawns) { if (p.type === "plain" || p.dead) continue; const d = Math.hypot(p.x - e.x, p.y - e.y); if (d < bd) { bd = d; tgt = p; } }
+    if (!tgt) { pawnsNearAll(e, (p, d) => { if (d < bd) { bd = d; tgt = p; } }); }
+    if (!tgt) continue;
+    const opts = chessMoves(e.kind, e.variant === "sniper" ? 8 : 0);
+    let bestMove = null, bm = 1e9;
+    for (const [mx, my] of opts) { const tx = e.x + mx * SQ, ty = e.y + my * SQ; if (tx < 0 || tx > W || ty < 0 || ty > H) continue;
+      const d = Math.hypot(tgt.x - tx, tgt.y - ty) + rnd() * 6; if (d < bm) { bm = d; bestMove = [tx, ty]; } }
+    if (bestMove) { const move = { fx: e.x, fy: e.y, tx: bestMove[0], ty: bestMove[1], t: 0, d: e.kind === "king" ? .35 : e.kind === "knight" ? .28 : .3 };
+      move.squares = attackSquares(e, move); e.windup = { t: WINDUP, move }; }
+  }
+  // power-ups drift to the nearest pawn and get picked up on touch
+  for (const u of S.pickups) {
+    u.t -= dt; let near = null, nd = 90;
+    pawnsNear(u.x, u.y, 90, p => { const d = Math.hypot(p.x - u.x, p.y - u.y); if (d < nd) { nd = d; near = p; } });
+    if (near) { u.x += (near.x - u.x) / (nd || 1) * 140 * dt; u.y += (near.y - u.y) / (nd || 1) * 140 * dt; if (nd < 14) { u.t = 0; collect(u); } }
+  }
+  S.pickups = S.pickups.filter(u => u.t > 0);
+  // cleanup
+  S.pawns = S.pawns.filter(p => !p.dead); S.enemies = S.enemies.filter(e => !e.dead);
+  S.peak = Math.max(S.peak, S.pawns.length);
+  // fx
+  for (const f of S.fx) f.t += dt; S.fx = S.fx.filter(f => f.t < f.life);
+  for (const t of S.texts) { t.t += dt; t.y -= 26 * dt; } S.texts = S.texts.filter(t => t.t < t.life);
+  if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 30);
+  // end conditions
+  if (!S.pawns.length) return endRun(false);
+  if (S.kingDead) return endRun(true);
+  if (!S.spawnQueue.length && !S.incoming.length && !S.enemies.length) endWave();
+}
+// pawns walk like rooks: one axis at a time, never diagonally. They stick to their
+// current axis until the other one is clearly longer, so they don't zig-zag every frame.
+function stepOrtho(p, tx, ty, d, stopAt) {
+  const dx = tx - p.x, dy = ty - p.y, ax = Math.abs(dx), ay = Math.abs(dy);
+  if (ax + ay <= stopAt) return;
+  if (p.axis === "x" ? (ay > ax * 1.3 || ax < 2) : (ax > ay * 1.3 || ay < 2)) p.axis = p.axis === "x" ? "y" : "x";
+  if (p.axis === "x") p.x += Math.sign(dx) * Math.min(d, ax); else p.y += Math.sign(dy) * Math.min(d, ay);
+}
+function swarmCentre() {
+  if (!S.pawns.length) return [W / 2, H / 2];
+  let x = 0, y = 0; for (const p of S.pawns) { x += p.x; y += p.y; } return [x / S.pawns.length, y / S.pawns.length];
+}
+function collect(u) {
+  const P = POWERUPS[u.kind];
+  if (u.kind === "heal") for (const p of S.pawns) p.hp = p.maxHp;
+  if (u.kind === "haste") S.buffs.haste = 6;
+  if (u.kind === "fury") S.buffs.fury = 6;
+  if (u.kind === "freeze") S.buffs.freeze = 3;
+  if (u.kind === "bounty") S.buffs.bounty = 8;
+  if (u.kind === "reinforce") { for (let i = 0; i < 3; i++) { const n = makePawn("plain", u.x, u.y); const a = rnd() * 6.28; n.vx = Math.cos(a) * 90; n.vy = Math.sin(a) * 90; S.pawns.push(n); } bumpCounter(); }
+  toast(P.name + ": " + P.text); burst(u.x, u.y, P.color, 16);
+}
+// squares a black move hits: sliders hit every square they pass through,
+// knights and the king stomp the 3×3 block where they land (stomper knights a wider cross)
+const WINDUP = .4; // seconds the red squares show before the move lands
+function attackSquares(e, m) {
+  const out = []; const add = (x, y) => { if (x > 0 && x < W && y > 0 && y < H) out.push([x, y]); };
+  if (e.kind === "knight" || e.kind === "king") {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) add(m.tx + dx * SQ, m.ty + dy * SQ);
+    if (e.variant === "stomper") for (const [dx, dy] of [[2,0],[-2,0],[0,2],[0,-2]]) add(m.tx + dx * SQ, m.ty + dy * SQ);
+  } else {
+    const n = Math.round(Math.max(Math.abs(m.tx - m.fx), Math.abs(m.ty - m.fy)) / SQ);
+    for (let i = 1; i <= n; i++) add(m.fx + (m.tx - m.fx) * i / n, m.fy + (m.ty - m.fy) * i / n);
+  }
+  return out;
+}
+function hitSquare(cx, cy, dmg) {
+  pawnsNear(cx, cy, SQ * .75, p => { if (Math.abs(p.x - cx) <= SQ / 2 + 2 && Math.abs(p.y - cy) <= SQ / 2 + 2) hurtPawn(p, dmg); });
+}
+function summon(e, n) {
+  for (let i = 0; i < n; i++) { const a = rnd() * 6.28; S.incoming.push({ kind: "knight", x: Math.max(SQ / 2, Math.min(W - SQ / 2, e.x + Math.cos(a) * SQ * 1.5)), y: Math.max(SQ / 2, Math.min(H - SQ / 2, e.y + Math.sin(a) * SQ * 1.5)), t: .8 }); }
+}
+// powers of the special black piece types
+function blackPower(e, dt) {
+  e.powerT -= dt; if (e.powerT > 0) return;
+  const v = e.variant;
+  if (v === "priest") { e.powerT = 2;
+    for (const o of S.enemies) if (!o.dead && o !== e && o.hp < o.maxHp && Math.hypot(o.x - e.x, o.y - e.y) < 90) { o.hp = Math.min(o.maxHp, o.hp + 2); addText(o.x, o.y - 20, "+2", "#8fcf6b"); }
+    S.fx.push({ kind: "ring", x: e.x, y: e.y, r: 4, max: 90, life: .3, t: 0, c: "#8fcf6b" }); }
+  else if (v === "cannon") { e.powerT = 3;
+    pawnsNear(e.x, e.y, SQ * 7, p => { if (Math.abs(p.x - e.x) < 12 || Math.abs(p.y - e.y) < 12) hurtPawn(p, 2); });
+    for (const [vx, vy] of [[1,0],[-1,0],[0,1],[0,-1]]) S.fx.push({ kind: "slash", x: e.x, y: e.y, tx: e.x + vx * SQ * 7, ty: e.y + vy * SQ * 7, life: .25, t: 0, c: "#e0614f" }); }
+  else if (v === "storm") { e.powerT = 4;
+    pawnsNear(e.x, e.y, 70, p => hurtPawn(p, 2)); S.shake = Math.min(10, S.shake + 3);
+    S.fx.push({ kind: "ring", x: e.x, y: e.y, r: 6, max: 70, life: .35, t: 0, c: "#bff3ff" }); }
+  else if (v === "summoner") { e.powerT = 6; summon(e, 2); }
+  else e.powerT = 99;
+}
+function pawnsNearAll(e, fn) { // nearest pawn search with growing radius
+  for (const r of [96, 256, 2000]) { let found = false; pawnsNear(e.x, e.y, r, p => { found = true; fn(p, Math.hypot(p.x - e.x, p.y - e.y)); }); if (found) return; }
+}
+function chessMoves(kind, reach) {
+  const L = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+  const out = [];
+  const line = (dirs, max) => { for (const [dx, dy] of dirs) for (let n = 1; n <= max; n++) out.push([dx * n, dy * n]); };
+  const diag = [[1,1],[1,-1],[-1,1],[-1,-1]], orth = [[1,0],[-1,0],[0,1],[0,-1]];
+  if (kind === "knight") return L;
+  if (kind === "bishop") line(diag, reach || 4);
+  if (kind === "rook") line(orth, 6);
+  if (kind === "queen") { line(diag, 5); line(orth, 5); }
+  if (kind === "king") line([...diag, ...orth], 1);
+  return out;
+}
+
+// ---------- skills ----------
+function ownedTypes() { const s = new Set(S.pawns.map(p => p.type)); return TYPE_KEYS.filter(k => s.has(k)); }
+function useSkill(type) {
+  if (S.phase !== "battle" || (S.cds[type] || 0) > 0) return;
+  const mine = S.pawns.filter(p => p.type === type); if (!mine.length) return;
+  S.cds[type] = TYPES[type].skill.cd;
+  const near = (p, r, fn) => { for (const e of S.enemies) if (!e.dead && Math.hypot(e.x - p.x, e.y - p.y) < r) fn(e); };
+  switch (type) {
+    case "plain": S.buffs.charge = 3; break;
+    case "shield": S.buffs.hold = 4; break;
+    case "spear": for (const p of mine) {
+      for (const e of S.enemies) if (!e.dead && ((Math.abs(e.x - p.x) < 20 && Math.abs(e.y - p.y) < 130) || (Math.abs(e.y - p.y) < 20 && Math.abs(e.x - p.x) < 130))) hurtEnemy(e, 3);
+      for (const [vx, vy] of [[1,0],[-1,0],[0,1],[0,-1]]) S.fx.push({ kind: "slash", x: p.x, y: p.y, tx: p.x + vx * 128, ty: p.y + vy * 128, life: .2, t: 0, c: "#f0d27a" }); } break;
+    case "twin": for (const p of mine) { near(p, 44, e => hurtEnemy(e, 2)); S.fx.push({ kind: "ring", x: p.x, y: p.y, r: 4, max: 44, life: .2, t: 0 }); } break;
+    case "medic": for (const p of S.pawns) p.hp = p.maxHp; burstAll("#8fcf6b"); break;
+    case "banner": S.buffs.rally = 5; break;
+    case "bomb": for (const p of mine) { p.dead = true; burst(p.x, p.y, "#ff6b4a", 10); explode(p.x, p.y); } break;
+    case "recruiter": for (const p of mine) for (let i = 0; i < 2; i++) { const n = makePawn("plain", p.x, p.y); const a = rnd() * 6.28; n.vx = Math.cos(a) * 80; n.vy = Math.sin(a) * 80; S.pawns.push(n); } bumpCounter(); break;
+    case "berserker": for (const p of mine) { if (p.hp > 1) p.hp--; } S.buffs.frenzy = 5; break;
+    case "promoter": for (const p of mine) { let b = null, bd = 1e9; for (const e of S.enemies) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; b = e; } }
+      if (b) { const dx = b.x - p.x, dy = b.y - p.y; if (Math.abs(dx) > Math.abs(dy)) p.x += Math.sign(dx) * Math.min(SQ * 5, Math.abs(dx)); else p.y += Math.sign(dy) * Math.min(SQ * 5, Math.abs(dy)); }
+      p.x = Math.max(8, Math.min(W - 8, p.x)); p.y = Math.max(8, Math.min(H - 8, p.y)); burst(p.x, p.y, "#ffe066", 6); } break;
+    case "enpassant": for (const p of mine) { p.dodge = true; let b = null, bd = 1e9; for (const e of S.enemies) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd) { bd = d; b = e; } } if (b && bd < 200) { p.x = b.x + (rnd() - .5) * 20; p.y = b.y + 18; hurtEnemy(b, 3); } } break;
+  }
+  toast(TYPES[type].skill.name + "!");
+  renderSkills();
+}
+const skillsEl = document.getElementById("skills");
+let skillKeys = [];
+function renderSkills() {
+  if (S.phase !== "battle") { skillsEl.innerHTML = ""; skillKeys = []; return; }
+  const owned = ownedTypes();
+  if (owned.join() !== skillKeys.join()) {
+    skillKeys = owned;
+    skillsEl.innerHTML = owned.map((k, i) => `<button class="skill" data-type="${k}" title="${TYPES[k].skill.text}"><span class="k">${i + 1}</span><span class="n" style="color:${TYPES[k].tint}">${TYPES[k].skill.name}</span><span class="t">${TYPES[k].name}</span><span class="cd"></span></button>`).join("");
+  }
+  for (const b of skillsEl.children) {
+    const k = b.dataset.type, left = S.cds[k] || 0, max = TYPES[k].skill.cd;
+    b.disabled = left > 0; b.classList.toggle("ready", left === 0);
+    b.querySelector(".cd").style.width = (left > 0 ? (1 - left / max) * 100 : 100) + "%";
+    b.querySelector(".t").textContent = left > 0 ? left.toFixed(1) + "s" : TYPES[k].name;
+  }
+}
+skillsEl.addEventListener("click", e => { const b = e.target.closest(".skill"); if (b) useSkill(b.dataset.type); });
+addEventListener("keydown", e => {
+  if (e.key >= "1" && e.key <= "9") { const k = skillKeys[+e.key - 1]; if (k) useSkill(k); }
+  if (e.key === " " && S.phase === "battle") { e.preventDefault(); togglePause(); }
+});
+
+// ---------- waves, shop, end ----------
+function endWave() {
+  S.phase = "shop";
+  S.army = {}; for (const p of S.pawns) { const t = p.type; S.army[t] = (S.army[t] || 0) + 1; }
+  S.wave++; S.rerolls = 0; S.recruited = {}; rollOffers(); renderSkills(); renderShop();
+}
+const OFFER_SLOTS = 3, MAX_PER_TYPE = 5; // per shop visit, at most 5 pawns of any one type
+// price of one pawn of this type: plain pawns sacrificed on top of the one that converts
+function offerCost(type) { return Math.ceil(TYPES[type].base / 2 * (1 + .25 * (S.wave - 1))); }
+function recruited(type) { return S.recruited[type] || 0; }
+function rollOffers() {
+  const pool = TYPE_KEYS.filter(k => TYPES[k].rarity && RARITY_GATE[TYPES[k].rarity] <= S.wave);
+  const weight = k => ({ common: 6, rare: 3, epic: 1.4 })[TYPES[k].rarity];
+  const keep = S.offers.filter(o => o.locked);
+  const out = keep.map(o => ({ ...o }));
+  // no type twice in one shop; early waves have fewer types than slots, so they show fewer offers
+  while (out.length < OFFER_SLOTS) { const left = pool.filter(k => !out.some(o => o.type === k)); if (!left.length) break;
+    const tot = left.reduce((a, k) => a + weight(k), 0); let r = rnd() * tot; let pickK = left[0]; for (const k of left) { r -= weight(k); if (r <= 0) { pickK = k; break; } }
+    out.push({ type: pickK, locked: false }); }
+  S.offers = out;
+}
+function nextWaveInfo() {
+  const [k, b, r, q, kg] = WAVES[S.wave - 1]; const names = ["knights", "bishops", "rooks", "queens", "king"];
+  const parts = [k, b, r, q, kg].map((n, i) => n ? n + " " + (n === 1 ? names[i].replace(/s$/, "") : names[i]) : "").filter(Boolean).join(", ");
+  const fresh = VARIANT_KEYS.filter(v => VARIANTS[v].from === S.wave);
+  const known = VARIANT_KEYS.filter(v => VARIANTS[v].from < S.wave);
+  const row = v => `<span class="chip" style="border-color:${VARIANTS[v].color}"><b style="color:${VARIANTS[v].color}">${VARIANTS[v].name}</b> · ${VARIANTS[v].text}</span>`;
+  return `<p><b style="color:var(--fg)">Wave ${S.wave}:</b> ${parts}, all at once.</p>` +
+    (fresh.length ? `<p><b style="color:var(--danger)">New black types this wave</b></p><div class="army">${fresh.map(row).join("")}</div>` : "") +
+    (known.length ? `<details><summary style="cursor:pointer;color:var(--muted)">Black types you've met (${known.length})</summary><div class="army" style="margin-top:6px">${known.map(row).join("")}</div></details>` : "");
+}
+function rerollCost() { return 1 + S.rerolls + Math.floor(S.wave / 3); }
+const shopEl = document.getElementById("shopScreen");
+function renderShop() {
+  shopEl.hidden = false; const plain = S.army.plain || 0;
+  const chips = TYPE_KEYS.filter(k => S.army[k]).map(k => `<span class="chip" style="border-color:${TYPES[k].tint}55"><b style="color:${TYPES[k].tint}">♟</b> ${TYPES[k].name} × ${S.army[k]}</span>`).join("");
+  shopEl.innerHTML = `<div class="sheet">
+    <h2>Wave ${S.wave - 1} cleared</h2>
+    <p>You have <b style="color:var(--accent)">${plain}</b> plain pawns to spend. Each recruit turns one plain pawn into the type and sacrifices more as the price. Up to ${MAX_PER_TYPE} of each type per wave. You always keep at least one plain pawn.</p>
+    <div class="army">${chips}</div>
+    ${nextWaveInfo()}
+    <div class="offers">${S.offers.map((o, i) => { const T = TYPES[o.type]; const cost = offerCost(o.type) + 1; const done = recruited(o.type); const full = done >= MAX_PER_TYPE;
+      return `<div class="offer ${full ? "sold" : ""}" style="--rarity:${RARITY_COLOR[T.rarity]}">
+        <span class="rar">${T.rarity}</span><h3 style="color:${T.tint}">♟ ${T.name}</h3>
+        <span class="stats">${T.hp} HP · ${T.atk} attack</span>
+        <span class="desc">${T.desc}</span>
+        <span class="sk">Skill · ${T.skill.name}: ${T.skill.text}</span>
+        <span class="stats">Recruited this wave: <b style="color:var(--fg)">${done}/${MAX_PER_TYPE}</b></span>
+        <div class="row"><button class="btn" data-buy="${i}" ${full || plain < cost + 1 ? "disabled" : ""}>${full ? "Max this wave" : `Recruit 1 (${cost} ♟)`}</button>
+        <button class="btn ghost" data-lock="${i}" aria-pressed="${o.locked}">${o.locked ? "Locked" : "Lock"}</button></div>
+      </div>`; }).join("")}</div>
+    <div class="shopbar"><button class="btn ghost" id="rerollBtn" ${plain < rerollCost() + 1 ? "disabled" : ""}>Reroll (${rerollCost()} ♟)</button>
+      <div class="spacer"></div><button class="btn big" id="nextBtn">Start wave ${S.wave}</button></div>
+  </div>`;
+}
+shopEl.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t || t.disabled) return;
+  if (t.dataset.buy) { const o = S.offers[+t.dataset.buy]; S.army.plain -= offerCost(o.type) + 1; S.army[o.type] = (S.army[o.type] || 0) + 1; S.recruited[o.type] = recruited(o.type) + 1; }
+  else if (t.dataset.lock) { const o = S.offers[+t.dataset.lock]; o.locked = !o.locked; }
+  else if (t.id === "rerollBtn") { S.army.plain -= rerollCost(); S.rerolls++; S.offers = S.offers.filter(o => o.locked); rollOffers(); }
+  else if (t.id === "nextBtn") { shopEl.hidden = true; S.offers = S.offers.filter(o => o.locked); startWave(); return; }
+  renderShop();
+});
+const endEl = document.getElementById("endScreen");
+function endRun(won) {
+  S.phase = "end"; renderSkills(); endEl.hidden = false;
+  endEl.innerHTML = `<div class="sheet"><h2>${won ? "Checkmate. The king is down." : "Your last pawn fell."}</h2>
+    <p>${won ? "You cleared all 10 waves." : `You reached wave ${S.wave}.`} Biggest swarm: <b style="color:var(--accent)">${S.peak}</b> pawns. Black pieces taken: ${S.kills}.</p>
+    <div><button class="btn big" id="againBtn">New run</button></div></div>`;
+}
+endEl.addEventListener("click", e => { if (e.target.id === "againBtn") { endEl.hidden = true; newRun(); startWave(); } });
+document.getElementById("startBtn").onclick = () => { document.getElementById("startScreen").hidden = true; startWave(); };
+
+// ---------- controls ----------
+document.getElementById("speed").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.speed = +b.dataset.s;
+  for (const x of e.currentTarget.children) x.setAttribute("aria-pressed", String(x === b)); });
+const pauseBtn = document.getElementById("pauseBtn");
+function togglePause() { S.paused = !S.paused; pauseBtn.textContent = S.paused ? "Resume" : "Pause"; pauseBtn.setAttribute("aria-pressed", String(S.paused)); }
+pauseBtn.onclick = togglePause;
+
+// ---------- fx helpers ----------
+function addText(x, y, s, c, life = .6, size = 13) { if (S.texts.length < 260) S.texts.push({ x: x + (rnd() - .5) * 8, y, s, c, t: 0, life, size }); }
+function burst(x, y, c, n) { for (let i = 0; i < n; i++) { const a = rnd() * 6.28, v = 40 + rnd() * 120; S.fx.push({ kind: "dot", x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, c, life: .35 + rnd() * .3, t: 0 }); } }
+function burstAll(c) { for (const p of S.pawns.slice(0, 120)) burst(p.x, p.y, c, 1); }
+const toastEl = document.getElementById("toast"); let toastT = 0;
+function toast(s) { toastEl.textContent = s; toastT = 1.2; }
+const countEl = document.getElementById("pawnCount");
+function bumpCounter() { countEl.classList.remove("bump"); void countEl.offsetWidth; countEl.classList.add("bump"); }
+
+// ---------- render ----------
+const board = document.createElement("canvas"); board.width = W * RES; board.height = H * RES; board.getContext("2d").scale(RES, RES);
+{ const g = board.getContext("2d"); for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#3a2f22" : "#4a3c2b"; g.fillRect(c * SQ, r * SQ, SQ, SQ); }
+}
+function draw() {
+  ctx.setTransform(RES, 0, 0, RES, 0, 0);
+  ctx.save(); if (S.shake > 0) ctx.translate((rnd() - .5) * S.shake, (rnd() - .5) * S.shake);
+  ctx.drawImage(board, 0, 0, W, H);
+  if (S.buffs.hold > 0) { ctx.strokeStyle = "#7fb3ff55"; for (const p of S.pawns) if (p.type === "shield") { ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, 6.28); ctx.stroke(); } }
+  // pawns
+  for (const p of S.pawns) {
+    const spr = p.queen ? SPR.queenW : SPR[p.type]; const s = p.pop > 0 ? 1 - p.pop * 2 : 1;
+    const w = spr.width / RES * s; if (p.stun > 0) ctx.globalAlpha = .5; ctx.drawImage(spr, p.x - w / 2, p.y - w / 2, w, w); ctx.globalAlpha = 1;
+    if (p.stun > 0) { ctx.fillStyle = "#e8b04a"; ctx.font = "700 9px Barlow, sans-serif"; ctx.textAlign = "center"; ctx.fillText("z", p.x + 6 + Math.sin(S.t * 6 + p.x) * 2, p.y - 10 - (S.t * 8 % 4)); }
+    if (p.hp < p.maxHp) { ctx.fillStyle = "#0009"; ctx.fillRect(p.x - 10, p.y + 15, 20, 3); ctx.fillStyle = "#8fcf6b"; ctx.fillRect(p.x - 10, p.y + 15, 20 * p.hp / p.maxHp, 3); }
+  }
+  // red squares: where black moves are about to land
+  for (const e of S.enemies) if (e.windup) { const k = 1 - e.windup.t / WINDUP; ctx.fillStyle = `rgba(224,97,79,${.18 + .3 * k})`;
+    for (const [cx, cy] of e.windup.move.squares) ctx.fillRect(cx - SQ / 2 + 1, cy - SQ / 2 + 1, SQ - 2, SQ - 2); }
+  // enemies
+  for (const e of S.enemies) {
+    const spr = SPR["e_" + e.kind]; const y = e.y - (e.hop || 0); const sw = spr.width / RES;
+    if (e.hop) { ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 10, 4, 0, 0, 6.28); ctx.fill(); }
+    if (e.variant) { ctx.fillStyle = VARIANTS[e.variant].color + "44"; ctx.strokeStyle = VARIANTS[e.variant].color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, y, ENEMY[e.kind].size * .62, 0, 6.28); ctx.fill(); ctx.stroke(); }
+    ctx.globalAlpha = e.flash > 0 ? .5 : 1; ctx.drawImage(spr, e.x - sw / 2, y - sw / 2, sw, sw); ctx.globalAlpha = 1;
+    const bw = ENEMY[e.kind].size * .9; ctx.fillStyle = "#0009"; ctx.fillRect(e.x - bw / 2, y + sw / 2 - 4, bw, 3);
+    ctx.fillStyle = "#e0614f"; ctx.fillRect(e.x - bw / 2, y + sw / 2 - 4, bw * Math.max(0, e.hp) / e.maxHp, 3);
+  }
+  if (S.buffs.freeze > 0) { ctx.fillStyle = "#bff3ff22"; ctx.fillRect(0, 0, W, H); }
+  // power-ups
+  for (const u of S.pickups) { const P = POWERUPS[u.kind]; const r = 9 + Math.sin(S.t * 8) * 1.5;
+    ctx.globalAlpha = u.t < 2 ? .4 + .6 * Math.abs(Math.sin(u.t * 10)) : 1;
+    ctx.fillStyle = P.color; ctx.beginPath(); ctx.arc(u.x, u.y, r, 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#15120e"; ctx.font = "700 12px Barlow, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(P.label, u.x, u.y + 1); ctx.textBaseline = "alphabetic"; }
+  ctx.globalAlpha = 1;
+  // spawn warnings: a pulsing square where black pieces are about to land
+  for (const w of S.incoming) { ctx.strokeStyle = "#e0614f"; ctx.globalAlpha = .4 + .4 * Math.sin(w.t * 20); ctx.lineWidth = 2; ctx.strokeRect(w.x - SQ / 2 + 2, w.y - SQ / 2 + 2, SQ - 4, SQ - 4); }
+  ctx.globalAlpha = 1;
+  // fx
+  for (const f of S.fx) { const k = f.t / f.life;
+    if (f.kind === "slash") { ctx.strokeStyle = f.c; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.tx, f.ty); ctx.stroke(); }
+    else if (f.kind === "ring") { ctx.strokeStyle = f.c || "#ffcf7a"; ctx.globalAlpha = 1 - k; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(f.x, f.y, f.r + (f.max - f.r) * k, 0, 6.28); ctx.stroke(); }
+    else if (f.kind === "dot") { ctx.fillStyle = f.c; ctx.globalAlpha = 1 - k; ctx.fillRect(f.x + f.vx * f.t, f.y + f.vy * f.t, 3, 3); } }
+  ctx.globalAlpha = 1; ctx.textAlign = "center";
+  for (const t of S.texts) { ctx.globalAlpha = 1 - t.t / t.life; ctx.font = `700 ${t.size}px Barlow, sans-serif`; ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y); }
+  ctx.globalAlpha = 1; ctx.restore();
+}
+const plainEl = document.getElementById("plainCount"), waveEl = document.getElementById("waveNum"), enemyEl = document.getElementById("enemyCount");
+function hud() {
+  const n = S.phase === "battle" ? S.pawns.length : totalPawnsInArmy();
+  const plain = S.phase === "battle" ? S.pawns.filter(p => p.type === "plain").length : (S.army.plain || 0);
+  if (countEl.textContent !== String(n)) countEl.textContent = n;
+  plainEl.textContent = plain; waveEl.textContent = Math.min(S.wave, 10) + "/10";
+  enemyEl.textContent = S.enemies.length + S.incoming.length + S.spawnQueue.length;
+}
+
+// ---------- loop ----------
+let last = performance.now(), acc = 0, hudT = 0;
+function frame(now) {
+  const real = Math.min(.1, (now - last) / 1000); last = now;
+  if (S.phase === "battle" && !S.paused) { acc += real * S.speed; while (acc >= 1 / 60 && S.phase === "battle") { step(1 / 60); acc -= 1 / 60; } } else acc = 0;
+  draw(); hudT -= real; if (hudT <= 0) { hud(); renderSkills(); hudT = .1; }
+  if (toastT > 0) { toastT -= real; toastEl.style.opacity = Math.min(1, toastT * 2); }
+  requestAnimationFrame(frame);
+}
+const stageEl = document.getElementById("stage");
+function fit() { const r = stageEl.getBoundingClientRect(); const k = Math.min(r.width / W, r.height / H);
+  cv.style.width = Math.floor(W * k) + "px"; cv.style.height = Math.floor(H * k) + "px"; }
+cv.width = W * RES; cv.height = H * RES; addEventListener("resize", fit); fit();
+placeArmy(); requestAnimationFrame(frame);
+</script>

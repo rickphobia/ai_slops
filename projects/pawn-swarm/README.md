@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`in progress` — one plain pawn fights wave 1 (a single knight) on its own, ending in a win or game-over screen with a "new run" button. Shop, skills and later waves are still to come; see `docs/tickets/`.
+`in progress` — the game was redesigned around a real-time swarm after a prototype (`docs/prototype/`, decision 0002). The current build is still the old tick-based one-pawn-vs-one-knight battle; tickets 04–11 in `docs/tickets/` rebuild it to the new spec.
 
 ## Requirements
 
