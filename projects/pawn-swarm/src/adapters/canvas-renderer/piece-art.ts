@@ -1,4 +1,5 @@
 import { ANIMATION_FRAMES } from "../art/animation";
+import { ArtError } from "../art/art-error";
 import { ART_IDS, type ArtId } from "../art/drawings";
 import { frameStripSvg } from "../art/frame-strip";
 import { BONE } from "../art/palette";
@@ -22,6 +23,26 @@ export interface PieceArt {
   sprite(id: ArtId, squarePx: number, frame: number): Sprite;
   /** The colour effects use for this piece: sparks when it dies, slashes when it strikes. */
   tint(piece: PieceIdentity): string;
+}
+
+/** Copies a sprite 1:1 centred on (`x`, `y`); whole-pixel positions avoid resampling it every frame. */
+export function drawSpriteCentred(
+  context: CanvasRenderingContext2D,
+  sprite: Sprite,
+  x: number,
+  y: number,
+): void {
+  context.drawImage(
+    sprite.sheet,
+    sprite.sourceX,
+    0,
+    sprite.size,
+    sprite.size,
+    Math.round(x - sprite.size / 2),
+    Math.round(y - sprite.size / 2),
+    sprite.size,
+    sprite.size,
+  );
 }
 
 /** Which drawing a piece on the board uses. Black types join in ticket 10. */
@@ -119,7 +140,7 @@ export async function loadPieceArt(): Promise<PieceArt> {
     if (cached !== undefined) return cached;
     const strip = strips.get(id);
     if (strip === undefined) {
-      throw new StartupError(`There is no drawing for "${id}".`);
+      throw new ArtError(`There is no drawing for "${id}".`);
     }
     const { canvas, context } = newCanvas(ANIMATION_FRAMES * size, size);
     context.drawImage(strip, 0, 0, canvas.width, canvas.height);

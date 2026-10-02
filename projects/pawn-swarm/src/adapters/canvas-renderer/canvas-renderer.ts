@@ -15,7 +15,7 @@ import type { ArtId } from "../art/drawings";
 import { paintBoard } from "./board-art";
 import { drawEffect } from "./draw-effect";
 import type { Effect } from "./effects";
-import { artIdOf, type PieceArt } from "./piece-art";
+import { artIdOf, drawSpriteCentred, type PieceArt } from "./piece-art";
 
 const WARNING_RED = "224 97 79";
 const HP_BAR_BACK = "rgb(0 0 0 / 60%)";
@@ -101,24 +101,17 @@ export function createCanvasRenderer(
     context.drawImage(boardImage, 0, 0);
   };
 
-  /** Copies a sprite 1:1 centred on `centre`; whole-pixel positions avoid resampling it every frame. */
   const drawSprite = (
     id: ArtId,
     centre: Point,
     squarePx: number,
     frame: number,
   ): void => {
-    const sprite = art.sprite(id, squarePx, frame);
-    context.drawImage(
-      sprite.sheet,
-      sprite.sourceX,
-      0,
-      sprite.size,
-      sprite.size,
-      Math.round(centre.x - sprite.size / 2),
-      Math.round(centre.y - sprite.size / 2),
-      sprite.size,
-      sprite.size,
+    drawSpriteCentred(
+      context,
+      art.sprite(id, squarePx, frame),
+      centre.x,
+      centre.y,
     );
   };
 

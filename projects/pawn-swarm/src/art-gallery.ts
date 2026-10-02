@@ -1,9 +1,13 @@
 import { frameIndexAt } from "./adapters/art/animation";
-import { ART_IDS, type ArtId } from "./adapters/art/drawings";
+import { ART_IDS } from "./adapters/art/drawings";
 import { portraitSvg } from "./adapters/art/portrait";
 import { paintBoard } from "./adapters/canvas-renderer/board-art";
-import { loadPieceArt } from "./adapters/canvas-renderer/piece-art";
+import {
+  drawSpriteCentred,
+  loadPieceArt,
+} from "./adapters/canvas-renderer/piece-art";
 import { createConsoleLogger, logLevelFromQuery } from "./logger";
+import { StartupError } from "./startup-error";
 
 /**
  * Entrypoint of art-gallery.html, a dev page that shows every drawing at game
@@ -17,7 +21,7 @@ const TILE_SQUARES = 2;
 
 const logger = createConsoleLogger(logLevelFromQuery(window.location.search));
 
-function tile(id: ArtId): {
+function gameSizeTile(): {
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
 } {
@@ -26,19 +30,30 @@ function tile(id: ArtId): {
   canvas.style.width =
     canvas.style.height = `${String(SQUARE_CSS_PX * TILE_SQUARES)}px`;
   const context = canvas.getContext("2d");
-  if (context === null) throw new Error("Canvas 2D context is not available.");
-  const figure = document.createElement("figure");
-  const caption = document.createElement("figcaption");
-  caption.textContent = id;
-  figure.append(canvas, caption);
-  document.getElementById("game-size")?.append(figure);
+  if (context === null) {
+    throw new StartupError("Canvas 2D context is not available.");
+  }
   return { canvas, context };
+}
+
+function captioned(content: HTMLElement, caption: string): HTMLElement {
+  const figure = document.createElement("figure");
+  const figcaption = document.createElement("figcaption");
+  figcaption.textContent = caption;
+  figure.append(content, figcaption);
+  return figure;
 }
 
 async function showGallery(): Promise<void> {
   const art = await loadPieceArt();
   const squarePx = SQUARE_CSS_PX * PIXEL_RATIO;
-  const tiles = ART_IDS.map((id, index) => ({ id, index, ...tile(id) }));
+  const tiles = ART_IDS.map((id, index) => ({
+    id,
+    index,
+    ...gameSizeTile(),
+  }));
+  const gameSize = document.getElementById("game-size");
+  for (const { id, canvas } of tiles) gameSize?.append(captioned(canvas, id));
   const portraits = document.getElementById("portraits");
   for (const id of ART_IDS) {
     portraits?.insertAdjacentHTML(
@@ -53,21 +68,11 @@ async function showGallery(): Promise<void> {
         { files: TILE_SQUARES, ranks: TILE_SQUARES },
         squarePx,
       );
-      const sprite = art.sprite(
-        id,
-        squarePx,
-        frameIndexAt(nowMs / 1000, index),
-      );
-      context.drawImage(
-        sprite.sheet,
-        sprite.sourceX,
-        0,
-        sprite.size,
-        sprite.size,
-        Math.round(canvas.width / 2 - sprite.size / 2),
-        Math.round(canvas.height / 2 - sprite.size / 2),
-        sprite.size,
-        sprite.size,
+      drawSpriteCentred(
+        context,
+        art.sprite(id, squarePx, frameIndexAt(nowMs / 1000, index)),
+        canvas.width / 2,
+        canvas.height / 2,
       );
     }
     requestAnimationFrame(draw);

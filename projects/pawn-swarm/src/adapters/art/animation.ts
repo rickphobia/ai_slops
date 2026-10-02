@@ -1,3 +1,5 @@
+import { ArtError } from "./art-error";
+
 /**
  * The piece drawings are written once and played two ways:
  * - live, as SVG with SMIL animations, for portraits in the DOM;
@@ -52,7 +54,7 @@ function blend(from: string, to: string, share: number): string {
   const toNumbers = to.match(NUMBER) ?? [];
   const fromNumbers = from.match(NUMBER) ?? [];
   if (toNumbers.length !== fromNumbers.length) {
-    throw new Error(
+    throw new ArtError(
       `Animated values must have the same numbers: "${from}" and "${to}".`,
     );
   }
@@ -123,7 +125,7 @@ export function frameAnimator(atSeconds: number): Animator {
         .map((motion) => {
           const cycles = ANIMATION_LOOP_SECONDS / motion.seconds;
           if (Math.abs(cycles - Math.round(cycles)) > LOOP_TOLERANCE) {
-            throw new Error(
+            throw new ArtError(
               `A ${String(motion.seconds)} s ${motion.attribute} animation doesn't divide the ${String(ANIMATION_LOOP_SECONDS)} s loop.`,
             );
           }
