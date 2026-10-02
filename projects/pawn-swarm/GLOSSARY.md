@@ -8,7 +8,7 @@ An auto-battler on a chess board where the player's white pawns are both the arm
 One game from the first wave to a win or a loss.
 
 **Wave**:
-One battle against a set of black pieces. A run has 5.
+One battle against a set of black pieces. A run has 10.
 
 **Tick**:
 One step of the battle simulation.
@@ -24,6 +24,13 @@ _Avoid_: coin, gold, basic pawn
 **Pawn type**:
 A kind of white pawn with its own stats and ability (Shield, Medic, ...).
 _Avoid_: class, unit type
+
+**Capture**:
+A piece attacking an enemy on a square it could move to by capturing. It deals the attacker's attack as damage; the attacker stays where it is.
+_Avoid_: kill (the target only dies at 0 HP)
+
+**Cooldown**:
+Ticks a piece waits between moves.
 
 **Enemy**:
 A black piece: knight, bishop, rook, queen or king.
