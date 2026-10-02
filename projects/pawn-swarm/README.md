@@ -31,7 +31,7 @@ npm run preview   # serve dist/ locally
 ## Test
 
 ```bash
-npm run check          # everything CI runs except the build: lint, format, type check, tests
+npm run check          # what CI runs: lint, format check, type check, tests
 npm run lint           # ESLint
 npm run format:check   # Prettier (npm run format to fix)
 npm run typecheck      # tsc, strict
@@ -39,7 +39,7 @@ npm test               # Vitest, once
 npx vitest             # Vitest, watch mode
 ```
 
-CI runs the same checks plus `npm run build` on every push that touches this folder (`.github/workflows/pawn-swarm.yml`).
+CI runs `npm run check` and `npm run build` on every push that touches this folder (`.github/workflows/pawn-swarm.yml`).
 
 ## Configuration
 
@@ -63,6 +63,7 @@ src/
   main.ts                   # entrypoint: wires config, logger and renderer
   config.ts                 # reads and validates VITE_* env vars
   logger.ts                 # level-based console logger
+  startup-error.ts          # error type for a page that cannot start
   adapters/
     canvas-renderer.ts      # draws the board on a <canvas>
 tests/
@@ -78,8 +79,13 @@ docs/
 - **"Pawn Swarm could not start: VITE_… is missing"** — there is no `.env`, or it lacks that variable. Run `cp .env.example .env` and restart `npm run dev` (Vite only reads `.env` at startup).
 - **Blank page, no error** — open the console; a script error before startup would show there.
 
+## Decisions
+
+See `docs/decisions/` for why things are the way they are:
+
+- [0001](docs/decisions/0001-browser-canvas-no-engine.md) — browser demo in TypeScript + Canvas, no game engine
+
 ## Docs
 
 - `docs/spec.md` — what the demo is
 - `GLOSSARY.md` — the game's words
-- `docs/decisions/` — why things are the way they are
