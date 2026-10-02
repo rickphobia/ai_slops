@@ -4,6 +4,8 @@ export interface RunResult {
   readonly outcome: "won" | "lost";
   readonly wave: number;
   readonly seed: number;
+  readonly peakSwarm: number;
+  readonly piecesTaken: number;
 }
 
 export interface EndScreen {
@@ -25,8 +27,14 @@ export function createEndScreen(
 
   return {
     show: (result) => {
-      title.textContent = result.outcome === "won" ? "You won!" : "Game over";
-      detail.textContent = `${result.outcome === "won" ? "Cleared" : "Reached"} wave ${String(result.wave)} · seed ${String(result.seed)}`;
+      title.textContent =
+        result.outcome === "won" ? "Checkmate. The king is down." : "Game over";
+      detail.textContent = [
+        `${result.outcome === "won" ? "Cleared" : "Reached"} wave ${String(result.wave)}`,
+        `biggest swarm ${String(result.peakSwarm)}`,
+        `pieces taken ${String(result.piecesTaken)}`,
+        `seed ${String(result.seed)}`,
+      ].join(" · ");
       panel.hidden = false;
       newRunButton.focus();
     },

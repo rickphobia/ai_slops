@@ -5,7 +5,7 @@ import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
 import { NO_INPUTS } from "./battle/battle-state";
-import { STEP_SECONDS, STEPS_PER_SECOND } from "./battle/step";
+import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
 import { ConfigError, loadConfig } from "./config";
 import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
@@ -36,7 +36,7 @@ function hudStatus(run: RunState): HudStatus {
     wave: run.wave,
     waveCount: run.waves.length,
     whitePawns: run.battle.pawns.length,
-    blackLeft: run.battle.blackPieces.length + run.battle.landings.length,
+    blackLeft: blackPiecesLeft(run.battle),
     seed: run.seed,
   };
 }
@@ -45,6 +45,14 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
   const stepNumber = next.battle.stepNumber;
   for (const event of next.battle.events) {
     log.debug(`battle ${event.type}`, { step: stepNumber, ...event });
+    if (event.type === "push") {
+      log.info("more black pieces incoming", {
+        wave: next.wave,
+        step: stepNumber,
+        count: event.count,
+        pushesLeft: event.pushesLeft,
+      });
+    }
   }
   if (next.wave !== previous.wave) {
     log.info("wave started", {
@@ -63,7 +71,13 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
     });
   }
   if (previous.phase === "battle" && next.phase !== "battle") {
-    log.info("run ended", { result: next.phase, seed: next.seed });
+    log.info("run ended", {
+      result: next.phase,
+      seed: next.seed,
+      wave: next.wave,
+      peakSwarm: next.peakSwarm,
+      piecesTaken: next.piecesTaken,
+    });
   }
 }
 
@@ -101,7 +115,7 @@ async function start(): Promise<void> {
   const hud = createHud(document);
   let run = beginRun(config.defaultSeed);
   const clock = createTickClock({
-    tickMs: 1000 / STEPS_PER_SECOND,
+    tickMs: REAL_MS_PER_STEP,
     startMs: performance.now(),
     maxTicksPerFrame: MAX_STEPS_PER_FRAME,
   });
@@ -143,7 +157,13 @@ async function start(): Promise<void> {
       effects.add(run.battle.events);
       if (run.battle.events.some((event) => event.type === "drop")) hud.bump();
       if (run.phase !== "battle") {
-        endScreen.show({ outcome: run.phase, wave: run.wave, seed: run.seed });
+        endScreen.show({
+          outcome: run.phase,
+          wave: run.wave,
+          seed: run.seed,
+          peakSwarm: run.peakSwarm,
+          piecesTaken: run.piecesTaken,
+        });
       }
     }
   };

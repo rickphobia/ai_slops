@@ -21,8 +21,8 @@
         --ember: #ff8a3c;
         --font-display: "Cinzel", Georgia, serif;
         --font-body: "Crimson Pro", Georgia, serif;
-        /* The board is 20 × 14 squares; leave room above it for the HUD. */
-        --board-width: min(94vw, calc((94vh - 72px) * 20 / 14));
+        /* The board is 16 × 11 squares; leave room above it for the HUD. */
+        --board-width: min(94vw, calc((94vh - 72px) * 16 / 11));
       }
       body {
         margin: 0;
@@ -44,7 +44,7 @@
       }
       #board {
         width: var(--board-width);
-        aspect-ratio: 20 / 14;
+        aspect-ratio: 16 / 11;
         border-radius: 3px;
         box-shadow:
           0 0 0 1px var(--line),

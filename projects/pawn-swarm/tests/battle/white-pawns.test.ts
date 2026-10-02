@@ -3,6 +3,7 @@ import { PAWN_TYPES } from "../../src/catalog/pieces";
 import {
   after,
   battleWith,
+  blackOn,
   blackPieceById,
   eventsOfType,
   knightOn,
@@ -18,7 +19,7 @@ describe("white pawn movement", () => {
       pawns: [pawnAt(1, 2.3, 2.2)],
       blackPieces: [
         knightOn(2, { file: 15, rank: 10 }),
-        knightOn(3, { file: 1, rank: 13 }),
+        knightOn(3, { file: 1, rank: 10 }),
       ],
     });
     const states = playSteps(start, stepsIn(6));
@@ -32,11 +33,37 @@ describe("white pawn movement", () => {
       expect(movedX && movedY).toBe(false);
       previous = pawn;
     }
-    // It went for the nearer knight at (1.5, 13.5), not the one at (15.5, 10.5).
+    // It went for the nearer knight at (1.5, 10.5), not the one at (15.5, 10.5).
     const end = pawnById(states.at(-1) ?? start, 1);
-    expect(Math.hypot((end?.x ?? 0) - 1.5, (end?.y ?? 0) - 13.5)).toBeLessThan(
-      Math.hypot(2.3 - 1.5, 2.2 - 13.5) - 5,
+    expect(Math.hypot((end?.x ?? 0) - 1.5, (end?.y ?? 0) - 10.5)).toBeLessThan(
+      Math.hypot(2.3 - 1.5, 2.2 - 10.5) - 5,
     );
+  });
+
+  it("chases a moving black piece where it is now, not the square it left", () => {
+    // A rook halfway through a slide from (0,5) to (6,5): it is at (3.5, 5.5).
+    const rook = blackOn(
+      "rook",
+      2,
+      { file: 0, rank: 5 },
+      {
+        move: {
+          phase: "moving",
+          to: { file: 6, rank: 5 },
+          hitSquares: [],
+          secondsLeft: 0.15,
+          phaseSeconds: 0.3,
+        },
+      },
+    );
+    const start = battleWith({
+      pawns: [pawnAt(1, 3.5, 8.5, { axis: "x", strikeCooldownLeft: 99 })],
+      blackPieces: [rook],
+    });
+    const pawn = pawnById(after(start, 1), 1);
+    // Lined up with the rook, it turns straight down; toward the square the rook left it would keep walking left.
+    expect(pawn?.x).toBe(3.5);
+    expect(pawn?.y).toBeLessThan(8.5);
   });
 
   it("keeps its axis until the other one is more than 30% longer", () => {
@@ -63,7 +90,7 @@ describe("white pawn movement", () => {
   it("pushes apart from pawns standing too close", () => {
     const start = battleWith({
       pawns: [pawnAt(1, 5, 5), pawnAt(2, 5.1, 5)],
-      blackPieces: [knightOn(3, { file: 15, rank: 12 })],
+      blackPieces: [knightOn(3, { file: 15, rank: 10 })],
     });
     const next = after(start, 1);
     const [first, second] = [pawnById(next, 1), pawnById(next, 2)];
@@ -77,13 +104,13 @@ describe("white pawn movement", () => {
 
   it("stays inside the board edge", () => {
     const start = battleWith({
-      pawns: [pawnAt(1, 0.1, 13.9, { burstX: -5, burstY: 5 })],
-      blackPieces: [knightOn(2, { file: 0, rank: 13 }, { hp: 50 })],
+      pawns: [pawnAt(1, 0.1, 10.9, { burstX: -5, burstY: 5 })],
+      blackPieces: [knightOn(2, { file: 0, rank: 10 }, { hp: 50 })],
     });
     for (const state of playSteps(start, 30)) {
       const pawn = pawnById(state, 1);
       expect(pawn?.x).toBeGreaterThanOrEqual(0.25);
-      expect(pawn?.y).toBeLessThanOrEqual(14 - 0.25);
+      expect(pawn?.y).toBeLessThanOrEqual(11 - 0.25);
     }
   });
 });

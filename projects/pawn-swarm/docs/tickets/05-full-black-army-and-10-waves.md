@@ -1,20 +1,27 @@
 # 05: Full black army and 10 waves
 
-**What to build:** Bishops, rooks, queens and the king join the battle with their chess moves and square hits, and a full run goes through all 10 waves from the spec table. Killing the king in wave 10 wins. End screens show wave reached, biggest swarm and pieces taken. A headless script plays N runs with a simple bot and prints win rate and peak swarm.
+**What to build:** Bishops, rooks, queens and the king join the battle with their chess moves and square hits, and a full run goes through all 10 waves from the spec table. Each wave lands in 3 pushes. The board becomes 16×11 and the game runs at the spec's 0.65 pace, with the spec's black HP values. Killing the king in wave 10 wins. End screens show wave reached, biggest swarm and pieces taken. A headless script plays N runs with a simple bot and prints win rate and peak swarm.
 
 **Blocked by:** 04
 
-**Status:** ready
+**Status:** done
 
 **Touches:** board, battle, catalog, run, adapters/dom-ui, balance script
 
 The paused old-ticket-04 branch `pawn-swarm/04-enemy-roster-drops-10-waves` has tested move generation for every piece; reuse it if it fits.
 
-- [ ] Bishop, rook, queen move generation with reach limits; king one square (tested)
-- [ ] Sliders hit every square they pass through; king hits the 3×3 landing block (tested)
-- [ ] King calls 3 knights next to him every 6s, with warnings
-- [ ] Shield-first targeting placeholder: pieces target the nearest pawn (shields come in 06)
-- [ ] HP growth per wave from the catalog; wave table 1–10 in the catalog
-- [ ] Survivors carry over between waves at full HP; run reaches `won` on the king's death, `lost` at zero pawns (scripted tests)
-- [ ] End screens with wave reached, biggest swarm, pieces taken, seed, "New run"
-- [ ] `npm run balance` (or similar) plays N headless runs and prints win rate, waves reached and peak swarm; documented in the README
+- [x] Bishop, rook, queen move generation with reach limits; king one square (tested)
+- [x] Sliders hit every square they pass through; king hits the 3×3 landing block (tested)
+- [x] King calls 3 knights next to him every 6s, with warnings
+- [x] Shield-first targeting placeholder: pieces target the nearest pawn (shields come in 06)
+- [x] Black HP and HP growth per wave from the catalog (spec values); wave table 1–10 in the catalog
+- [x] Waves land in 3 pushes; next push at 25% left or after 25 game seconds; king in the last push; landing squares avoid white pawns (tested)
+- [x] Board 16×11; pace 0.65 game seconds per real second at 1×, never changing results (tested)
+- [x] Survivors carry over between waves at full HP; run reaches `won` on the king's death, `lost` at zero pawns (scripted tests)
+- [x] End screens with wave reached, biggest swarm, pieces taken, seed, "New run"
+- [x] `npm run balance` (or similar) plays N headless runs and prints win rate, waves reached and peak swarm; documented in the README
+
+**Notes from the build:**
+
+- The spec's "More black pieces incoming" toast is logged at `info` and sent as a `push` battle event, but not shown on screen yet: there is no toast UI, and ticket 13 is reworking the page. Show it when toasts arrive.
+- The balance bot has nothing to do until the shop (06) and skills (07) exist, so its win rate measures the plain swarm only.

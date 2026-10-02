@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NO_INPUTS } from "../src/battle/battle-state";
-import { STEPS_PER_SECOND } from "../src/battle/step";
+import { REAL_MS_PER_STEP, STEPS_PER_SECOND } from "../src/battle/step";
+import { WAVES } from "../src/catalog/waves";
 import { advanceRun, type RunState, startRun } from "../src/run/run";
 import {
   createTickClock,
@@ -10,6 +11,8 @@ import {
 } from "../src/tick-clock";
 
 const FRAME_MS = 16;
+/** The first three waves: long enough to cover pushes and bishops, short enough to replay at every speed. */
+const EARLY_WAVES = WAVES.slice(0, 3);
 
 function clockAt(maxTicksPerFrame = 100): TickClock {
   return createTickClock({ tickMs: 250, startMs: 0, maxTicksPerFrame });
@@ -18,12 +21,12 @@ function clockAt(maxTicksPerFrame = 100): TickClock {
 /** Plays a run the way the game loop does: frames of real time, ticks as the clock allows. */
 function playByClock(speed: Speed, pauseEveryFrames?: number): RunState {
   const clock = createTickClock({
-    tickMs: 1000 / STEPS_PER_SECOND,
+    tickMs: REAL_MS_PER_STEP,
     startMs: 0,
     maxTicksPerFrame: 5,
   });
   clock.setSpeed(speed);
-  let run = startRun({ seed: 7 });
+  let run = startRun({ seed: 7, plainPawns: 20, waves: EARLY_WAVES });
   for (let frame = 1; frame < 100_000 && run.phase === "battle"; frame++) {
     if (pauseEveryFrames !== undefined) {
       clock.setPaused(frame % pauseEveryFrames < pauseEveryFrames / 2);
@@ -89,8 +92,23 @@ describe("tick clock", () => {
     expect(clock.takeDueTicks(60_250)).toBe(1);
   });
 
+  it("runs 0.65 game seconds per real second at 1x", () => {
+    const clock = createTickClock({
+      tickMs: REAL_MS_PER_STEP,
+      startMs: 0,
+      maxTicksPerFrame: 100,
+    });
+    let steps = 0;
+    const minuteOfFrames = 60_000 / FRAME_MS;
+    for (let frame = 1; frame <= minuteOfFrames; frame++) {
+      steps += clock.takeDueTicks(frame * FRAME_MS);
+    }
+    // 60 real seconds × 0.65 = 39 game seconds = 2340 steps, give or take the part-step left over.
+    expect(steps / STEPS_PER_SECOND).toBeCloseTo(39, 1);
+  });
+
   it("gives the same battle result at every speed and with pauses", () => {
-    let reference = startRun({ seed: 7 });
+    let reference = startRun({ seed: 7, plainPawns: 20, waves: EARLY_WAVES });
     while (reference.phase === "battle") {
       reference = advanceRun(reference, NO_INPUTS);
     }

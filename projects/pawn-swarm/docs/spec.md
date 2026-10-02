@@ -19,8 +19,8 @@ The prototype is the reference for feel and numbers. All numbers below are start
 ## Game rules
 
 ### Board and time
-- Board: 20 files × 14 ranks, drawn large so pieces are easy to see.
-- Real time with a fixed simulation step (60 steps per game second). Speed control 0.5×, 1×, 1.5×, 2× changes how many steps run per real second, never the result. Pause stops the steps.
+- Board: 16 files × 11 ranks, drawn large so pieces are easy to see.
+- Real time with a fixed simulation step (60 steps per game second). **Pace:** at 1× the game runs at 0.65 game seconds per real second, so battles are readable; cooldowns are shown in real seconds. Speed control 0.5×, 1×, 1.5×, 2× changes how many steps run per real second, never the result. Pause stops the steps.
 - White pawns move freely (not snapped to squares), but **only up, down, left or right, never diagonally**. A pawn keeps its current direction until the other axis is clearly longer (30% more), so it doesn't zig-zag.
 - Black pieces always stand on square centres and move only with their chess moves.
 
@@ -32,13 +32,13 @@ The prototype is the reference for feel and numbers. All numbers below are start
 ### Black pieces
 | Piece | HP (wave 1) | Attack | Acts every | Drop | Move |
 |---|---|---|---|---|---|
-| Knight | 1 | 1 | 1.1s | 1 | L-jump |
-| Bishop | 3 | 1 | 1.6s | 2 | diagonal, up to 4 squares |
-| Rook | 8 | 2 | 2.0s | 3 | straight, up to 6 squares |
-| Queen | 18 | 3 | 1.3s | 5 | rook + bishop, up to 5 squares |
-| King | 160 | 4 | 0.8s | — (win) | 1 square, calls 3 knights every 6s |
+| Knight | 2 | 1 | 1.1s | 1 | L-jump |
+| Bishop | 5 | 1 | 1.6s | 2 | diagonal, up to 4 squares |
+| Rook | 12 | 2 | 2.0s | 3 | straight, up to 6 squares |
+| Queen | 26 | 3 | 1.3s | 5 | rook + bishop, up to 5 squares |
+| King | 220 | 4 | 0.8s | — (win) | 1 square, calls 3 knights every 6s |
 
-- HP grows 50% of base per wave after wave 1.
+- HP grows 35% of base per wave after wave 1. (Black HP is high enough that pieces take several strikes; with 1 HP they popped instantly and fights had no weight.)
 - Each piece picks the legal move that gets closest to its target: the nearest shield pawn within reach if any, otherwise the nearest pawn.
 - **Attacks hit squares.** Before a move, the squares it will hit glow red for 0.4s. Sliders (bishop, rook, queen) hit every square they pass through. Knights and the king hit the 3×3 block where they land. Every white pawn standing on a hit square when the move lands takes the piece's attack as damage.
 - **Contact hurts.** A white pawn touching a black piece takes 1 damage every 1.5s.
@@ -58,12 +58,13 @@ From wave 3, pieces can spawn as special types with a power, shown by a coloured
 | Summoner | queen | 8 | Every 6s calls 2 knights next to her |
 
 ### Waves
-- The whole wave lands at once at wave start. Each piece gets its own square: half in a ring around the board centre, half anywhere, never within ~4 squares of the centre. Red squares warn for 1.2s before they land.
-- Wave 1 is 3 knights, so one pawn can win it.
+- **Each wave lands in 3 pushes** (fewer when it has under 3 pieces besides the king, like wave 1). A push lands all at once; the king always comes in the last push. The next push lands when the current one is down to 25% or after 25 game seconds, with a "More black pieces incoming" toast.
+- Each piece in a push gets its own free square: half in a ring 3–7 squares around the swarm's centre, half anywhere, never within 3 squares of a white pawn. Red squares warn for 1.2s before they land.
+- Wave 1 is 2 knights, so one pawn can win it.
 
 | Wave | Knights | Bishops | Rooks | Queens | King |
 |---|---|---|---|---|---|
-| 1 | 3 | | | | |
+| 1 | 2 | | | | |
 | 2 | 8 | | | | |
 | 3 | 12 | 3 | | | |
 | 4 | 16 | 6 | | | |
@@ -75,11 +76,10 @@ From wave 3, pieces can spawn as special types with a power, shown by a coloured
 | 10 | 30 | 14 | 8 | 4 | 1 |
 
 - A wave is won when every black piece is dead. Killing the king wins the run.
-- **Longer waves (to confirm when tuning):** waves in the prototype last 15–40s. The demo should be longer. Planned approach: each wave arrives in 3 pushes; each push lands all at once, and the next push lands when the current one is mostly dead or after a timer.
 
 ### Drops and growth
 - A killed black piece drops its pawns on its square; they burst outward and fight straight away.
-- **Crowding:** each drop is multiplied by `max(0.15, 1 - pawns / 400)`, with the fraction rolled as a chance. A big swarm grows slower, so it can't compound forever.
+- **Crowding:** each drop is multiplied by `max(0.1, 1 - pawns / 300)`, with the fraction rolled as a chance. A big swarm grows slower, so it can't compound forever.
 
 ### Pawn types
 Each type has its own stats, a passive, and a skill. Rarity gates when it can appear in the shop: common from wave 1, rare from wave 3, epic from wave 6.
@@ -109,6 +109,7 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 - The shop never takes your last plain pawn.
 - **Reroll** costs `1 + rerolls this visit + floor(wave / 3)` and replaces unlocked offers.
 - **Lock** keeps an offer for the next visit.
+- Every offer card shows the pawn type's **portrait** (its art, animated), and the army list shows a small icon per type.
 - The shop shows your army, the next wave's pieces, any **new black types** in it with their power, and a collapsible list of black types already met.
 
 ### Power-ups
@@ -118,8 +119,10 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 
 ### Feedback
 - Big pawn counter that bumps when pawns are added; plain-pawn count; wave n/10; black pieces left.
+- **Team bases:** white pawns stand on a pale glowing disc, black pieces on a dark blood-red one, so the sides read apart in a crowd.
 - Damage numbers, "+n ♟" drop pop-ups, death bursts, screen shake on big hits, stun "z" over stunned pawns, red warning squares, coloured rings on special black types.
 - Toasts for wave start, skills and power-ups.
+- **Sound and juice:** Web Audio sounds for every hit, death, skill and pickup, plus a music loop; lunges, sliding moves, death collapses, blood sprays and gibs; volume and screen-shake settings.
 - End screens: win ("Checkmate") or loss, with wave reached, biggest swarm and pieces taken, plus "New run".
 
 ## User Stories
@@ -184,12 +187,12 @@ Each type has its own stats, a passive, and a skill. Rarity gates when it can ap
 
 - Placing or steering pawns by hand.
 - Brotato-style stat items beyond pawn types and power-ups.
-- Sound and music. Art is the grotesque dark-fantasy set in `docs/art/` (ticket 13), not painted assets.
+- Recorded music, voice acting, and art beyond the grotesque style in `docs/art/`.
 - Saving runs, accounts, leaderboards, mobile touch tuning.
 - Hosting beyond the static build.
 
 ## Further Notes
 
-- All numbers are first guesses tuned with the prototype's bot: it wins about 2 runs in 8, dies between waves 5 and 9 otherwise, and peaks at 40–280 pawns.
+- All numbers are first guesses tuned with the prototype's bot (fires every skill when ready, recruits greedily): it reaches waves 6–10, rarely wins, and peaks at 45–185 pawns. A human who plays well should win some runs. One pawn wins wave 1 about 92% of the time.
 - White pawns don't avoid red squares yet. If that feels unfair in play, add dodging (automatic or as a skill).
 - If the demo is fun, the plan is a rebuild in Unreal; pure, data-driven rule modules make that port easier.

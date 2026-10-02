@@ -42,7 +42,7 @@ describe("effects from battle events", () => {
 
   it("shows a red number when a pawn is hurt", () => {
     const [effect] = effectsFor([
-      { type: "pawn-hurt", pawnId: 1, damage: 1, cause: "stomp", at },
+      { type: "pawn-hurt", pawnId: 1, damage: 1, cause: "hit", at },
     ]);
     expect(effect).toMatchObject({
       kind: "text",

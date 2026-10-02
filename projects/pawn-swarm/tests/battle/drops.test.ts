@@ -13,31 +13,31 @@ describe("dropCount (crowding)", () => {
     expect(dropCount(3, 0, 0.99)).toBe(3);
   });
 
-  it("shrinks the drop by swarm / 400 and rolls the fraction as a chance", () => {
-    // 1 × (1 − 200 / 400) = 0.5
-    expect(dropCount(1, 200, 0.49)).toBe(1);
-    expect(dropCount(1, 200, 0.5)).toBe(0);
-    // 5 × (1 − 100 / 400) = 3.75
-    expect(dropCount(5, 100, 0.74)).toBe(4);
-    expect(dropCount(5, 100, 0.76)).toBe(3);
+  it("shrinks the drop by swarm / 300 and rolls the fraction as a chance", () => {
+    // 1 × (1 − 150 / 300) = 0.5
+    expect(dropCount(1, 150, 0.49)).toBe(1);
+    expect(dropCount(1, 150, 0.5)).toBe(0);
+    // 5 × (1 − 75 / 300) = 3.75
+    expect(dropCount(5, 75, 0.74)).toBe(4);
+    expect(dropCount(5, 75, 0.76)).toBe(3);
   });
 
-  it("never drops less than 15% of the normal drop, however big the swarm", () => {
-    // 2 × 0.15 = 0.3
-    expect(dropCount(2, 1000, 0.29)).toBe(1);
-    expect(dropCount(2, 1000, 0.31)).toBe(0);
-    expect(dropCount(20, 400, 0.99)).toBe(3);
+  it("never drops less than 10% of the normal drop, however big the swarm", () => {
+    // 3 × 0.1 = 0.3
+    expect(dropCount(3, 1000, 0.29)).toBe(1);
+    expect(dropCount(3, 1000, 0.31)).toBe(0);
+    expect(dropCount(20, 300, 0.99)).toBe(2);
   });
 });
 
 describe("drops in battle", () => {
-  // The pawn stands 0.8 from the knight: in reach, but not close enough to push the drop.
+  // The pawn stands 0.8 from a 1-HP knight: in reach, but not close enough to push the drop.
   const start = (seed: number) =>
     battleWith({
       pawns: [pawnAt(1, 5.5, 4.7)],
       blackPieces: [
-        knightOn(2, { file: 5, rank: 5 }),
-        knightOn(3, { file: 18, rank: 12 }),
+        knightOn(2, { file: 5, rank: 5 }, { hp: 1 }),
+        knightOn(3, { file: 15, rank: 10 }),
       ],
       rng: seed,
     });
@@ -69,7 +69,7 @@ describe("drops in battle", () => {
         expect(burstSpeed).toBeLessThanOrEqual(1.875 + 2.8);
       }
     }
-    // One knight drops 1 pawn, times 1 − 1/400 for the one-pawn swarm.
+    // One knight drops 1 pawn, times 1 − 1/300 for the one-pawn swarm.
     expect(dropsSeen).toBeGreaterThanOrEqual(9);
   });
 

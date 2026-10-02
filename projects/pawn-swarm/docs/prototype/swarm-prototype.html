@@ -1,23 +1,23 @@
-<title>Pawn Swarm Prototype</title>
+<title>Pawn Swarm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600&family=Barlow:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Crimson+Pro:wght@400;600;700&display=swap">
 <style>
 /* Layout: one-screen game. HUD strip on top, board fills the middle, skill bar at the bottom; shop and end screens overlay the board. Single dark look on purpose (a walnut chess table under a lamp). */
 :root {
   color-scheme: dark;
-  --bg: #15120e;
+  --bg: #0b0908;
   --panel: #211c15;
   --line: #3b3226;
   --fg: #efe6d4;
   --muted: #a99b81;
-  --accent: #e8b04a;
+  --accent: #d0442f;
   --danger: #e0614f;
   --good: #8fcf6b;
   --common: #b8c4cf;
   --rare: #6fb0ff;
   --epic: #c58bff;
-  --font-display: "Teko", "Arial Narrow", sans-serif;
-  --font-body: "Barlow", system-ui, sans-serif;
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "Crimson Pro", Georgia, serif;
 }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
@@ -28,8 +28,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #hud { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
 .stat { display: flex; align-items: baseline; gap: 6px; }
 .stat .label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.stat .value { font-family: var(--font-display); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
-#pawnCount { color: var(--accent); font-size: 44px; }
+.stat .value { font-family: var(--font-display); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+#pawnCount { color: var(--accent); font-size: 38px; }
 #pawnCount.bump { animation: bump .25s ease-out; }
 @keyframes bump { 50% { transform: scale(1.18); } }
 .spacer { flex: 1; }
@@ -55,6 +55,9 @@ canvas { display: block; border-radius: 4px; box-shadow: 0 0 0 1px var(--line), 
 .offer { display: flex; flex-direction: column; gap: 6px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--rarity); border-radius: 6px; min-width: 0; }
 .offer .rar { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--rarity); }
 .offer h3 { margin: 0; font-size: 18px; }
+.offer .pic { width: 100%; max-width: 100%; aspect-ratio: 1.4; border-radius: 3px; border: 1px solid var(--line);
+  background: radial-gradient(ellipse at 50% 60%, #2a1a14 0%, #0b0908 75%); filter: drop-shadow(0 4px 6px #000a); }
+.chip .ico { width: 22px; height: 22px; vertical-align: -6px; margin-right: 2px; }
 .offer .stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .offer .desc { font-size: 13px; }
 .offer .sk { font-size: 13px; color: var(--accent); }
@@ -90,7 +93,8 @@ canvas { display: block; border-radius: 4px; box-shadow: 0 0 0 1px var(--line), 
     <div class="overlay" id="startScreen">
       <div class="sheet">
         <h2>Pawn Swarm</h2>
-        <p>You start with one white pawn in the middle of the board. The whole black army lands around you at once; red squares warn you where. Every black piece you kill drops more pawns, and they join the fight on the spot. Some kills also drop power-ups (coloured orbs): heal, haste, fury, freeze, bounty, reinforcements. From wave 3, black pieces come in special types with powers, marked by a coloured ring. The shop tells you which ones are coming next. Pawns are also your money: between waves, spend them to turn plain pawns into special types. Each type you own gives you a skill button (keys 1–9). Survive 10 waves and kill the king.</p>
+        <p style="color:var(--fg)">A grotesque chess swarm. Brotato meets How Many Dudes on a chessboard.</p>
+        <p>You start with one white pawn in the middle of the board. The black army lands around you in waves of pushes; red squares warn you where. Every black piece you kill drops more pawns, and they join the fight on the spot. Some kills also drop power-ups (coloured orbs): heal, haste, fury, freeze, bounty, reinforcements. From wave 3, black pieces come in special types with powers, marked by a coloured ring. The shop tells you which ones are coming next. Pawns are also your money: between waves, spend them to turn plain pawns into special types. Each type you own gives you a skill button (keys 1–9). Survive 10 waves and kill the king.</p>
         <div><button class="btn big" id="startBtn">Start run</button></div>
       </div>
     </div>
@@ -104,7 +108,7 @@ canvas { display: block; border-radius: 4px; box-shadow: 0 0 0 1px var(--line), 
 "use strict";
 // ---------- data ----------
 // a smaller board shown larger: pieces read clearly on screen. RES renders at 2x for sharp glyphs.
-const SQ = 32, COLS = 20, ROWS = 14, W = COLS * SQ, H = ROWS * SQ, RES = 2;
+const SQ = 32, COLS = 16, ROWS = 11, W = COLS * SQ, H = ROWS * SQ, RES = 2;
 const TYPES = {
   plain:     { name: "Pawn",       rarity: null,     hp: 3,  atk: 1, spd: 46, cd: .7,  range: 28, tint: "#f4efe4",
                desc: "Moves up, down, left or right, never diagonally. Strikes anything in reach. Also your money.",
@@ -142,15 +146,15 @@ const TYPES = {
 };
 const TYPE_KEYS = Object.keys(TYPES);
 const ENEMY = {
-  knight: { glyph: "♞", hp: 1,  atk: 1, every: 1.1, drop: 1,  size: 26 },
-  bishop: { glyph: "♝", hp: 3,  atk: 1, every: 1.6, drop: 2,  size: 28 },
-  rook:   { glyph: "♜", hp: 8,  atk: 2, every: 2.0, drop: 3,  size: 30 },
-  queen:  { glyph: "♛", hp: 18, atk: 3, every: 1.3, drop: 5,  size: 34 },
-  king:   { glyph: "♚", hp: 160, atk: 4, every: .8, drop: 0,  size: 46 },
+  knight: { glyph: "♞", hp: 2,  atk: 1, every: 1.1, drop: 1,  size: 26 },
+  bishop: { glyph: "♝", hp: 5,  atk: 1, every: 1.6, drop: 2,  size: 28 },
+  rook:   { glyph: "♜", hp: 12, atk: 2, every: 2.0, drop: 3,  size: 30 },
+  queen:  { glyph: "♛", hp: 26, atk: 3, every: 1.3, drop: 5,  size: 34 },
+  king:   { glyph: "♚", hp: 220, atk: 4, every: .8, drop: 0,  size: 46 },
 };
 // enemy counts per wave: [knight, bishop, rook, queen, king]. The whole wave lands at once.
 const WAVES = [
-  [3,0,0,0,0],[8,0,0,0,0],[12,3,0,0,0],[16,6,0,0,0],[20,8,2,0,0],
+  [2,0,0,0,0],[8,0,0,0,0],[12,3,0,0,0],[16,6,0,0,0],[20,8,2,0,0],
   [26,12,4,0,0],[30,14,6,1,0],[36,18,8,2,0],[42,20,10,3,0],[30,14,8,4,1],
 ];
 // black piece types: each piece kind has special versions with their own power.
@@ -167,9 +171,13 @@ const VARIANTS = {
 };
 const VARIANT_KEYS = Object.keys(VARIANTS);
 // balance knobs
-const HP_GROWTH = .5;      // black HP grows this much per wave
-const CROWD_SIZE = 400;    // at this many white pawns, kills drop (almost) nothing
-const DROP_FLOOR = .15;    // ...but never less than this share of the normal drop
+const PACE = .65;          // game seconds per real second at 1x: the whole game runs slower
+const DROP_MULT = 1;       // share of a piece's listed drop that actually appears
+const PUSHES = 3;          // each wave lands in this many pushes
+const PUSH_AFTER = 25;     // seconds before the next push lands anyway
+const HP_GROWTH = .35;     // black HP grows this much per wave
+const CROWD_SIZE = 300;    // at this many white pawns, kills drop (almost) nothing
+const DROP_FLOOR = .1;     // ...but never less than this share of the normal drop
 // power-ups dropped by kills; any white pawn that touches one picks it up
 const POWERUPS = {
   heal:   { label: "+", color: "#8fcf6b", name: "Heal",          text: "every pawn back to full HP" },
@@ -199,6 +207,285 @@ const SPR = {};
 for (const k of TYPE_KEYS) SPR[k] = glyphSprite("♟", 28, TYPES[k].tint, "#1a140c");
 SPR.queenW = glyphSprite("♛", 36, "#fff6dc", "#1a140c");
 for (const k in ENEMY) SPR["e_" + k] = glyphSprite(ENEMY[k].glyph, ENEMY[k].size, "#141210", "#e9dcc2");
+// ---------- grotesque art: SVG drawings rasterised once into the same sprite slots ----------
+const ARTSET = (() => {
+
+
+// Shared parts, drawn in a 100×100 box.
+const BONE = "#d9cfb6", BONE_D = "#a8987a", BONE_DD = "#7d6e55", OUT = "#120b08", BLOOD = "#7a1010", BLOOD_L = "#b3201c", ICHOR = "#0b0806";
+const IRON = "#221c1a", IRON_L = "#3f3530", EMBER = "#ff6a1f", SICK = "#bfc4a2", FLUSH = "#d9a091";
+const outline = `stroke="${OUT}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"`;
+const at = (cx, s, svg) => `<g transform="translate(${cx} 100) scale(${s}) translate(-50 -100)">${svg}</g>`;
+
+// a hooded, stitched bone figure with hollow eyes; tint changes the skin
+function pawnBody(cx = 50, s = 1, tint = BONE, tearSide = -1) {
+  return at(cx, s, `
+  <path d="M30 92 L34 86 L37 90 L41 85 L45 90 L50 85 L55 90 L59 85 L63 90 L66 86 L70 92 L62 82 Q64 64 58 54 L42 54 Q36 64 38 82 Z" fill="${tint}" ${outline}/>
+  <path d="M41 66 Q44 74 42 82 M58 64 Q55 72 57 80" fill="none" stroke="${BONE_DD}" stroke-width="1.6"/>
+  <path d="M39 70 L61 69" stroke="#5a4532" stroke-width="2.6"/>
+  <path d="M44 69 L46 76 M47 69 L46 75" stroke="#5a4532" stroke-width="1.4"/>
+  <circle cx="50" cy="38" r="13.5" fill="${tint}" ${outline}/>
+  <path d="M35 42 Q34 20 50 21 Q66 20 65 42 L62 36 L60 41 Q57 29 50 29 Q43 29 40 41 L38 36 Z" fill="${BONE_DD}" ${outline}/>
+  <ellipse cx="45" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/><ellipse cx="55" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/>
+  <circle cx="45" cy="40" r="1.1" fill="#ff2a1a"><animate attributeName="opacity" values="1;.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+  <circle cx="55" cy="40" r="1.1" fill="#ff2a1a"><animate attributeName="opacity" values="1;.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+  <path d="M44 47 L56 47" stroke="${OUT}" stroke-width="1.6"/>
+  <path d="M45.5 45 L46.5 49 M48.5 45 L49.5 49 M51.5 45 L52.5 49 M54.5 45 L55.5 49" stroke="${OUT}" stroke-width="1.1"/>
+  <path d="M${50 + tearSide * 5} 43 Q${50 + tearSide * 5.6} 47 ${50 + tearSide * 4.8} 51" fill="none" stroke="${BLOOD_L}" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M56 28 L54 32 L57 34" fill="none" stroke="${OUT}" stroke-width="1.2"/>`);
+}
+// a hooded stitched head on its own, for the conjoined twins
+function twinHead(cx, cy, r, tint, tearSide) {
+  const k = r / 13.5;
+  return `<g transform="translate(${cx} ${cy}) scale(${k}) translate(-50 -38)">
+    <circle cx="50" cy="38" r="13.5" fill="${tint}" ${outline}/>
+    <path d="M35 42 Q34 20 50 21 Q66 20 65 42 L62 36 L60 41 Q57 29 50 29 Q43 29 40 41 L38 36 Z" fill="${BONE_DD}" ${outline}/>
+    <ellipse cx="45" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/><ellipse cx="55" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/>
+    <circle cx="45" cy="40" r="1.1" fill="#ff2a1a"/><circle cx="55" cy="40" r="1.1" fill="#ff2a1a"/>
+    <path d="M44 47 L56 47" stroke="${OUT}" stroke-width="1.6"/>
+    <path d="M45.5 45 L46.5 49 M48.5 45 L49.5 49 M51.5 45 L52.5 49 M54.5 45 L55.5 49" stroke="${OUT}" stroke-width="1.1"/>
+    <path d="M${50 + tearSide * 5} 43 Q${50 + tearSide * 5.6} 47 ${50 + tearSide * 4.8} 51" fill="none" stroke="${BLOOD_L}" stroke-width="1.6" stroke-linecap="round"/></g>`;
+}
+const drip = (x, y, len, dur) => `<circle cx="${x}" cy="${y}" r="1.5" fill="${BLOOD}"><animate attributeName="cy" values="${y};${y + len};${y}" dur="${dur}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" dur="${dur}s" repeatCount="indefinite"/></circle>`;
+const ART = {
+  plain: () => pawnBody(),
+  bomb: () => pawnBody(44) + `
+    <circle cx="66" cy="72" r="15" fill="#3a2a22" ${outline}/>
+    <path d="M53 66 Q66 62 79 67 M52 76 Q66 80 80 75" fill="none" stroke="#1d1410" stroke-width="1.6"/>
+    <path d="M58 64 L60 68 M63 63 L64 67 M69 63 L68 67 M74 64 L72 68" stroke="#c9b894" stroke-width="1.2"/>
+    <circle cx="66" cy="74" r="5.5" fill="#c9b894"/><circle cx="64" cy="73" r="1.4" fill="#1d1410"/><circle cx="68" cy="73" r="1.4" fill="#1d1410"/>
+    <path d="M64 77 L68 77" stroke="#1d1410" stroke-width="1"/>
+    <path d="M74 60 Q82 52 78 44" fill="none" stroke="#6b5a45" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="78" cy="42" r="4.5" fill="${EMBER}"><animate attributeName="r" values="3;5.5;3" dur=".4s" repeatCount="indefinite"/></circle>
+    <circle cx="78" cy="42" r="1.8" fill="#fff3c4"/>
+    <path d="M42 73 Q50 78 56 74" fill="none" stroke="${OUT}" stroke-width="2.4" stroke-linecap="round"/>`,
+  // conjoined twins, one body and two heads. Twin-to-twin transfusion: the left head is the
+  // gaunt, pale donor; the right is swollen and flushed; a vessel pumps between their necks
+  twin: () => `
+    <path d="M24 92 L28 86 L32 90 L36 85 L41 90 L46 85 L50 90 L54 85 L59 90 L64 85 L68 90 L72 86 L76 92 L68 82 Q71 62 64 52 L36 52 Q29 62 32 82 Z" fill="${BONE}" ${outline}/>
+    <path d="M36 66 Q39 74 37 82 M64 64 Q61 72 63 80" fill="none" stroke="${BONE_DD}" stroke-width="1.6"/>
+    <path d="M33 70 L67 69" stroke="#5a4532" stroke-width="2.6"/>
+    <path d="M44 58 Q50 54 56 58 L54 66 Q50 70 46 66 Z" fill="#9e7a66" ${outline}/>
+    <path d="M47 60 Q50 57 53 60 Q50 65 47 60 Z" fill="${BLOOD_L}"><animateTransform attributeName="transform" type="scale" values="1;1.2;1" additive="sum" dur=".7s" repeatCount="indefinite"/></path>
+    <path d="M45 61 L43 59 M55 61 L57 59 M50 66 L50 68" stroke="${OUT}" stroke-width="1.1"/>` +
+    twinHead(37, 36, 10.5, SICK, 1) + twinHead(63, 34, 14, FLUSH, -1) + `
+    <path d="M40 46 C46 54 54 42 58 48" fill="none" stroke="${BLOOD}" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M40 46 C46 54 54 42 58 48" fill="none" stroke="${BLOOD_L}" stroke-width="1.8" stroke-dasharray="2.5 5" stroke-linecap="round"><animate attributeName="stroke-dashoffset" values="0;-15" dur=".7s" repeatCount="indefinite"/></path>`,
+  spear: () => `
+    <path d="M70 94 L70 24" stroke="#4a3626" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M70 4 L76 22 L70 27 L64 22 Z" fill="#8a9095" ${outline}/>
+    <circle cx="70" cy="18" r="6" fill="#efe8d8" ${outline}/><circle cx="71.5" cy="17.5" r="2.6" fill="#7a2a12"/><circle cx="72" cy="17.2" r="1.2" fill="${ICHOR}"/>
+    <path d="M65 20 Q62 24 64 27 M75 21 Q78 25 76 28" fill="none" stroke="${BLOOD_L}" stroke-width="1.4"/>
+    <path d="M70 26 Q72 40 70 54 Q69 64 71 74" fill="none" stroke="${BLOOD}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M66 40 L74 42 L72 50 L68 46 Z" fill="#5d4c3f" ${outline}/>` + drip(71, 74, 18, 1.4) + pawnBody(42) + `
+    <circle cx="64" cy="64" r="4.5" fill="${BONE}" ${outline}/>`,
+  // the shield is stretched skin, stitched together, with an eye that still blinks
+  shield: () => pawnBody(38) + `
+    <path d="M52 52 L84 50 L84 78 Q84 92 68 97 Q52 92 52 78 Z" fill="#b58f7a" ${outline}/>
+    <path d="M60 52 Q66 70 60 94 M76 51 Q72 66 78 90" fill="none" stroke="#7a5a48" stroke-width="1.6"/>
+    <path d="M58 60 L62 58 M58 68 L62 67 M58 76 L62 76 M58 84 L61 85" stroke="${OUT}" stroke-width="1.2"/>
+    <ellipse cx="69" cy="70" rx="7" ry="4.5" fill="#f2ead8" ${outline}/>
+    <circle cx="69" cy="70" r="2.6" fill="#3b1a0e"><animate attributeName="cx" values="67;71;69;67" dur="3s" repeatCount="indefinite"/></circle>
+    <path d="M62 70 Q69 63 76 70" fill="#b58f7a" stroke="${OUT}" stroke-width="1.6"><animate attributeName="d" values="M62 70 Q69 63 76 70;M62 70 Q69 63 76 70;M62 70 Q69 76 76 70;M62 70 Q69 63 76 70" keyTimes="0;.9;.95;1" dur="4s" repeatCount="indefinite"/></path>
+    <path d="M63 78 Q65 86 63 92" fill="none" stroke="${BLOOD}" stroke-width="1.6"/>
+    <circle cx="56" cy="55" r="1.8" fill="#8a9095"/><circle cx="80" cy="54" r="1.8" fill="#8a9095"/>`,
+  // a horse skull on an exposed spine, leaking black ichor
+  knight: () => `
+    <path d="M24 94 L76 94 L72 84 L28 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M36 84 L38 60 Q30 50 34 38 Q40 22 56 16 L60 7 L64 16 Q76 22 80 38 L82 54 Q74 60 66 54 L60 58 Q66 68 66 84 Z" fill="#3b312b" ${outline}/>
+    <path d="M40 60 L40 82 M46 62 L46 84 M52 62 L52 84 M58 62 L58 84" stroke="${OUT}" stroke-width="2"/>
+    <path d="M38 64 L60 64 M38 72 L62 72" stroke="#6b5a4c" stroke-width="2"/>
+    <path d="M48 22 Q60 20 70 28" fill="none" stroke="#6b5a4c" stroke-width="2"/>
+    <ellipse cx="66" cy="32" rx="5" ry="6" fill="${ICHOR}"/>
+    <circle cx="67" cy="33" r="2" fill="${EMBER}"><animate attributeName="opacity" values="1;.4;1" dur="1.1s" repeatCount="indefinite"/></circle>
+    <path d="M70 48 L72 52 L74 48 L76 52 L78 48" fill="none" stroke="${OUT}" stroke-width="1.6"/>
+    <path d="M78 44 L80 50" stroke="${OUT}" stroke-width="1.6"/>
+    <path d="M44 26 Q36 36 38 50" fill="none" stroke="${ICHOR}" stroke-width="3"/>
+    <path d="M60 58 Q61 64 60 70" fill="none" stroke="${ICHOR}" stroke-width="2.4"/>` + drip(60, 70, 14, 1.8).replaceAll(BLOOD, ICHOR),
+  // a ruined tower with one huge eye in the window and chains hanging off it
+  rook: () => `
+    <path d="M22 94 L78 94 L74 84 L26 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M30 84 L33 36 L67 36 L70 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M27 36 L27 18 L36 18 L36 26 L45 26 L45 14 L55 16 L55 26 L63 26 L63 20 L73 18 L73 36 Z" fill="${IRON}" ${outline}/>
+    <path d="M42 46 Q50 38 58 46 L58 62 L42 62 Z" fill="#2a0806" ${outline}/>
+    <ellipse cx="50" cy="53" rx="7" ry="6" fill="#f0d9b0"/>
+    <circle cx="50" cy="53" r="3.5" fill="${EMBER}"><animate attributeName="cx" values="47;53;50;47" dur="3.4s" repeatCount="indefinite"/></circle>
+    <circle cx="50" cy="53" r="1.4" fill="${ICHOR}"><animate attributeName="cx" values="47;53;50;47" dur="3.4s" repeatCount="indefinite"/></circle>
+    <path d="M44 48 L42 46 M50 46 L50 43 M56 48 L58 46" stroke="#5a2a1a" stroke-width="1.2"/>
+    <path d="M70 40 Q78 48 74 60" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-dasharray="3 2"/>
+    <path d="M74 60 Q78 64 74 66" fill="none" stroke="#8a8a8a" stroke-width="2"/>
+    <path d="M30 44 Q24 54 28 62" fill="none" stroke="#6b6b6b" stroke-width="2" stroke-dasharray="3 2"/>
+    <path d="M36 84 Q38 90 34 94 M62 84 Q60 90 64 94" fill="none" stroke="${BLOOD}" stroke-width="2.4"/>
+    <path d="M38 40 L36 56 M62 70 L64 80" stroke="${IRON_L}" stroke-width="2"/>`,
+
+  // a plague priest: mitre that opens into a vertical toothed mouth
+  bishop: () => `
+    <path d="M24 94 L76 94 L72 84 L28 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M32 84 Q34 60 42 50 L58 50 Q66 60 68 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M38 52 Q34 30 50 8 Q66 30 62 52 Z" fill="#2c2420" ${outline}/>
+    <path d="M50 14 Q46 30 50 46 Q54 30 50 14 Z" fill="#3a0906" stroke="${OUT}" stroke-width="1.4"/>
+    <path d="M49 18 L47 20 M51 22 L53 24 M49 27 L47 29 M51 32 L53 34 M49 37 L47 39 M51 41 L53 43" stroke="#e9e0cc" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M44 50 L56 50" stroke="${IRON_L}" stroke-width="3"/>
+    <path d="M40 58 Q38 70 40 80 M60 58 Q62 70 60 80" fill="none" stroke="#d8cbb0" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M50 46 Q51 60 49 74" fill="none" stroke="${BLOOD}" stroke-width="2"/>` + drip(49, 74, 10, 1.7),
+  // a corpse bride: veil, crown of teeth, reaching hand
+  queen: () => `
+    <path d="M22 94 L78 94 L74 84 L26 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M28 84 Q30 56 40 46 L60 46 Q70 56 72 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M30 80 Q34 52 50 30 Q66 52 70 80 Q60 70 50 74 Q40 70 30 80 Z" fill="#9a9086" opacity=".55" ${outline}/>
+    <circle cx="50" cy="34" r="10" fill="#c9bfae" ${outline}/>
+    <ellipse cx="46" cy="34" rx="2.6" ry="3.2" fill="${ICHOR}"/><ellipse cx="54" cy="34" rx="2.6" ry="3.2" fill="${ICHOR}"/>
+    <path d="M46 40 Q50 43 54 40" fill="none" stroke="${OUT}" stroke-width="1.4"/>
+    <path d="M39 26 L41 16 L44 24 L47 13 L50 23 L53 13 L56 24 L59 16 L61 26 Z" fill="#e9e0cc" ${outline}/>
+    <path d="M40 46 Q44 60 40 70" fill="none" stroke="${BLOOD}" stroke-width="2.4"/>
+    <path d="M68 58 L80 52 L86 46 M80 52 L88 52 M80 52 L86 57" fill="none" stroke="#c9bfae" stroke-width="2.4" stroke-linecap="round"/>`,
+  // a rotting king: crown fused into the skull, bone cross, eyes opening on the robe
+  king: () => `
+    <path d="M20 94 L80 94 L76 84 L24 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M28 84 Q30 58 38 48 L62 48 Q70 58 72 84 Z" fill="${IRON}" ${outline}/>
+    <circle cx="50" cy="36" r="12" fill="#5a4c40" ${outline}/>
+    <path d="M37 32 L39 22 L44 28 L50 20 L56 28 L61 22 L63 32 Q50 28 37 32 Z" fill="#7a6a40" ${outline}/>
+    <path d="M50 20 L50 6 M45 11 L55 11" stroke="#e9e0cc" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M44 33 L42 30 M56 33 L58 30" stroke="${OUT}" stroke-width="1.2"/>
+    <ellipse cx="45" cy="37" rx="3" ry="3.4" fill="${ICHOR}"/><ellipse cx="55" cy="37" rx="3" ry="3.4" fill="${ICHOR}"/>
+    <circle cx="45" cy="37.5" r="1.3" fill="${EMBER}"/><circle cx="55" cy="37.5" r="1.3" fill="${EMBER}"/>
+    <path d="M44 44 L46 46 L48 44 L50 46 L52 44 L54 46 L56 44" fill="none" stroke="#e9e0cc" stroke-width="1.4"/>
+    ${[[40,62],[58,58],[48,72],[62,74],[36,76]].map(([x,y],i)=>`<ellipse cx="${x}" cy="${y}" rx="3.6" ry="2.4" fill="#f0d9b0" ${outline}/><circle cx="${x}" cy="${y}" r="1.3" fill="${BLOOD_L}"><animate attributeName="r" values="1.3;1.3;0;1.3" keyTimes="0;.85;.9;1" dur="${2.5 + i * .4}s" repeatCount="indefinite"/></circle>`).join("")}` + drip(42, 84, 8, 2.1).replaceAll(BLOOD, ICHOR),
+};
+// black types: the base piece plus one strong change that shows the power
+const VAR = {
+  stomper: () => ART.knight() + `
+    <path d="M30 60 L24 64 L30 66 M32 70 L26 76 L33 76" fill="none" stroke="#8a8a8a" stroke-width="2.4"/>
+    <path d="M28 84 L24 92 M50 94 L48 99 M72 84 L78 92" stroke="#ff9a3c" stroke-width="2" stroke-linecap="round"/>
+    <path d="M24 94 L76 94 L76 99 L24 99 Z" fill="#4a3f3a" ${outline}/>`,
+  hunter: () => ART.knight() + `
+    <circle cx="62" cy="28" r="1.8" fill="#ff2a1a"/><circle cx="70" cy="38" r="1.8" fill="#ff2a1a"/>
+    <path d="M20 40 L32 38 M18 48 L30 46 M22 56 L32 54" stroke="#ff4f7a" stroke-width="2" stroke-linecap="round" opacity=".7"/>`,
+  priest: () => ART.bishop() + `
+    <path d="M66 60 L76 70" stroke="#6b6b6b" stroke-width="1.6"/>
+    <circle cx="78" cy="73" r="5" fill="#3a3430" ${outline}/>
+    <circle cx="80" cy="64" r="5" fill="#8fcf6b" opacity=".4"><animate attributeName="cy" values="68;54" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".5;0" dur="2s" repeatCount="indefinite"/></circle>
+    <circle cx="76" cy="60" r="4" fill="#8fcf6b" opacity=".3"><animate attributeName="cy" values="66;50" dur="2.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".4;0" dur="2.6s" repeatCount="indefinite"/></circle>`,
+  sniper: () => `<g transform="translate(50 94) scale(.86 1.08) translate(-50 -94)">${ART.bishop()}</g>` + `
+    <path d="M70 90 L84 6" stroke="#e9e0cc" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="57" cy="40" r="3" fill="#6fb0ff"/><circle cx="57" cy="40" r="1.2" fill="${ICHOR}"/>`,
+  tower: () => ART.rook() + `
+    <path d="M31 50 L69 50 M31 66 L69 66 M30 76 L70 76" stroke="#6f7a85" stroke-width="3"/>
+    <path d="M44 46 L44 62 M50 46 L50 62 M56 46 L56 62" stroke="#6f7a85" stroke-width="2.4"/>
+    <path d="M27 18 L27 10 L35 10 L35 18 M65 18 L65 10 L73 10 L73 18" fill="${IRON}" ${outline}/>`,
+  cannon: () => ART.rook() + `
+    <path d="M40 48 L40 60 L62 58 L62 50 Z" fill="#3a3430" ${outline}/>
+    <rect x="58" y="47" width="16" height="12" rx="2" fill="#2a2422" ${outline}/>
+    <circle cx="74" cy="53" r="4" fill="${ICHOR}"/>
+    <circle cx="82" cy="50" r="5" fill="#8a8078" opacity=".5"><animate attributeName="cx" values="78;92" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0" dur="1.6s" repeatCount="indefinite"/></circle>`,
+  storm: () => ART.queen() + `
+    <path d="M38 22 L32 14 L36 14 L28 4 M62 22 L68 12 L64 12 L72 2" fill="none" stroke="#bff3ff" stroke-width="2" stroke-linejoin="round"><animate attributeName="opacity" values="1;.2;1;1" dur=".9s" repeatCount="indefinite"/></path>
+    <circle cx="50" cy="60" r="34" fill="none" stroke="#bff3ff" stroke-width="1.2" stroke-dasharray="2 6" opacity=".6"/>`,
+  summoner: () => `
+    <ellipse cx="50" cy="95" rx="40" ry="6" fill="none" stroke="#c58bff" stroke-width="2"/>
+    <path d="M18 95 L82 95 M30 90 L70 100 M30 100 L70 90" stroke="#c58bff" stroke-width="1" opacity=".6"/>` + ART.queen() + `
+    <path d="M14 92 Q12 80 18 76 Q24 80 22 92" fill="#c58bff" opacity=".35"><animate attributeName="opacity" values=".1;.5;.1" dur="2s" repeatCount="indefinite"/></path>
+    <path d="M80 92 Q78 80 84 76 Q90 80 88 92" fill="#c58bff" opacity=".35"><animate attributeName="opacity" values=".5;.1;.5" dur="2s" repeatCount="indefinite"/></path>`,
+};
+Object.assign(ART, VAR);
+const big = svg => `<g transform="translate(50 98) scale(1.18) translate(-50 -96)">${svg}</g>`;
+
+// ---------- grotesque versions ----------
+const MEAT = "#9b2a2a", MEAT_D = "#5e1414", MEAT_L = "#c4524a", FAT = "#e8d3a8", VEIN = "#4a1f3a", BILE = "#9aa83a";
+const maggot = (x, y, d) => `<path d="M${x} ${y} q2 -2 4 0 q2 2 4 0" fill="none" stroke="#efe6cf" stroke-width="2.2" stroke-linecap="round"><animateTransform attributeName="transform" type="translate" values="0 0;2 -1;0 0" dur="${d}s" repeatCount="indefinite"/></path>`;
+const pool = (cx, w) => `<ellipse cx="${cx}" cy="95" rx="${w}" ry="4" fill="${BLOOD}"><animate attributeName="rx" values="${w};${w + 3};${w}" dur="3s" repeatCount="indefinite"/></ellipse>`;
+const eyeball = (x, y, r, dur = 3) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#efe8d8" ${outline}/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#7a2a12"><animate attributeName="cx" values="${x - r * .3};${x + r * .3};${x - r * .3}" dur="${dur}s" repeatCount="indefinite"/></circle>`;
+const GROT = {
+  // flayed: half the face skinned, one eye hanging on its nerve, ribs and a beating heart through the torn robe, maggots
+  plain: () => pool(50, 18) + `
+    <path d="M30 92 L34 86 L37 90 L41 85 L45 90 L50 85 L55 90 L59 85 L63 90 L66 86 L70 92 L62 82 Q64 64 58 54 L42 54 Q36 64 38 82 Z" fill="${BONE}" ${outline}/>
+    <path d="M42 58 Q50 54 58 58 L56 78 Q50 82 44 78 Z" fill="${MEAT_D}" ${outline}/>
+    <path d="M43 62 Q50 60 57 62 M43 67 Q50 65 57 67 M44 72 Q50 70 56 72" fill="none" stroke="${FAT}" stroke-width="2"/>
+    <path d="M47 66 Q50 62 53 66 Q50 72 47 66 Z" fill="${MEAT_L}"><animateTransform attributeName="transform" type="scale" values="1;1.25;1" additive="sum" dur=".6s" repeatCount="indefinite"/></path>
+    <circle cx="50" cy="38" r="13.5" fill="${BONE}" ${outline}/>
+    <path d="M50 25 Q63 27 63 40 Q62 50 52 51 L50 51 Z" fill="${MEAT}" ${outline}/>
+    <path d="M53 30 Q58 34 60 42 M52 36 Q56 40 57 48" fill="none" stroke="${MEAT_L}" stroke-width="1.4"/>
+    <path d="M35 42 Q34 20 50 21 Q60 21 63 28 L56 30 Q50 29 46 31 Q42 33 40 41 L38 36 Z" fill="${BONE_DD}" ${outline}/>
+    <ellipse cx="45" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/><circle cx="45" cy="40" r="1.1" fill="#ff2a1a"/>
+    <ellipse cx="55" cy="39" rx="3.4" ry="4.2" fill="${ICHOR}"/>
+    <path d="M55 41 Q58 50 56 56" fill="none" stroke="${MEAT_L}" stroke-width="1.6"><animate attributeName="d" values="M55 41 Q58 50 56 56;M55 41 Q53 50 55 56;M55 41 Q58 50 56 56" dur="2.4s" repeatCount="indefinite"/></path>
+    <g><animateTransform attributeName="transform" type="translate" values="0 0;-2 0;0 0" dur="2.4s" repeatCount="indefinite"/>${eyeball(56, 59, 3.6, 2)}</g>
+    <path d="M42 46 L46 49 L50 46 L54 49 L58 46" fill="none" stroke="${FAT}" stroke-width="1.6"/>
+    <path d="M44 47 Q46 54 44 58" fill="none" stroke="${BLOOD_L}" stroke-width="1.6"/>` + maggot(36, 80, 1.1) + maggot(56, 86, 1.4) + maggot(44, 44, 1.2).replace('stroke-width="2.2"','stroke-width="1.6"'),
+  // two faces fused into one swollen head, sharing a third eye where they meet; veins, stitches, the donor face collapsing
+  twin: () => pool(50, 22) + `
+    <path d="M24 92 L28 86 L32 90 L36 85 L41 90 L46 85 L50 90 L54 85 L59 90 L64 85 L68 90 L72 86 L76 92 L68 82 Q71 62 64 52 L36 52 Q29 62 32 82 Z" fill="${BONE}" ${outline}/>
+    <path d="M42 56 Q50 52 58 56 L56 74 Q50 78 44 74 Z" fill="${MEAT_D}" ${outline}/>
+    <path d="M46 62 Q50 57 54 62 Q50 70 46 62 Z" fill="${MEAT_L}"><animateTransform attributeName="transform" type="scale" values="1;1.3;1" additive="sum" dur=".5s" repeatCount="indefinite"/></path>
+    <path d="M24 38 Q22 14 48 14 Q78 12 80 38 Q80 56 60 56 L40 56 Q24 56 24 38 Z" fill="${FLUSH}" ${outline}/>
+    <path d="M24 38 Q22 18 40 15 Q34 30 38 54 Q24 54 24 38 Z" fill="${SICK}" ${outline}/>
+    <path d="M30 22 Q38 30 34 44 M70 18 Q62 26 68 40 M58 16 Q56 26 62 30" fill="none" stroke="${VEIN}" stroke-width="1.6"/>
+    <ellipse cx="31" cy="34" rx="3" ry="3.8" fill="${ICHOR}"/><circle cx="31" cy="35" r="1" fill="#ff2a1a"/>
+    <ellipse cx="66" cy="32" rx="4" ry="4.8" fill="${ICHOR}"/><circle cx="66" cy="33" r="1.3" fill="#ff2a1a"/>
+    <path d="M44 20 L44 52" stroke="${OUT}" stroke-width="1.6"/>
+    <path d="M42 24 L46 25 M42 30 L46 31 M42 36 L46 37 M42 42 L46 43 M42 48 L46 49" stroke="${OUT}" stroke-width="1.2"/>
+    ${eyeball(46, 32, 5.5, 2.6)}
+    <path d="M28 46 Q32 44 36 47" fill="none" stroke="${OUT}" stroke-width="1.4"/>
+    <path d="M56 46 Q64 52 72 46 L70 50 L66 48 L62 51 L58 48 Z" fill="${ICHOR}" ${outline}/>
+    <path d="M30 37 Q31 44 29 50" fill="none" stroke="${BLOOD_L}" stroke-width="1.4"/>`,
+  // it has run the spear through its own body; three eyeballs on the shaft like a kebab
+  spear: () => pool(46, 20) + pawnBody(46) + `
+    <path d="M34 98 L70 6" stroke="#4a3626" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M70 6 L72 0 L76 10 Z" fill="#8a9095" ${outline}/>
+    <path d="M44 72 Q46 66 52 66 Q50 74 44 72 Z" fill="${MEAT_D}" ${outline}/>
+    <path d="M47 70 Q44 80 46 90" fill="none" stroke="${BLOOD}" stroke-width="2.4"/>
+    <path d="M42 68 Q40 74 42 82" fill="none" stroke="${MEAT_L}" stroke-width="2.6" stroke-linecap="round"><animate attributeName="d" values="M42 68 Q40 74 42 82;M42 68 Q38 76 41 84;M42 68 Q40 74 42 82" dur="2s" repeatCount="indefinite"/></path>
+    ${eyeball(66, 18, 4.5, 2.2)}${eyeball(62, 28, 4, 3)}${eyeball(59, 37, 3.5, 2.6)}
+    <path d="M64 22 Q63 30 61 32 M60 41 Q58 50 57 54" fill="none" stroke="${BLOOD_L}" stroke-width="1.4"/>`,
+  // a skinned horse head: raw muscle, a lipless grin, eyes opening all down its neck, ribs breaking out
+  knight: () => pool(50, 24) + `
+    <path d="M24 94 L76 94 L72 84 L28 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M36 84 L38 60 Q30 50 34 38 Q40 22 56 16 L60 7 L64 16 Q76 22 80 38 L82 54 Q74 60 66 54 L60 58 Q66 68 66 84 Z" fill="${MEAT}" ${outline}/>
+    <path d="M40 30 Q46 40 42 52 M50 22 Q54 34 50 46 M62 22 Q66 30 70 34" fill="none" stroke="${MEAT_L}" stroke-width="1.6"/>
+    <path d="M66 52 L82 52 L82 56 Q74 60 66 56 Z" fill="${FAT}" ${outline}/>
+    <path d="M68 52 L68 56 M71 52 L71 57 M74 52 L74 57 M77 52 L77 57 M80 52 L80 56" stroke="${OUT}" stroke-width="1"/>
+    ${eyeball(68, 32, 4.5, 2.4)}
+    ${[[40,62,2.6],[44,70,2.2],[38,76,2.4]].map(([x,y,r],i)=>`<ellipse cx="${x}" cy="${y}" rx="${r+1}" ry="${r}" fill="#efe8d8" ${outline}/><circle cx="${x}" cy="${y}" r="${r*.5}" fill="#7a2a12"><animate attributeName="r" values="${r*.5};${r*.5};0;${r*.5}" keyTimes="0;.8;.88;1" dur="${2+i*.7}s" repeatCount="indefinite"/></circle>`).join("")}
+    <path d="M50 62 Q56 60 60 64 M50 70 Q57 68 62 72 M50 78 Q57 76 63 80" fill="none" stroke="${FAT}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M60 58 Q61 66 59 72" fill="none" stroke="${ICHOR}" stroke-width="2.4"/>`,
+  // the veil hides a face that is only a vertical mouth; four bone arms; a second face on her belly
+  queen: () => pool(50, 26) + `
+    <path d="M22 94 L78 94 L74 84 L26 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M28 84 Q30 56 40 46 L60 46 Q70 56 72 84 Z" fill="${IRON}" ${outline}/>
+    <path d="M38 52 L18 40 L10 44 M38 58 L16 60 L10 66 M62 52 L82 40 L90 44 M62 58 L84 60 L90 66" fill="none" stroke="#c9bfae" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <animate attributeName="d" values="M38 52 L18 40 L10 44 M38 58 L16 60 L10 66 M62 52 L82 40 L90 44 M62 58 L84 60 L90 66;M38 52 L18 36 L12 38 M38 58 L16 64 L12 70 M62 52 L82 36 L88 38 M62 58 L84 64 L88 70;M38 52 L18 40 L10 44 M38 58 L16 60 L10 66 M62 52 L82 40 L90 44 M62 58 L84 60 L90 66" dur="1.4s" repeatCount="indefinite"/></path>
+    <ellipse cx="50" cy="34" rx="11" ry="13" fill="#c9bfae" ${outline}/>
+    <path d="M50 23 Q44 34 50 46 Q56 34 50 23 Z" fill="${ICHOR}" ${outline}><animate attributeName="d" values="M50 23 Q44 34 50 46 Q56 34 50 23 Z;M50 23 Q41 34 50 46 Q59 34 50 23 Z;M50 23 Q44 34 50 46 Q56 34 50 23 Z" dur="1.8s" repeatCount="indefinite"/></path>
+    <path d="M47 27 L49 28 M53 27 L51 28 M46 32 L49 33 M54 32 L51 33 M46 37 L49 37 M54 37 L51 37 M47 42 L49 41 M53 42 L51 41" stroke="#efe6cf" stroke-width="1.3"/>
+    <path d="M30 80 Q34 50 50 22 Q66 50 70 80 Q60 70 50 74 Q40 70 30 80 Z" fill="#9a9086" opacity=".4"/>
+    <path d="M39 22 L41 12 L44 20 L47 9 L50 19 L53 9 L56 20 L59 12 L61 22 Z" fill="#e9e0cc" ${outline}/>
+    <ellipse cx="44" cy="66" rx="2.4" ry="3" fill="${ICHOR}"/><ellipse cx="56" cy="66" rx="2.4" ry="3" fill="${ICHOR}"/>
+    <path d="M44 74 Q50 79 56 74 Q50 76 44 74 Z" fill="${BLOOD}" ${outline}/>
+    <path d="M45 75 L46 77 M50 76 L50 78 M55 75 L54 77" stroke="#efe6cf" stroke-width="1"/>`,
+};
+
+
+  return { ART, GROT, big };
+})();
+const PORTRAIT = {};
+const portrait = (slot, cls) => PORTRAIT[slot] ? `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true">${ARTSET.big(PORTRAIT[slot])}</svg>` : "";
+function artSprite(slot, svg, worldSize) {
+  const px = Math.round(worldSize * RES), c = document.createElement("canvas"); c.width = c.height = px;
+  const img = new Image();
+  img.onload = () => { c.getContext("2d").drawImage(img, 0, 0, px, px); SPR[slot] = c; };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${px}" height="${px}">${ARTSET.big(svg)}</svg>`);
+  PORTRAIT[slot] = svg; // the same drawing, kept as live SVG for the shop so its animations play
+}
+{
+  const { ART, GROT } = ARTSET;
+  // pawn types without their own drawing yet get the flayed pawn with a coloured glow in their type colour
+  const glow = tint => `<circle cx="50" cy="62" r="34" fill="${tint}" opacity=".35"/>` + GROT.plain();
+  const WHITE = { plain: GROT.plain(), twin: GROT.twin(), spear: GROT.spear(), bomb: ART.bomb(), shield: ART.shield() };
+  for (const k of TYPE_KEYS) artSprite(k, WHITE[k] || glow(TYPES[k].tint), 60);
+  const BLACK = { knight: GROT.knight(), queen: GROT.queen(), bishop: ART.bishop(), rook: ART.rook(), king: ART.king() };
+  for (const k in BLACK) artSprite("e_" + k, BLACK[k], ENEMY[k].size * 1.65);
+  for (const v of ["stomper", "hunter", "priest", "sniper", "tower", "cannon", "storm", "summoner"]) artSprite("v_" + v, ART[v](), ENEMY[VARIANTS[v].kind].size * 1.65);
+}
 
 // ---------- state ----------
 const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
@@ -206,7 +493,7 @@ let S; // run state
 function newRun() {
   S = { wave: 1, phase: "start", army: { plain: 1 }, pawns: [], enemies: [], fx: [], texts: [], t: 0,
         speed: S ? S.speed : 1, paused: false, spawnQueue: [], spawnTimer: 0, cds: {}, buffs: {},
-        locked: [], offers: [], recruited: {}, rerolls: 0, incoming: [], pickups: [], shake: 0, kills: 0, peak: 1 };
+        pushes: [], pushSize: 0, pushT: 0, locked: [], offers: [], recruited: {}, rerolls: 0, incoming: [], pickups: [], shake: 0, kills: 0, peak: 1 };
 }
 newRun();
 
@@ -237,6 +524,27 @@ function placeArmy() {
 }
 function totalPawnsInArmy() { return Object.values(S.army).reduce((a, b) => a + b, 0); }
 
+function landPush() {
+  const kinds = S.pushes.shift(); if (!kinds) return;
+  S.pushSize = kinds.length; S.pushT = 0;
+  const [cx, cy] = S.pawns.length ? swarmCentre() : [W / 2, H / 2];
+  const taken = new Set(S.enemies.map(e => Math.floor(e.x / SQ) + "," + Math.floor(e.y / SQ)));
+  for (const kind of kinds) {
+    let col, row;
+    for (let tries = 0; tries < 40; tries++) {
+      let x, y;
+      if (kind === "king") { x = W / 2; y = SQ * 1.5; }
+      else if (rnd() < .5) { const a = rnd() * 6.28, d = 110 + rnd() * 100; x = cx + Math.cos(a) * d; y = cy + Math.sin(a) * d; }
+      else { x = rnd() * W; y = rnd() * H; }
+      col = Math.max(0, Math.min(COLS - 1, Math.floor(x / SQ))); row = Math.max(0, Math.min(ROWS - 1, Math.floor(y / SQ)));
+      const px = col * SQ + SQ / 2, py = row * SQ + SQ / 2;
+      if (!taken.has(col + "," + row) && !S.pawns.some(q => Math.abs(q.x - px) < SQ * 3 && Math.abs(q.y - py) < SQ * 3)) break;
+    }
+    taken.add(col + "," + row);
+    S.incoming.push({ kind, x: col * SQ + SQ / 2, y: row * SQ + SQ / 2, t: 1.2 });
+  }
+  if (S.t > 0) toast("More black pieces incoming");
+}
 function startWave() {
   placeArmy(); S.enemies = []; S.incoming = []; S.pickups = []; S.fx = []; S.texts = []; S.cds = {}; S.buffs = {};
   const [k, b, r, q, kg] = WAVES[S.wave - 1];
@@ -246,20 +554,12 @@ function startWave() {
   for (let i = q2.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [q2[i], q2[j]] = [q2[j], q2[i]]; }
   if (kg) q2.unshift("king");
   // the whole wave lands at once, spread around the swarm: half in a ring, half anywhere, never on top of it
-  S.spawnQueue = []; const taken = new Set();
-  for (const kind of q2) {
-    let col, row;
-    for (let tries = 0; tries < 40; tries++) {
-      let x, y;
-      if (kind === "king") { x = W / 2; y = SQ * 1.5; }
-      else if (rnd() < .5) { const a = rnd() * 6.28, d = 150 + rnd() * 120; x = W / 2 + Math.cos(a) * d; y = H / 2 + Math.sin(a) * d; }
-      else { x = rnd() * W; y = rnd() * H; }
-      col = Math.max(0, Math.min(COLS - 1, Math.floor(x / SQ))); row = Math.max(0, Math.min(ROWS - 1, Math.floor(y / SQ)));
-      if (!taken.has(col + "," + row) && Math.hypot(col * SQ - W / 2, row * SQ - H / 2) > 120) break;
-    }
-    taken.add(col + "," + row);
-    S.incoming.push({ kind, x: col * SQ + SQ / 2, y: row * SQ + SQ / 2, t: 1.2 });
-  }
+  // the wave lands in pushes: each push lands all at once; the king always comes in the last one
+  S.spawnQueue = []; S.pushes = [];
+  const rest = q2.filter(k => k !== "king"), size = Math.ceil(rest.length / PUSHES);
+  for (let i = 0; i < PUSHES; i++) { const chunk = rest.slice(i * size, (i + 1) * size); if (chunk.length) S.pushes.push(chunk); }
+  if (kg) S.pushes[S.pushes.length - 1].push("king");
+  landPush();
   S.phase = "battle"; toast(`Wave ${S.wave}`);
   renderSkills();
 }
@@ -298,7 +598,7 @@ function hurtEnemy(e, dmg) {
     e.dead = true; S.kills++; burst(e.x, e.y, "#e9dcc2", 14); S.shake = Math.min(10, S.shake + (e.kind === "king" ? 12 : 1.5));
     // crowding: the bigger the swarm, the fewer pawns each kill drops, so growth slows down
     const crowd = Math.max(DROP_FLOOR, 1 - S.pawns.length / CROWD_SIZE);
-    const raw = (ENEMY[e.kind].drop + (e.variant ? 1 : 0)) * crowd * (S.buffs.bounty > 0 ? 2 : 1);
+    const raw = (ENEMY[e.kind].drop + (e.variant ? 1 : 0)) * DROP_MULT * crowd * (S.buffs.bounty > 0 ? 2 : 1);
     const drop = Math.floor(raw) + (rnd() < raw % 1 ? 1 : 0);
     const pChance = e.kind === "queen" || e.kind === "rook" ? .35 : e.variant ? .2 : .03;
     if (rnd() < pChance) S.pickups.push({ kind: pick(Object.keys(POWERUPS)), x: e.x, y: e.y, t: 9 });
@@ -330,6 +630,12 @@ function step(dt) {
   for (const b of S.pawns) if (b.type === "banner" && !b.dead) pawnsNear(b.x, b.y, 54, q => { if (q !== b) q.banner = true; });
   const alive = S.enemies.filter(e => !e.dead);
   const rally = S.buffs.rally > 0;
+  // team bases: pale glowing disc under white pawns, dark blood-red disc under black pieces
+  ctx.fillStyle = "#f3e7c4"; ctx.globalAlpha = .38;
+  for (const p of S.pawns) { ctx.beginPath(); ctx.ellipse(p.x, p.y + 13, 12, 4.5, 0, 0, 6.28); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  for (const e of S.enemies) { const r = ENEMY[e.kind].size * .55; ctx.fillStyle = "#4a0909"; ctx.strokeStyle = "#ff4a1f88"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(e.x, e.y + r * .55, r, r * .38, 0, 0, 6.28); ctx.fill(); ctx.stroke(); }
   // pawns
   for (const p of S.pawns) {
     if (p.dead) continue;
@@ -423,7 +729,9 @@ function step(dt) {
   // end conditions
   if (!S.pawns.length) return endRun(false);
   if (S.kingDead) return endRun(true);
-  if (!S.spawnQueue.length && !S.incoming.length && !S.enemies.length) endWave();
+  S.pushT += dt;
+  if (S.pushes.length && (S.enemies.length + S.incoming.length <= S.pushSize * .25 || S.pushT > PUSH_AFTER)) landPush();
+  if (!S.pushes.length && !S.incoming.length && !S.enemies.length) endWave();
 }
 // pawns walk like rooks: one axis at a time, never diagonally. They stick to their
 // current axis until the other one is clearly longer, so they don't zig-zag every frame.
@@ -539,7 +847,7 @@ function renderSkills() {
     const k = b.dataset.type, left = S.cds[k] || 0, max = TYPES[k].skill.cd;
     b.disabled = left > 0; b.classList.toggle("ready", left === 0);
     b.querySelector(".cd").style.width = (left > 0 ? (1 - left / max) * 100 : 100) + "%";
-    b.querySelector(".t").textContent = left > 0 ? left.toFixed(1) + "s" : TYPES[k].name;
+    b.querySelector(".t").textContent = left > 0 ? (left / PACE).toFixed(1) + "s" : TYPES[k].name;
   }
 }
 skillsEl.addEventListener("click", e => { const b = e.target.closest(".skill"); if (b) useSkill(b.dataset.type); });
@@ -575,7 +883,7 @@ function nextWaveInfo() {
   const fresh = VARIANT_KEYS.filter(v => VARIANTS[v].from === S.wave);
   const known = VARIANT_KEYS.filter(v => VARIANTS[v].from < S.wave);
   const row = v => `<span class="chip" style="border-color:${VARIANTS[v].color}"><b style="color:${VARIANTS[v].color}">${VARIANTS[v].name}</b> · ${VARIANTS[v].text}</span>`;
-  return `<p><b style="color:var(--fg)">Wave ${S.wave}:</b> ${parts}, all at once.</p>` +
+  return `<p><b style="color:var(--fg)">Wave ${S.wave}:</b> ${parts}, landing in ${PUSHES} pushes.</p>` +
     (fresh.length ? `<p><b style="color:var(--danger)">New black types this wave</b></p><div class="army">${fresh.map(row).join("")}</div>` : "") +
     (known.length ? `<details><summary style="cursor:pointer;color:var(--muted)">Black types you've met (${known.length})</summary><div class="army" style="margin-top:6px">${known.map(row).join("")}</div></details>` : "");
 }
@@ -583,7 +891,7 @@ function rerollCost() { return 1 + S.rerolls + Math.floor(S.wave / 3); }
 const shopEl = document.getElementById("shopScreen");
 function renderShop() {
   shopEl.hidden = false; const plain = S.army.plain || 0;
-  const chips = TYPE_KEYS.filter(k => S.army[k]).map(k => `<span class="chip" style="border-color:${TYPES[k].tint}55"><b style="color:${TYPES[k].tint}">♟</b> ${TYPES[k].name} × ${S.army[k]}</span>`).join("");
+  const chips = TYPE_KEYS.filter(k => S.army[k]).map(k => `<span class="chip" style="border-color:${TYPES[k].tint}55">${portrait(k, "ico") || `<b style="color:${TYPES[k].tint}">♟</b>`} ${TYPES[k].name} × ${S.army[k]}</span>`).join("");
   shopEl.innerHTML = `<div class="sheet">
     <h2>Wave ${S.wave - 1} cleared</h2>
     <p>You have <b style="color:var(--accent)">${plain}</b> plain pawns to spend. Each recruit turns one plain pawn into the type and sacrifices more as the price. Up to ${MAX_PER_TYPE} of each type per wave. You always keep at least one plain pawn.</p>
@@ -591,7 +899,7 @@ function renderShop() {
     ${nextWaveInfo()}
     <div class="offers">${S.offers.map((o, i) => { const T = TYPES[o.type]; const cost = offerCost(o.type) + 1; const done = recruited(o.type); const full = done >= MAX_PER_TYPE;
       return `<div class="offer ${full ? "sold" : ""}" style="--rarity:${RARITY_COLOR[T.rarity]}">
-        <span class="rar">${T.rarity}</span><h3 style="color:${T.tint}">♟ ${T.name}</h3>
+        ${portrait(o.type, "pic")}<span class="rar">${T.rarity}</span><h3 style="color:${T.tint}">${T.name}</h3>
         <span class="stats">${T.hp} HP · ${T.atk} attack</span>
         <span class="desc">${T.desc}</span>
         <span class="sk">Skill · ${T.skill.name}: ${T.skill.text}</span>
@@ -639,7 +947,7 @@ function bumpCounter() { countEl.classList.remove("bump"); void countEl.offsetWi
 
 // ---------- render ----------
 const board = document.createElement("canvas"); board.width = W * RES; board.height = H * RES; board.getContext("2d").scale(RES, RES);
-{ const g = board.getContext("2d"); for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#3a2f22" : "#4a3c2b"; g.fillRect(c * SQ, r * SQ, SQ, SQ); }
+{ const g = board.getContext("2d"); for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#1b1513" : "#2a201b"; g.fillRect(c * SQ, r * SQ, SQ, SQ); }
 }
 function draw() {
   ctx.setTransform(RES, 0, 0, RES, 0, 0);
@@ -658,7 +966,7 @@ function draw() {
     for (const [cx, cy] of e.windup.move.squares) ctx.fillRect(cx - SQ / 2 + 1, cy - SQ / 2 + 1, SQ - 2, SQ - 2); }
   // enemies
   for (const e of S.enemies) {
-    const spr = SPR["e_" + e.kind]; const y = e.y - (e.hop || 0); const sw = spr.width / RES;
+    const spr = (e.variant && SPR["v_" + e.variant]) || SPR["e_" + e.kind]; const y = e.y - (e.hop || 0); const sw = spr.width / RES;
     if (e.hop) { ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.ellipse(e.x, e.y + 12, 10, 4, 0, 0, 6.28); ctx.fill(); }
     if (e.variant) { ctx.fillStyle = VARIANTS[e.variant].color + "44"; ctx.strokeStyle = VARIANTS[e.variant].color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, y, ENEMY[e.kind].size * .62, 0, 6.28); ctx.fill(); ctx.stroke(); }
     ctx.globalAlpha = e.flash > 0 ? .5 : 1; ctx.drawImage(spr, e.x - sw / 2, y - sw / 2, sw, sw); ctx.globalAlpha = 1;
@@ -690,14 +998,14 @@ function hud() {
   const plain = S.phase === "battle" ? S.pawns.filter(p => p.type === "plain").length : (S.army.plain || 0);
   if (countEl.textContent !== String(n)) countEl.textContent = n;
   plainEl.textContent = plain; waveEl.textContent = Math.min(S.wave, 10) + "/10";
-  enemyEl.textContent = S.enemies.length + S.incoming.length + S.spawnQueue.length;
+  enemyEl.textContent = S.enemies.length + S.incoming.length + (S.pushes || []).reduce((a, c) => a + c.length, 0);
 }
 
 // ---------- loop ----------
 let last = performance.now(), acc = 0, hudT = 0;
 function frame(now) {
   const real = Math.min(.1, (now - last) / 1000); last = now;
-  if (S.phase === "battle" && !S.paused) { acc += real * S.speed; while (acc >= 1 / 60 && S.phase === "battle") { step(1 / 60); acc -= 1 / 60; } } else acc = 0;
+  if (S.phase === "battle" && !S.paused) { acc += real * S.speed * PACE; while (acc >= 1 / 60 && S.phase === "battle") { step(1 / 60); acc -= 1 / 60; } } else acc = 0;
   draw(); hudT -= real; if (hudT <= 0) { hud(); renderSkills(); hudT = .1; }
   if (toastT > 0) { toastT -= real; toastEl.style.opacity = Math.min(1, toastT * 2); }
   requestAnimationFrame(frame);
