@@ -21,6 +21,34 @@
         width: min(90vw, 90vh);
         height: min(90vw, 90vh);
       }
+      #end-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgb(0 0 0 / 60%);
+      }
+      #end-screen[hidden] {
+        display: none;
+      }
+      #end-screen h2 {
+        margin: 0;
+        font-size: 2.5rem;
+      }
+      #new-run {
+        margin-top: 8px;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 6px;
+        background: #81b64c;
+        color: #ffffff;
+        font-size: 1.25rem;
+        font-weight: bold;
+        cursor: pointer;
+      }
       #startup-error {
         max-width: 40rem;
         padding: 12px 16px;
@@ -33,6 +61,11 @@
   <body>
     <p id="startup-error" role="alert" hidden></p>
     <canvas id="board" aria-label="Chess board"></canvas>
+    <section id="end-screen" role="dialog" aria-labelledby="end-title" hidden>
+      <h2 id="end-title"></h2>
+      <p id="end-detail"></p>
+      <button id="new-run" type="button">New run</button>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
