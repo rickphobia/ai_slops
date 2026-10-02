@@ -64,6 +64,6 @@ Then fill in the README and add a row to the index.
 
 | Project | What it does | Stack | Status |
 |---------|--------------|-------|--------|
-| [pawn-swarm](projects/pawn-swarm) | Chess-board auto-battler where pawns are army and money | TypeScript, Vite, Canvas | idea |
+| [pawn-swarm](projects/pawn-swarm) | Chess-board auto-battler where pawns are army and money | TypeScript, Vite, Canvas | in progress |
 
 Status values: `idea`, `in progress`, `working`, `abandoned`.
