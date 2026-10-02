@@ -9,7 +9,7 @@ metadata:
     url: "https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md"
 ---
 
-Title the PR `<project-name>: <imperative summary>` (e.g. `pdf-summarizer: Add retry to model adapter`). If the PR delivers a ticket, put `Ticket: projects/<name>/docs/tickets/<NN>-<slug>.md` as the first line of the body.
+Title the PR `<project-name>: <imperative summary>` (e.g. `pdf-summarizer: Add retry to model adapter`). If the PR delivers a ticket, put `Ticket: projects/<name>/docs/tickets/<NN>-<slug>.md` as the first line of the body. If there is a playable or viewable build, its link goes on the next line: `▶ Try this version: <link>`.
 
 Use this template for writing the PR body:
 
