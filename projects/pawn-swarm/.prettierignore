@@ -3,3 +3,5 @@ node_modules
 package-lock.json
 # Prose is written by hand; Prettier only formats code and config.
 *.md
+# Throwaway design prototype, kept as a reference; not part of the build.
+docs/prototype/
