@@ -4,13 +4,13 @@
 
 **Blocked by:** 06
 
-**Status:** ready
+**Status:** done
 
 **Touches:** shop, run, adapters/dom-ui
 
-- [ ] One row per owned pawn type: icon, name, count, HP, attack, damage per second (attack ÷ cooldown)
-- [ ] Army totals: pawns, total HP, total damage per second
-- [ ] Last wave: black pieces taken, pawns gained, pawns lost, biggest swarm, time taken
-- [ ] Battle records these numbers as it runs; the panel only reads them (tested)
-- [ ] Works at phone width (rows stack or scroll inside the panel)
-- [ ] Screenshot in the PR
+- [x] One row per owned pawn type: icon, name, count, HP, attack, damage per second (attack ÷ cooldown)
+- [x] Army totals: pawns, total HP, total damage per second
+- [x] Last wave: black pieces taken, pawns gained, pawns lost, biggest swarm, time taken
+- [x] Battle records these numbers as it runs; the panel only reads them (tested)
+- [x] Works at phone width (rows stack or scroll inside the panel)
+- [x] Screenshot in the PR

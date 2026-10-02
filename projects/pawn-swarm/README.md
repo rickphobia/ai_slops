@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`in progress` — the battle is the real-time swarm from the prototype (`docs/prototype/`, decision 0002): one pawn in the middle of a 16×11 board against all 10 waves of knights, bishops, rooks, queens and finally the king, each wave landing in 3 pushes. Kills drop pawns that snowball the swarm; killing the king wins. Pause and 0.5×–2× speed. Between waves, the shop sells the common pawn types (Shield, Spear, Twin) for plain pawns. During a battle, each pawn type on the board gives a skill button (Charge, Hold the line, Volley, Fork) with a cooldown; keys 1–9 fire them and Space pauses. Tickets 08–12 in `docs/tickets/` add the rare and epic pawn types, black types, power-ups and a stats panel.
+`in progress` — the battle is the real-time swarm from the prototype (`docs/prototype/`, decision 0002): one pawn in the middle of a 16×11 board against all 10 waves of knights, bishops, rooks, queens and finally the king, each wave landing in 3 pushes. Kills drop pawns that snowball the swarm; killing the king wins. Pause and 0.5×–2× speed. Between waves, the shop sells the common pawn types (Shield, Spear, Twin) for plain pawns. During a battle, each pawn type on the board gives a skill button (Charge, Hold the line, Volley, Fork) with a cooldown; keys 1–9 fire them and Space pauses. The shop also shows an army stats panel (per-type count, HP, attack, damage per second; army totals; last wave's results). Tickets 08–11 in `docs/tickets/` add the rare and epic pawn types, black types and power-ups.
 
 ## Requirements
 
@@ -68,8 +68,8 @@ The battle runs at a fixed 60 steps per game second. The game plays at a pace of
 
 The rules are pure functions with no DOM, so tests drive them directly:
 
-- `run/` — the run state machine (`battle → shop → battle | won | lost`). `advanceRun` plays one step and keeps the biggest swarm and the pieces taken; the call after a cleared wave opens the shop, with the survivors as the army. `actInShop` applies the player's shop actions; "start wave" starts the next wave with the army at full HP, each pawn keeping its type, and carries locked offers to the next shop. Killing the king, or clearing the last wave, wins.
-- `shop/` — `shop.ts`: offers (3 slots, never the same type twice, weighted by rarity and gated by wave), recruit (price `ceil(base / 2 × (1 + 0.25 × (wave − 1)))` plain pawns on top of the one that turns, at most 5 of a type per shop visit), reroll (`1 + rerolls this visit + floor(wave / 3)`), lock, and the rule that the shop never takes the last plain pawn. `shop-view.ts` works out everything the shop screen shows.
+- `run/` — the run state machine (`battle → shop → battle | won | lost`). `advanceRun` plays one step and keeps the biggest swarm and the pieces taken, plus a `waveReport` for the wave being fought (`wave-report.ts`: pieces taken, pawns gained from drops, pawns lost, biggest swarm, game seconds; a new wave starts a fresh one, and the shop shows the wave just cleared); the call after a cleared wave opens the shop, with the survivors as the army. `actInShop` applies the player's shop actions; "start wave" starts the next wave with the army at full HP, each pawn keeping its type, and carries locked offers to the next shop. Killing the king, or clearing the last wave, wins.
+- `shop/` — `shop.ts`: offers (3 slots, never the same type twice, weighted by rarity and gated by wave), recruit (price `ceil(base / 2 × (1 + 0.25 × (wave − 1)))` plain pawns on top of the one that turns, at most 5 of a type per shop visit), reroll (`1 + rerolls this visit + floor(wave / 3)`), lock, and the rule that the shop never takes the last plain pawn. `shop-view.ts` works out everything the shop screen shows, including the stats panel (damage per second is attack ÷ seconds between strikes).
 - `skills/` — skill cooldowns, whether a skill can be used now (`skillBlocker`: no pawns of the type, or on cooldown), the button order (one per type on the board, in catalog order), and what the skill bar shows. Cooldowns count in game seconds; the bar shows real seconds at 1×.
 - `battle/` — `step(state, inputs)` plays one step. `inputs.skillUses` lists the skills fired on it; a seed plus every use (`{ step, skill }`, replayed with `skillsUsedAt`) replays a battle exactly. A use the rules refuse does nothing.
   0. `skill-effects.ts` fires the skills used this step, for every pawn of the type: Charge (plain pawns twice as fast, +1 attack for 3 s), Hold the line (shields take no damage and draw black pieces from 6.9 squares for 4 s), Volley (each spear hits black pieces within 4 squares in its row and column for 3), Fork (each twin hits black pieces within 1.375 squares for 2). The numbers live with each skill in `catalog/pieces.ts`.
@@ -93,7 +93,7 @@ The `adapters/` only draw state and report clicks; they never change rules:
 - `canvas-renderer/board-art.ts` — paints the empty board: dark squares, old blood stains, a vignette.
 - `canvas-renderer/effects.ts` — turns battle events into damage numbers, death bursts, "+n ♟" pop-ups, strike lines and landing rings, and ages them with game time (so they freeze on pause).
 - `canvas-renderer/canvas-renderer.ts` — draws the board at 2× resolution or more (so the sprites are 2× too), warning squares, pieces back to front (each pawn type on a disc in its own colour, from `art/type-colours.ts`), and HP bars; `draw-effect.ts` draws each effect.
-- `dom-ui/shop-screen.ts` — the shop between waves: offers with their animated portraits, the army with small icons, the next wave's pieces, reroll and "start wave". It reports clicks as shop actions.
+- `dom-ui/shop-screen.ts` — the shop between waves: offers with their animated portraits, the army with small icons, the army stats panel (a table that scrolls sideways inside its box on a phone) and the last wave's results, the next wave's pieces, reroll and "start wave". It reports clicks as shop actions.
 - `dom-ui/skill-bar.ts` — the skill buttons under the board: the type's portrait, the skill's name, its cooldown in seconds and a recharge bar, and hotkeys 1–9. It reports which skill was asked for; the entrypoint queues it for the next step.
 
 See `docs/spec.md`.
@@ -116,7 +116,7 @@ src/
   catalog/                  # pieces.ts (stats), battle-rules.ts, shop-rules.ts, waves.ts
   board/                    # square.ts (squares, points), moves.ts (chess moves, hit squares)
   battle/                   # battle-state.ts, create-battle.ts, step.ts and one file per phase
-  run/                      # run.ts (run state machine)
+  run/                      # run.ts (run state machine), wave-report.ts (what happened in a wave)
   shop/                     # shop.ts (offers, recruit, reroll, lock), shop-view.ts
   skills/                   # skills.ts (cooldowns, using a skill, the skill bar's view)
   balance/                  # headless bot runs and their report
