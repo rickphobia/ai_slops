@@ -1,6 +1,7 @@
 import { centreOf, type Point, type Square } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import type { HurtCause } from "./battle-state";
+import { lastingEffect } from "./skill-effects";
 import type { SpatialGrid } from "./spatial-grid";
 import { isAlive, type StepContext, type WorkingPawn } from "./step-context";
 
@@ -35,6 +36,7 @@ export function hurtPawn(
   cause: HurtCause,
 ): void {
   if (!isAlive(pawn)) return;
+  if (lastingEffect(context, pawn.type)?.takesNoDamage === true) return;
   pawn.hp -= damage;
   const at = { x: pawn.x, y: pawn.y };
   context.events.push({

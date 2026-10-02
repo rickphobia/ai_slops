@@ -1,5 +1,6 @@
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { createRandom } from "../rng";
+import { countDown } from "../skills/skills";
 import type {
   BattleOutcome,
   BattleState,
@@ -9,13 +10,9 @@ import type {
 } from "./battle-state";
 import { actBlackPieces, landPieces } from "./black-pieces";
 import { landNextPushIfDue } from "./pushes";
+import { fireSkills } from "./skill-effects";
 import { isAlive, type StepContext } from "./step-context";
 import { actPawns, separatePawns } from "./white-pawns";
-
-/** The inputs ask for something this build of the battle cannot do. */
-export class BattleInputError extends Error {
-  override name = "BattleInputError";
-}
 
 /** The simulation runs at 60 steps per game second, whatever the speed setting. */
 export const STEPS_PER_SECOND = 60;
@@ -27,16 +24,13 @@ export const STEP_SECONDS = 1 / STEPS_PER_SECOND;
 export const REAL_MS_PER_STEP = 1000 / (STEPS_PER_SECOND * BATTLE_RULES.pace);
 
 /**
- * Advances the battle by one step (1/60 game second). Pure: returns a new
+ * Advances the battle by one step (1/60 game second): first the skills the
+ * player fired, then the phases below. Pure: returns a new
  * state and leaves `state` alone. All randomness comes from `state.rng`, so the
  * same state and inputs always give the same next state.
  */
 export function step(state: BattleState, inputs: StepInputs): BattleState {
   if (state.outcome !== "ongoing") return state;
-  // A recorded replay from a later build may hold skill uses; refuse them rather than replay a different battle.
-  if (inputs.skillUses.length > 0) {
-    throw new BattleInputError("This build cannot play skill inputs yet.");
-  }
 
   const context: StepContext = {
     board: state.board,
@@ -51,9 +45,12 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
     pushSize: state.pushSize,
     pushSecondsLeft: state.pushSecondsLeft,
     nextId: state.nextId,
+    skillCooldowns: state.skillCooldowns,
+    lastingSkills: state.lastingSkills,
     kingDown: false,
   };
 
+  fireSkills(context, inputs.skillUses);
   landPieces(context);
   actPawns(context);
   separatePawns(context);
@@ -74,6 +71,8 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
     pushSecondsLeft: context.pushSecondsLeft,
     nextId: context.nextId,
     rng: context.random.state(),
+    skillCooldowns: countDown(context.skillCooldowns, context.seconds),
+    lastingSkills: countDown(context.lastingSkills, context.seconds),
     outcome: outcomeOf(
       pawns,
       context.kingDown,

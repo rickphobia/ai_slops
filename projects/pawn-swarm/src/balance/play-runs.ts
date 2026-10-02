@@ -1,7 +1,8 @@
-import { NO_INPUTS, type StepInputs } from "../battle/battle-state";
+import type { BattleState, StepInputs } from "../battle/battle-state";
 import { WAVES, type Wave } from "../catalog/waves";
 import { actInShop, advanceRun, type RunState, startRun } from "../run/run";
 import { recruitBlocker } from "../shop/shop";
+import { skillBlocker, skillsOnBoard } from "../skills/skills";
 
 /** How one headless run ended. */
 export interface RunSummary {
@@ -37,12 +38,14 @@ export class RunStuckError extends Error {
 /** About 4.6 hours of game time: no real run gets close. */
 const MAX_STEPS_PER_RUN = 1_000_000;
 
-/**
- * What the bot does each battle step. There are no skills yet, so it does
- * nothing; ticket 07 teaches it to fire skills when ready.
- */
-function botInputs(): StepInputs {
-  return NO_INPUTS;
+/** What the bot does each battle step: fires every skill that is ready. */
+function botInputs(battle: BattleState): StepInputs {
+  return {
+    skillUses: skillsOnBoard(battle.pawns).filter(
+      (type) =>
+        skillBlocker(battle.skillCooldowns, battle.pawns, type) === undefined,
+    ),
+  };
 }
 
 /** The bot's shop visit: recruits from the first offer it can, over and over, then starts the wave. */
@@ -71,7 +74,9 @@ export function playBotRun(seed: number, waves: readonly Wave[]): RunSummary {
       );
     }
     run =
-      run.phase === "shop" ? shopGreedily(run) : advanceRun(run, botInputs());
+      run.phase === "shop"
+        ? shopGreedily(run)
+        : advanceRun(run, botInputs(run.battle));
   }
   return {
     seed,

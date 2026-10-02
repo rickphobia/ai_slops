@@ -1,8 +1,8 @@
 import { boardCentre, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
-import { killBlackPiece } from "./drops";
 import { blackPiecePosition } from "./piece-position";
+import { strikeDamage, walkingSpeed } from "./skill-effects";
 import { buildSpatialGrid } from "./spatial-grid";
 import {
   hasRunOut,
@@ -11,6 +11,7 @@ import {
   type WorkingBlackPiece,
   type WorkingPawn,
 } from "./step-context";
+import { strike } from "./strike";
 
 /**
  * Every pawn alive at the start of the step drifts with its drop burst, then
@@ -46,7 +47,12 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
   const targetCentre = blackPiecePosition(target);
   const reach = stats.range + BLACK_PIECES[target.kind].bodyRadius;
   if (distance(pawn, targetCentre) > reach) {
-    walkStraight(pawn, targetCentre, stats.speed * context.seconds, 0);
+    walkStraight(
+      pawn,
+      targetCentre,
+      walkingSpeed(context, pawn) * context.seconds,
+      0,
+    );
     return;
   }
   if (!hasRunOut(pawn.strikeCooldownLeft)) return;
@@ -59,28 +65,10 @@ function actPawn(context: StepContext, pawn: WorkingPawn): void {
           .filter((piece) => piece !== target)
           .slice(0, stats.strikesAtOnce - 1)
       : [];
-  for (const piece of [target, ...others]) strike(context, pawn, piece);
-}
-
-/** One blow from `pawn` to `target`, for the pawn's attack. */
-function strike(
-  context: StepContext,
-  pawn: WorkingPawn,
-  target: WorkingBlackPiece,
-): void {
-  const damage = PAWN_TYPES[pawn.type].attack;
-  const targetCentre = blackPiecePosition(target);
-  target.hp -= damage;
-  context.events.push({
-    type: "strike",
-    pawnId: pawn.id,
-    pawnType: pawn.type,
-    targetId: target.id,
-    damage,
-    from: { x: pawn.x, y: pawn.y },
-    at: targetCentre,
-  });
-  if (!isAlive(target)) killBlackPiece(context, target, targetCentre);
+  const damage = strikeDamage(context, pawn);
+  for (const piece of [target, ...others]) {
+    strike(context, pawn, piece, damage);
+  }
 }
 
 /** Living black pieces a pawn with this range can strike from where it stands, nearest first. */

@@ -47,6 +47,9 @@ export function createBattle(setup: BattleSetup): BattleState {
     pushSecondsLeft: BATTLE_RULES.pushes.nextAfterSeconds,
     nextId: pawns.length + 1,
     rng: random.state(),
+    // Every skill starts each wave ready.
+    skillCooldowns: {},
+    lastingSkills: {},
     outcome: "ongoing",
     events: [],
   };

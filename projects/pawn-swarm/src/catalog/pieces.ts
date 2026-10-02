@@ -6,13 +6,54 @@ import type { MovePattern } from "../board/moves";
  */
 export type Rarity = "common" | "rare" | "epic";
 
-/** A pawn type's hand-fired ability. Skills join the battle in ticket 07; the shop already shows them. */
-export interface SkillText {
+/**
+ * What a skill does to the pawns of its own type while it lasts. Fields left
+ * out change nothing.
+ */
+export interface LastingSkillEffect {
+  readonly seconds: number;
+  /** Walking speed is multiplied by this. */
+  readonly speedFactor?: number;
+  /** Added to each strike's damage. */
+  readonly extraAttack?: number;
+  /** Hits and contact do nothing to these pawns. */
+  readonly takesNoDamage?: boolean;
+  /** Black pieces whose centre is within this many squares go for these pawns first, instead of `drawsBlackWithin`. */
+  readonly drawsBlackWithin?: number;
+}
+
+/** Where a skill's hit lands around each pawn of the type, in squares from the pawn. */
+export type SkillHitArea =
+  /** Every black piece whose centre is within `radius`. */
+  | { readonly shape: "around"; readonly radius: number }
+  /**
+   * Every black piece in the pawn's row or column: within `reach` along one
+   * axis and `halfWidth` across it.
+   */
+  | {
+      readonly shape: "row-and-column";
+      readonly reach: number;
+      readonly halfWidth: number;
+    };
+
+/** A hit each pawn of the type deals the moment the skill fires. */
+export interface SkillHit {
+  readonly damage: number;
+  readonly area: SkillHitArea;
+}
+
+/** A pawn type's hand-fired ability. It fires for every pawn of the type at once. */
+export interface SkillStats {
   readonly name: string;
-  /** Seconds between uses. */
+  /** Game seconds before it can be used again. */
   readonly cooldown: number;
   readonly text: string;
+  readonly lasting?: LastingSkillEffect;
+  readonly hit?: SkillHit;
 }
+
+/** What the shop says about a skill. */
+export type SkillText = Pick<SkillStats, "name" | "cooldown" | "text">;
 
 /** How the shop sells a pawn type. */
 export interface ShopListing {
@@ -37,7 +78,7 @@ export interface PawnStats {
   readonly drawsBlackWithin?: number;
   /** The always-on ability, as the shop describes it. */
   readonly passive: string;
-  readonly skill: SkillText;
+  readonly skill: SkillStats;
   /** How the shop sells it; the plain pawn is money, not for sale. */
   readonly shop?: ShopListing;
 }
@@ -58,6 +99,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Charge",
       cooldown: 12,
       text: "Plain pawns move twice as fast and get +1 attack for 3s.",
+      lasting: { seconds: 3, speedFactor: 2, extraAttack: 1 },
     },
   },
   shield: {
@@ -74,6 +116,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Hold the line",
       cooldown: 20,
       text: "Shields take no damage for 4s and pull black pieces from further away.",
+      lasting: { seconds: 4, takesNoDamage: true, drawsBlackWithin: 6.875 },
     },
     shop: { rarity: "common", basePrice: 3 },
   },
@@ -91,6 +134,11 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Volley",
       cooldown: 15,
       text: "Each spear hits every black piece within 4 squares in its row and column for 3.",
+      // Half a square plus a little slack across, so a spear between two squares still lines up.
+      hit: {
+        damage: 3,
+        area: { shape: "row-and-column", reach: 4, halfWidth: 0.625 },
+      },
     },
     shop: { rarity: "common", basePrice: 3 },
   },
@@ -107,6 +155,8 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Fork",
       cooldown: 12,
       text: "Each twin hits every black piece around it for 2.",
+      // The prototype's reach: the squares beside it, and a diagonal one only when the twin stands toward it (its centre is 1.41 away from a twin on a square centre).
+      hit: { damage: 2, area: { shape: "around", radius: 1.375 } },
     },
     shop: { rarity: "common", basePrice: 3 },
   },
