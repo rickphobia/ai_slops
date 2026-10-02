@@ -2,7 +2,7 @@ import type { BattleState, StepInputs } from "../battle/battle-state";
 import { WAVES, type Wave } from "../catalog/waves";
 import { actInShop, advanceRun, type RunState, startRun } from "../run/run";
 import { recruitBlocker } from "../shop/shop";
-import { readySkills } from "../skills/skills";
+import { skillBlocker, skillsOnBoard } from "../skills/skills";
 
 /** How one headless run ended. */
 export interface RunSummary {
@@ -41,7 +41,10 @@ const MAX_STEPS_PER_RUN = 1_000_000;
 /** What the bot does each battle step: fires every skill that is ready. */
 function botInputs(battle: BattleState): StepInputs {
   return {
-    skillUses: readySkills(battle.skillCooldowns, battle.pawns),
+    skillUses: skillsOnBoard(battle.pawns).filter(
+      (type) =>
+        skillBlocker(battle.skillCooldowns, battle.pawns, type) === undefined,
+    ),
   };
 }
 

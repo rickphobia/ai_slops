@@ -108,7 +108,7 @@ src/
   art-gallery.ts            # entrypoint of art-gallery.html
   fonts.css                 # Cinzel and Crimson Pro, self-hosted from @fontsource
   config.ts                 # reads and validates VITE_* env vars
-  debug-options.ts          # ?pawns= for a big starting swarm, ?autoskills for hands-off battles
+  debug-options.ts          # ?pawns= for a big starting swarm
   logger.ts                 # level-based console logger
   startup-error.ts          # error type for a page that cannot start
   rng.ts                    # seeded RNG for rule code
@@ -141,7 +141,6 @@ docs/
 - Logs go to the browser console, prefixed `[pawn-swarm]`. Default level is `info`.
 - Add `?debug=1` to the URL for debug logs, e.g. `http://localhost:5173/?debug=1`. Debug logs show every battle event (strike, hurt, death, drop, landing, stomp) with its step. That is a lot of logging in a big fight.
 - Add `?pawns=300` to start every run with that many plain pawns (1–1000), to see how a big swarm plays and performs. Combine with `?debug=1` as `?pawns=300&debug=1`.
-- Add `?autoskills` to fire every skill as soon as it is ready, so battles play themselves and only the shop needs you. A prototype of hands-off play (see "Hands-off play" in `docs/spec.md`).
 - Wave starts and ends, each push landing ("more black pieces incoming"), pause, resume and speed changes are logged at `info` with the step they happened on. The run's end logs the wave, biggest swarm and pieces taken.
 - Each skill that fires is logged at `info` as "skill used" with the wave, the step it fired on and how many pawns took part. A press the rules refuse (on cooldown) is logged at `debug` as "skill not ready".
 - The shop logs at `info` when it opens (offers and army), each recruit and reroll with the plain pawns before and after, and each lock toggle. Use `?pawns=60` to reach the shop with pawns to spend.

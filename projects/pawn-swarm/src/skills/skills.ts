@@ -61,16 +61,6 @@ export function skillsOnBoard(
   );
 }
 
-/** Every skill on the board that can be used right now, in button order. */
-export function readySkills(
-  cooldowns: SkillTimers,
-  pawns: readonly { readonly type: PawnTypeId }[],
-): PawnTypeId[] {
-  return skillsOnBoard(pawns).filter(
-    (type) => skillBlocker(cooldowns, pawns, type) === undefined,
-  );
-}
-
 /** The skills a recording fired on one step, in the order they were used. */
 export function skillsUsedAt(
   uses: readonly SkillUse[],

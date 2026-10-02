@@ -9,7 +9,7 @@ import { createSkillBar } from "./adapters/dom-ui/skill-bar";
 import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
 import type { PawnTypeId } from "./catalog/pieces";
 import { ConfigError, loadConfig } from "./config";
-import { autoSkillsFromQuery, startingPawnsFromQuery } from "./debug-options";
+import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
 import {
   actInShop,
@@ -21,7 +21,7 @@ import {
   startRun,
 } from "./run/run";
 import { ShopError } from "./shop/shop";
-import { describeSkillBar, readySkills, skillBlocker } from "./skills/skills";
+import { describeSkillBar, skillBlocker } from "./skills/skills";
 import { StartupError } from "./startup-error";
 import { createTickClock } from "./tick-clock";
 
@@ -154,7 +154,6 @@ async function start(): Promise<void> {
   logger.info("config loaded", { ...config });
   const startingPawns = startingPawnsFromQuery(window.location.search);
   if ("error" in startingPawns) throw new StartupError(startingPawns.error);
-  const autoSkills = autoSkillsFromQuery(window.location.search);
 
   const canvas = document.getElementById("board");
   if (!(canvas instanceof HTMLCanvasElement)) {
@@ -262,10 +261,7 @@ async function start(): Promise<void> {
     const dueSteps = clock.takeDueTicks(nowMs);
     for (let index = 0; index < dueSteps && run.phase === "battle"; index++) {
       const previous = run;
-      const skillUses = autoSkills
-        ? readySkills(run.battle.skillCooldowns, run.battle.pawns)
-        : queuedSkills;
-      run = advanceRun(run, { skillUses });
+      run = advanceRun(run, { skillUses: queuedSkills });
       queuedSkills = [];
       logStep(previous, run, logger);
       effects.advance(STEP_SECONDS);
