@@ -68,14 +68,15 @@ export function createMusic(
     const beatSeconds = 60 / settings.bpm;
     const bar = Math.floor(beat / 4) % BASS_NOTES.length;
     const bass = BASS_NOTES[bar] ?? 55;
-    if (beat % 4 === 0) note("sawtooth", bass, time, beatSeconds * 3.6, 0.22);
+    if (beat % 4 === 0)
+      note("triangle", bass * 2, time, beatSeconds * 3.6, 0.2);
     if (settings.pulse) {
-      note("sine", 52, time, 0.22, 0.5);
-      if (beat % 2 === 1) note("sine", 52, time + beatSeconds * 0.5, 0.18, 0.3);
+      note("sine", 52, time, 0.22, 0.35);
+      if (beat % 2 === 1) note("sine", 52, time + beatSeconds * 0.5, 0.18, 0.2);
     }
     if (settings.lead) {
       const lead = LEAD_NOTES[beat % LEAD_NOTES.length] ?? 220;
-      note("triangle", lead, time, beatSeconds * 0.9, 0.12);
+      note("sine", lead, time, beatSeconds * 0.9, 0.08);
     }
     beat += 1;
   };

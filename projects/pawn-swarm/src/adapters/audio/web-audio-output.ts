@@ -13,6 +13,12 @@ export interface UnlockableAudio extends AudioOutput {
 }
 
 const NOISE_SECONDS = 2;
+/** Everything goes through a low-pass filter: it takes the fizz off the raw oscillators. */
+const MASTER_CUTOFF_HZ = 3200;
+/** Headroom, so a big fight stacks up without the compressor squashing it. */
+const MASTER_LEVEL = 0.55;
+/** A few ms fade-in on every sound; starting at full volume clicks. */
+const ATTACK_SECONDS = 0.005;
 
 /**
  * The real sound maker, on the Web Audio API. Until `unlock()` runs it keeps
@@ -35,9 +41,16 @@ export function createWebAudioOutput(log: Logger): UnlockableAudio {
     try {
       const created = new AudioContext();
       const compressor = created.createDynamicsCompressor();
+      compressor.threshold.value = -18;
+      compressor.ratio.value = 4;
       compressor.connect(created.destination);
+      const tone = created.createBiquadFilter();
+      tone.type = "lowpass";
+      tone.frequency.value = MASTER_CUTOFF_HZ;
+      tone.connect(compressor);
       master = created.createGain();
-      master.connect(compressor);
+      master.gain.value = MASTER_LEVEL;
+      master.connect(tone);
       noiseBuffer = created.createBuffer(
         1,
         created.sampleRate * NOISE_SECONDS,
@@ -76,7 +89,8 @@ export function createWebAudioOutput(log: Logger): UnlockableAudio {
         Math.max(1, to * pitch),
         at + seconds,
       );
-      envelope.gain.setValueAtTime(gain * volume, at);
+      envelope.gain.setValueAtTime(0, at);
+      envelope.gain.linearRampToValueAtTime(gain * volume, at + ATTACK_SECONDS);
       envelope.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
       oscillator.connect(envelope).connect(destination);
       oscillator.start(at);
@@ -94,7 +108,8 @@ export function createWebAudioOutput(log: Logger): UnlockableAudio {
         Math.max(20, to * pitch),
         at + seconds,
       );
-      envelope.gain.setValueAtTime(gain * volume, at);
+      envelope.gain.setValueAtTime(0, at);
+      envelope.gain.linearRampToValueAtTime(gain * volume, at + ATTACK_SECONDS);
       envelope.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
       source.connect(filter).connect(envelope).connect(destination);
       source.start(at);

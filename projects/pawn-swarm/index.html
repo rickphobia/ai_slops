@@ -25,17 +25,33 @@
         --black-edge: #4a1a16;
         --font-display: "Cinzel", Georgia, serif;
         --font-body: "Crimson Pro", Georgia, serif;
-        /* The board is 16 × 11 squares; leave room above it for the HUD and below it for the skill bar. */
-        --board-width: min(94vw, calc((94vh - 150px) * 16 / 11));
+        /* Fixed heights, so a skill appearing or a number growing never moves the board. */
+        --hud-height: 48px;
+        --skills-height: 56px;
+        --gap: 6px;
+        /* The board is 16 × 11 squares; it takes whatever the HUD and skill bar leave. */
+        --board-width: min(
+          calc(100vw - 16px),
+          calc(
+            (
+                100vh - var(--hud-height) - var(--skills-height) - 4 *
+                  var(--gap)
+              ) *
+              16 / 11
+          )
+        );
       }
       body {
         margin: 0;
-        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
+        box-sizing: border-box;
+        padding: var(--gap) 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: var(--gap);
         background: radial-gradient(
           ellipse at 50% 0%,
           #1d1512 0%,
@@ -47,6 +63,7 @@
         font-size: 17px;
       }
       #board {
+        flex: none;
         width: var(--board-width);
         aspect-ratio: 16 / 11;
         border-radius: 3px;
@@ -58,8 +75,11 @@
       }
       #hud {
         width: var(--board-width);
+        height: var(--hud-height);
+        flex: none;
+        overflow: hidden;
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: space-between;
         gap: 8px 16px;
@@ -67,7 +87,8 @@
       #hud-status {
         margin: 0;
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        white-space: nowrap;
         align-items: baseline;
         gap: 4px 22px;
         font-family: var(--font-display);
@@ -109,6 +130,7 @@
       }
       #battle-controls,
       #speed-buttons {
+        flex: none;
         display: flex;
         gap: 6px;
       }
@@ -141,19 +163,27 @@
       #pause {
         min-width: 5.5rem;
       }
+      #fullscreen {
+        min-width: 6.5rem;
+      }
+      #fullscreen[hidden] {
+        display: none;
+      }
       /* Ember, not the speed red, so "paused" doesn't read as a fifth speed. */
       #battle-controls #pause[aria-pressed="true"] {
         border-color: var(--ember);
         background: var(--ember);
         color: var(--bg);
       }
+      /* One row only: buttons share the width and shrink rather than wrap. */
       #skills {
         width: var(--board-width);
-        min-height: 54px;
+        height: var(--skills-height);
+        flex: none;
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
       }
       #skills[hidden] {
         visibility: hidden;
@@ -164,8 +194,9 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        min-width: 10rem;
-        padding: 4px 30px 6px 4px;
+        flex: 0 1 12rem;
+        min-width: 0;
+        padding: 4px 26px 6px 4px;
         border: 1px solid var(--line);
         border-radius: 3px;
         background: linear-gradient(var(--panel-raised), var(--panel));
@@ -197,6 +228,9 @@
         opacity: 0.5;
       }
       /* The drawings leave room around the piece; let it spill into the padding. */
+      .skill-icon {
+        flex: none;
+      }
       .skill-icon svg {
         display: block;
         width: 48px;
@@ -206,6 +240,13 @@
       .skill-words {
         display: flex;
         flex-direction: column;
+        min-width: 0;
+        white-space: nowrap;
+      }
+      .skill-name,
+      .skill-status {
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .skill-name {
         font-family: var(--font-display);
@@ -695,6 +736,9 @@
       <div id="battle-controls">
         <button id="pause" type="button" aria-pressed="false">Pause</button>
         <div id="speed-buttons" role="group" aria-label="Battle speed"></div>
+        <button id="fullscreen" type="button" aria-pressed="false">
+          Fullscreen
+        </button>
       </div>
     </header>
     <canvas id="board" aria-label="Chess board"></canvas>

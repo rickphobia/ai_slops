@@ -15,6 +15,7 @@ import { createEffects } from "./adapters/canvas-renderer/effects";
 import { createPieceMotion } from "./adapters/canvas-renderer/piece-motion";
 import { loadPieceArt } from "./adapters/canvas-renderer/piece-art";
 import { createBattleControls } from "./adapters/dom-ui/battle-controls";
+import { createFullscreenToggle } from "./adapters/dom-ui/fullscreen";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
 import { createSettingsPanel } from "./adapters/dom-ui/settings-panel";
@@ -253,6 +254,7 @@ async function start(): Promise<void> {
     return run;
   };
 
+  createFullscreenToggle(document, logger);
   const hud = createHud(document);
   const toast = createToast(document);
   let run = beginRun(config.defaultSeed);
