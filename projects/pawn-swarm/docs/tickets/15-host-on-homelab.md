@@ -4,7 +4,7 @@
 
 **Blocked by:** 10, 11 (last ticket in the queue)
 
-**Status:** ready
+**Status:** in review (waiting on the owner's run on the Beelink)
 
 **Touches:** deploy/ (new), README
 
@@ -22,10 +22,10 @@
 3. Copy `dist/` to a temp folder next to `~/homelab/html/ai-projects/pawn-swarm/`, then swap the two folders, so visitors never see half a deploy. Keep the previous build as `pawn-swarm.previous` for a one-command rollback.
 4. Exit non-zero with a clear message on any failed step. The live site stays untouched when the build fails.
 
-- [ ] `deploy/update-site.sh` (`set -euo pipefail`; paths come from env vars with the defaults above, listed in `.env.example`)
-- [ ] `deploy/rollback.sh` swaps the previous build back
-- [ ] Optional systemd timer (`deploy/pawn-swarm-update.timer` + `.service`) that runs the update every 15 minutes, skipping the build when `main` hasn't changed
+- [x] `deploy/update-site.sh` (`set -euo pipefail`; paths come from env vars with the defaults above, listed in `.env.example`)
+- [x] `deploy/rollback.sh` swaps the previous build back
+- [x] Optional systemd timer (`deploy/pawn-swarm-update.timer` + `.service`) that runs the update every 15 minutes, skipping the build when `main` hasn't changed
 - [ ] No nginx config change needed if `/ai-projects/` already serves files from `~/homelab/html/ai-projects/`. Check that first and write down what you found in the README.
-- [ ] README "Deploy" section: first-time setup, update, rollback, how to check it worked (`curl -I https://rickphobia.com/ai-projects/pawn-swarm/`)
+- [x] README "Deploy" section: first-time setup, update, rollback, how to check it worked (`curl -I https://rickphobia.com/ai-projects/pawn-swarm/`)
 - [ ] Ran it on the Beelink once by hand and the game loads at the URL (owner confirms, since the session can't reach the server)
-- [ ] Shellcheck clean, and the CI workflow runs shellcheck on `deploy/`
+- [x] Shellcheck clean, and the CI workflow runs shellcheck on `deploy/`
