@@ -5,3 +5,5 @@ package-lock.json
 *.md
 # Throwaway design prototype, kept as a reference; not part of the build.
 docs/prototype/
+# Approved art style sample, kept as a reference; not part of the build.
+docs/art/
