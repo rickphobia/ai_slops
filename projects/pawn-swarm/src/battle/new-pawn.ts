@@ -22,5 +22,7 @@ export function newPawn(
     axis: "y",
     burstX: 0,
     burstY: 0,
+    stunLeft: 0,
+    healLeft: stats.passiveEffect?.heals?.everySeconds ?? 0,
   };
 }

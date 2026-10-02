@@ -21,6 +21,7 @@ const WARNING_RED = "224 97 79";
 const HP_BAR_BACK = "rgb(0 0 0 / 60%)";
 const PAWN_HP = "#8fcf6b";
 const BLACK_HP = "#e0614f";
+const STUN_MARK = "#d6e4ff";
 const SHADOW = "rgb(0 0 0 / 40%)";
 const TYPE_DISC_ALPHA = 0.45;
 /** The board, and so every piece sprite, is drawn at least at 2× the CSS size so the art stays sharp. */
@@ -196,6 +197,28 @@ export function createCanvasRenderer(
     context.stroke();
   };
 
+  /** A bobbing "z" over a stunned pawn. */
+  const drawStunMark = (
+    centre: Point,
+    squarePx: number,
+    nowSeconds: number,
+    pawnId: number,
+  ): void => {
+    const bob = Math.sin(nowSeconds * 5 + pawnId) * squarePx * 0.05;
+    context.font = `bold ${String(Math.round(squarePx * 0.45))}px sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.lineWidth = Math.max(2, squarePx * 0.07);
+    context.strokeStyle = "rgb(0 0 0 / 70%)";
+    context.fillStyle = STUN_MARK;
+    const at = {
+      x: centre.x + squarePx * 0.3,
+      y: centre.y - squarePx * 0.55 + bob,
+    };
+    context.strokeText("z", at.x, at.y);
+    context.fillText("z", at.x, at.y);
+  };
+
   const drawPawn = (
     pawn: WhitePawn,
     board: BoardSize,
@@ -210,6 +233,7 @@ export function createCanvasRenderer(
       squarePx,
       frameIndexAt(nowSeconds, pawn.id),
     );
+    if (pawn.stunLeft > 0) drawStunMark(centre, squarePx, nowSeconds, pawn.id);
     if (pawn.hp < pawn.maxHp) {
       drawHpBar(
         centre,
