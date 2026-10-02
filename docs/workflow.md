@@ -26,7 +26,8 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 
 - Only run tickets in parallel when all their blockers are `done` **and** their **Touches** don't overlap. Two sessions editing the same area is like two painters on the same wall.
 - Each parallel ticket gets its own fresh session, branch and PR.
-- Merge one PR at a time. If the next one conflicts, ask its session to merge `main` in and re-run the checks.
+- Each ticket's session watches its own PR until it is merged: it fixes merge conflicts (by merging `main` in) and failing CI by itself, so a PR only waits on you once it is green and mergeable. You still review and merge.
+- Merge one PR at a time; merging one can make the next conflict, and its session then fixes that.
 
 ## Habits that prevent slop
 
@@ -46,7 +47,7 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 | `/grilling` | Same interview, without writing docs |
 | `/to-spec` | Turn the conversation into a spec file |
 | `/to-tickets` | Turn a spec into ticket files with blockers and parallel batches |
-| `/implement` | Build one ticket end to end and open a PR |
+| `/implement` | Build one ticket end to end, open a PR and keep it green until you merge |
 | `/tdd` | Test-first loop (used by `/implement`) |
 | `/review-diff` | Review a diff against `CLAUDE.md` and the ticket |
 | `/pr` | Write a PR description with evidence and risk |
