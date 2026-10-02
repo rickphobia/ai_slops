@@ -1,7 +1,11 @@
 import type { Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import { POWER_UP_RULES } from "../catalog/power-ups";
 import { BLACK_PIECES } from "../catalog/pieces";
+import { baseDropOf } from "./black-type-rules";
 import { newPawn } from "./new-pawn";
+import { maybeDropOrb } from "./orb-drops";
+import { isRunning } from "./power-ups";
 import {
   isAlive,
   type StepContext,
@@ -30,13 +34,22 @@ export function killBlackPiece(
   context.events.push({
     type: "death",
     id: piece.id,
-    piece: { side: "black", kind: piece.kind },
+    piece: {
+      side: "black",
+      kind: piece.kind,
+      ...(piece.type === undefined ? {} : { type: piece.type }),
+    },
     at,
   });
   if (BLACK_PIECES[piece.kind].isKing === true) context.kingDown = true;
+  maybeDropOrb(context, piece, at);
   const swarm = context.pawns.filter(isAlive).length;
+  // Bounty doubles the drop before crowding shrinks it and the fraction is rounded.
+  const bounty = isRunning(context, "bounty")
+    ? POWER_UP_RULES.bountyDropFactor
+    : 1;
   const count = dropCount(
-    BLACK_PIECES[piece.kind].drop,
+    baseDropOf(piece) * bounty,
     swarm,
     context.random.next(),
   );

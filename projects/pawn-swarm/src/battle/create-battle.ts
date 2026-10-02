@@ -32,7 +32,7 @@ export function createBattle(setup: BattleSetup): BattleState {
   const [firstPush = [], ...laterPushes] = splitIntoPushes(setup.wave, random);
   const landings = planPushLandings(
     firstPush,
-    { board, pawns, blackPieces: [], landings: [] },
+    { board, wave: setup.waveNumber, pawns, blackPieces: [], landings: [] },
     random,
   );
   return {
@@ -42,6 +42,8 @@ export function createBattle(setup: BattleSetup): BattleState {
     pawns,
     blackPieces: [],
     landings,
+    orbs: [],
+    powerUps: {},
     pushes: laterPushes,
     pushSize: firstPush.length,
     pushSecondsLeft: BATTLE_RULES.pushes.nextAfterSeconds,

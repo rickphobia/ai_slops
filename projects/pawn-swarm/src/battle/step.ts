@@ -9,7 +9,9 @@ import type {
   WhitePawn,
 } from "./battle-state";
 import { actBlackPieces, landPieces } from "./black-pieces";
+import { moveOrbs } from "./orbs";
 import { promoteAtEdges, pulseMedics, pulseRecruiters } from "./passives";
+import { countDownPowerUps } from "./power-ups";
 import { landNextPushIfDue } from "./pushes";
 import { fireSkills } from "./skill-effects";
 import { isAlive, type StepContext } from "./step-context";
@@ -42,6 +44,8 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
     pawns: state.pawns.map((pawn) => ({ ...pawn })),
     blackPieces: state.blackPieces.map((piece) => ({ ...piece })),
     landings: state.landings.map((landing) => ({ ...landing })),
+    orbs: state.orbs.map((orb) => ({ ...orb })),
+    powerUps: state.powerUps,
     pushes: state.pushes,
     pushSize: state.pushSize,
     pushSecondsLeft: state.pushSecondsLeft,
@@ -59,6 +63,7 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
   separatePawns(context);
   promoteAtEdges(context);
   actBlackPieces(context);
+  moveOrbs(context);
   landNextPushIfDue(context);
 
   const pawns: WhitePawn[] = context.pawns.filter(isAlive);
@@ -70,6 +75,8 @@ export function step(state: BattleState, inputs: StepInputs): BattleState {
     pawns,
     blackPieces,
     landings: context.landings,
+    orbs: context.orbs,
+    powerUps: countDownPowerUps(context.powerUps, context.seconds),
     pushes: context.pushes,
     pushSize: context.pushSize,
     pushSecondsLeft: context.pushSecondsLeft,

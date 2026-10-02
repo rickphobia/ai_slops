@@ -208,4 +208,38 @@ describe("effect lifetimes", () => {
     expect(effects.list()).toEqual([]);
     expect(effects.particles.count).toBe(0);
   });
+
+  it("shows a ring in the type's colour for a priest and a storm, sized by their reach", () => {
+    const ring = (blackType: "priest" | "storm") =>
+      effectsFor([{ type: "black-power", id: 1, blackType, at }])[0];
+    expect(ring("priest")).toMatchObject({
+      kind: "ring",
+      colour: "#8fcf6b",
+      radius: 3,
+    });
+    expect(ring("storm")).toMatchObject({
+      kind: "ring",
+      colour: "#bff3ff",
+      radius: 2.3,
+    });
+  });
+
+  it("shows four 7-square lines for a cannon", () => {
+    const effects = effectsFor([
+      { type: "black-power", id: 1, blackType: "cannon", at },
+    ]);
+    expect(kinds(effects)).toEqual(["slash", "slash", "slash", "slash"]);
+    expect(effects[0]).toMatchObject({ to: { x: at.x + 7, y: at.y } });
+  });
+
+  it("rings a new orb, and rings and bursts sparks when a power-up is picked up, in its colour", () => {
+    expect(
+      effectsFor([{ type: "orb-drop", id: 3, powerUp: "freeze", at }]),
+    ).toMatchObject([{ kind: "ring", colour: "#bff3ff" }]);
+    const picked = effectsFor([
+      { type: "power-up", id: 3, powerUp: "bounty", at },
+    ]);
+    // The toast names it; on the board there is only a ring and sparks.
+    expect(picked).toMatchObject([{ kind: "ring", colour: "#e8b04a" }]);
+  });
 });

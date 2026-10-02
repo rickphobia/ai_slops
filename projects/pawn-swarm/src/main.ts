@@ -20,8 +20,10 @@ import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
 import { createSettingsPanel } from "./adapters/dom-ui/settings-panel";
 import { createShopScreen } from "./adapters/dom-ui/shop-screen";
 import { createSkillBar } from "./adapters/dom-ui/skill-bar";
+import { createToast, powerUpToastText } from "./adapters/dom-ui/toast";
 import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
 import type { PawnTypeId } from "./catalog/pieces";
+import { POWER_UPS } from "./catalog/power-ups";
 import { ConfigError, loadConfig } from "./config";
 import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
@@ -123,6 +125,9 @@ function logShopAction(
   }
 }
 
+/** The warning colour of the "more black pieces" toast: the same red as the board's warning squares. */
+const MORE_BLACK_TOAST_COLOUR = "#e0614f";
+
 function logStep(previous: RunState, next: RunState, log: Logger): void {
   const stepNumber = next.battle.stepNumber;
   for (const event of next.battle.events) {
@@ -134,6 +139,13 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
         step: previous.battle.stepNumber,
         skill: event.pawnType,
         pawns: event.pawns,
+      });
+    }
+    if (event.type === "power-up") {
+      log.info("power-up picked up", {
+        wave: next.wave,
+        step: stepNumber,
+        powerUp: event.powerUp,
       });
     }
     if (event.type === "push") {
@@ -242,6 +254,7 @@ async function start(): Promise<void> {
   };
 
   const hud = createHud(document);
+  const toast = createToast(document);
   let run = beginRun(config.defaultSeed);
   /** Skills the player asked for since the last step: they fire on the next one, even if that waits on a pause. */
   let queuedSkills: PawnTypeId[] = [];
@@ -336,6 +349,15 @@ async function start(): Promise<void> {
       for (const event of run.battle.events) {
         const sound = soundForEvent(event);
         if (sound !== undefined) player.play(sound);
+        if (event.type === "push") {
+          toast.show("More black pieces incoming", MORE_BLACK_TOAST_COLOUR);
+        }
+        if (event.type === "power-up") {
+          toast.show(
+            powerUpToastText(event.powerUp),
+            POWER_UPS[event.powerUp].colour,
+          );
+        }
         if (
           event.type === "death" &&
           event.piece.side === "black" &&
@@ -347,8 +369,12 @@ async function start(): Promise<void> {
       const endSound = soundForRunEnd(previous, run);
       if (endSound !== undefined) player.play(endSound);
       if (run.battle.events.some((event) => event.type === "drop")) hud.bump();
-      if (run.phase === "shop") shopScreen.show(shopView(run));
+      if (run.phase === "shop") {
+        toast.hide();
+        shopScreen.show(shopView(run));
+      }
       if (run.phase === "won" || run.phase === "lost") {
+        toast.hide();
         endScreen.show({
           outcome: run.phase,
           wave: run.wave,

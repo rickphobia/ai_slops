@@ -247,6 +247,29 @@
       .skill[data-state="ready"] .skill-recharge {
         background: var(--ember);
       }
+      /* A short message over the top of the board: power-ups, new pushes. It never takes clicks. */
+      #toast {
+        position: fixed;
+        top: 12%;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 90vw;
+        margin: 0;
+        padding: 6px 18px;
+        border: 1px solid var(--toast-colour, var(--line));
+        border-radius: 3px;
+        background: rgb(11 9 8 / 88%);
+        color: var(--toast-colour, var(--bone));
+        font-family: var(--font-display);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-align: center;
+        pointer-events: none;
+        z-index: 5;
+      }
+      #toast[hidden] {
+        display: none;
+      }
       #end-screen {
         position: fixed;
         inset: 0;
@@ -370,6 +393,57 @@
       }
       .chip-black {
         border-color: var(--black-edge);
+      }
+      #shop-black-types {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #shop-black-types[hidden] {
+        display: none;
+      }
+      .black-types {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+        gap: 6px;
+      }
+      /* Each black type wears its board ring's colour on its edge. */
+      .black-type {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 10px 2px 2px;
+        border: 1px solid var(--black-edge);
+        border-left: 4px solid var(--ring, var(--black-edge));
+        border-radius: 3px;
+        background: var(--panel);
+      }
+      .black-type-name {
+        font-family: var(--font-display);
+        font-weight: 600;
+        color: var(--ring, var(--bone));
+      }
+      .black-type-power {
+        display: block;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      #shop-met-black-types summary {
+        cursor: pointer;
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      #shop-met-black-types summary:focus-visible {
+        outline: 2px solid var(--bone);
+        outline-offset: 2px;
       }
       .chip-icon svg {
         display: block;
@@ -625,6 +699,7 @@
     </header>
     <canvas id="board" aria-label="Chess board"></canvas>
     <nav id="skills" aria-label="Skills" hidden></nav>
+    <p id="toast" role="status" hidden></p>
     <section id="shop" role="dialog" aria-labelledby="shop-title" hidden>
       <div class="shop-sheet">
         <header>
@@ -641,6 +716,16 @@
             <ul id="shop-next-wave" class="chips"></ul>
           </section>
         </div>
+        <section id="shop-black-types" aria-label="Black types" hidden>
+          <div id="shop-new-black-types-box">
+            <h3>New black types this wave</h3>
+            <ul id="shop-new-black-types" class="black-types"></ul>
+          </div>
+          <details id="shop-met-black-types">
+            <summary id="shop-met-black-types-title"></summary>
+            <ul id="shop-met-black-types-list" class="black-types"></ul>
+          </details>
+        </section>
         <section id="shop-stats" aria-labelledby="shop-stats-title">
           <h3 id="shop-stats-title">Army stats</h3>
           <div class="stats-scroll">

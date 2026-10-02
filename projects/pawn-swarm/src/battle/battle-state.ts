@@ -1,5 +1,7 @@
 import type { BoardSize, Point, Square } from "../board/square";
+import type { BlackTypeId } from "../catalog/black-types";
 import type { BlackKind, PawnTypeId } from "../catalog/pieces";
+import type { PowerUpId, TimedPowerUpId } from "../catalog/power-ups";
 import type { RngState } from "../rng";
 import type { SkillTimers } from "../skills/skills";
 
@@ -8,7 +10,12 @@ export type Axis = "x" | "y";
 /** Which kind of piece something is: a white pawn type or a black piece kind. */
 export type PieceIdentity =
   | { readonly side: "white"; readonly type: PawnTypeId }
-  | { readonly side: "black"; readonly kind: BlackKind };
+  | {
+      readonly side: "black";
+      readonly kind: BlackKind;
+      /** Which special type it is, if it is one. */
+      readonly type?: BlackTypeId;
+    };
 
 /** A white pawn. It moves freely in board units, along one axis at a time. */
 export interface WhitePawn {
@@ -56,6 +63,8 @@ export interface BlackMove {
 export interface BlackPiece {
   readonly id: number;
   readonly kind: BlackKind;
+  /** Which special type it is, if it is one. */
+  readonly type: BlackTypeId | undefined;
   readonly square: Square;
   readonly hp: number;
   readonly maxHp: number;
@@ -63,14 +72,17 @@ export interface BlackPiece {
   readonly actLeft: number;
   /** Seconds until it next hurts the pawns touching it. */
   readonly contactLeft: number;
-  /** Seconds until it next calls knights; only counts for pieces that summon (the king). */
+  /** Seconds until it next calls knights; only counts for pieces that summon (the king, a summoner). */
   readonly summonLeft: number;
+  /** Seconds until its next power fires; only counts for special types that heal or hit on a timer. */
+  readonly powerLeft: number;
   readonly move: BlackMove | undefined;
 }
 
 /** A black piece about to land (from a push or a summon), shown as a warning square. */
 export interface Landing {
   readonly kind: BlackKind;
+  readonly type: BlackTypeId | undefined;
   readonly square: Square;
   readonly secondsLeft: number;
   readonly warningSeconds: number;
@@ -78,6 +90,19 @@ export interface Landing {
 
 /** How a pawn got hurt: by a black move landing on its square, by touching a black piece, or by paying for its own skill (Frenzy). */
 export type HurtCause = "hit" | "contact" | "skill";
+
+/** A power-up orb lying on the board, waiting for a pawn. */
+export interface PowerUpOrb {
+  readonly id: number;
+  readonly powerUp: PowerUpId;
+  readonly x: number;
+  readonly y: number;
+  /** Seconds until it vanishes. */
+  readonly secondsLeft: number;
+}
+
+/** Seconds each timed power-up still runs. A power-up that isn't running has no entry. */
+export type PowerUpTimers = Readonly<Partial<Record<TimedPowerUpId, number>>>;
 
 export type BattleOutcome = "ongoing" | "won" | "lost";
 
@@ -166,6 +191,27 @@ export type BattleEvent =
       readonly id: number;
       readonly count: number;
       readonly at: Point;
+    }
+  /** A special black piece fired its power (a priest's heal, a cannon's shot, a storm's pulse). */
+  | {
+      readonly type: "black-power";
+      readonly id: number;
+      readonly blackType: BlackTypeId;
+      readonly at: Point;
+    }
+  /** A kill dropped an orb. */
+  | {
+      readonly type: "orb-drop";
+      readonly id: number;
+      readonly powerUp: PowerUpId;
+      readonly at: Point;
+    }
+  /** A pawn touched an orb: its power-up works for the whole swarm. */
+  | {
+      readonly type: "power-up";
+      readonly id: number;
+      readonly powerUp: PowerUpId;
+      readonly at: Point;
     };
 
 export interface BattleState {
@@ -186,6 +232,10 @@ export interface BattleState {
   readonly pushSize: number;
   /** Seconds until the next push lands anyway. */
   readonly pushSecondsLeft: number;
+  /** Power-up orbs on the board. */
+  readonly orbs: readonly PowerUpOrb[];
+  /** Timed power-ups running now. */
+  readonly powerUps: PowerUpTimers;
   /** The id the next new piece gets. */
   readonly nextId: number;
   readonly rng: RngState;

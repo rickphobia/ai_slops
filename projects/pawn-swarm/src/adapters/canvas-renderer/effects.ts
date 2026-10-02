@@ -1,5 +1,7 @@
 import type { BattleEvent, PieceIdentity } from "../../battle/battle-state";
+import { BLACK_TYPES } from "../../catalog/black-types";
 import type { BlackKind } from "../../catalog/pieces";
+import { POWER_UPS } from "../../catalog/power-ups";
 import type { Point } from "../../board/square";
 import { createParticlePool, type ParticlePool } from "./particles";
 
@@ -382,6 +384,58 @@ export function createEffects(
         addRing(EFFECT_COLOURS.stomp, event.at, 1.4, 0.2);
         addShake(0.2);
         return;
+      case "black-power": {
+        const type = BLACK_TYPES[event.blackType];
+        const hit = type.hitsOnTimer?.area;
+        if (hit?.shape === "row-and-column") {
+          // A cannon's shot: a line along its row and column, as far as it reaches.
+          for (const [stepX, stepY] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ]) {
+            push(
+              {
+                kind: "slash",
+                colour: type.colour,
+                from: event.at,
+                to: {
+                  x: event.at.x + (stepX ?? 0) * hit.reach,
+                  y: event.at.y + (stepY ?? 0) * hit.reach,
+                },
+                life: 0.25,
+                age: 0,
+              },
+              MAX_SLASHES,
+            );
+          }
+          addShake(0.25);
+        } else {
+          const radius =
+            hit?.shape === "around" ? hit.radius : type.heals?.radius;
+          addRing(type.colour, event.at, radius ?? 1, 0.35);
+          if (hit !== undefined) addShake(0.3);
+        }
+        return;
+      }
+      case "orb-drop":
+        addRing(POWER_UPS[event.powerUp].colour, event.at, 0.8, 0.3);
+        return;
+      case "power-up": {
+        const power = POWER_UPS[event.powerUp];
+        addRing(power.colour, event.at, 1.6, 0.45);
+        burst(
+          "spark",
+          power.colour,
+          event.at,
+          16,
+          [1.5, 5],
+          [0.06, 0.12],
+          [0.35, 0.65],
+        );
+        return;
+      }
       default:
         return;
     }

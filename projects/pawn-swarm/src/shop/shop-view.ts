@@ -1,4 +1,9 @@
 import {
+  BLACK_TYPE_IDS,
+  BLACK_TYPES,
+  type BlackTypeId,
+} from "../catalog/black-types";
+import {
   type Army,
   BLACK_PIECES,
   type BlackKind,
@@ -59,6 +64,16 @@ export interface ArmyStats {
   readonly lastWave: WaveReport;
 }
 
+/** A special black type as the shop describes it. */
+export interface BlackTypeView {
+  readonly type: BlackTypeId;
+  readonly name: string;
+  /** The piece it is a version of, e.g. "Knight". */
+  readonly pieceName: string;
+  readonly colour: string;
+  readonly power: string;
+}
+
 export interface ShopView {
   /** The wave the shop leads into. */
   readonly wave: number;
@@ -80,6 +95,13 @@ export interface ShopView {
     readonly name: string;
     readonly count: number;
   }[];
+  /** Black types that can turn up for the first time in the next wave. */
+  readonly newBlackTypes: readonly BlackTypeView[];
+  /**
+   * Black types that could already turn up in an earlier wave. Whether one
+   * actually did is chance, so this is "could have met", not "did meet".
+   */
+  readonly metBlackTypes: readonly BlackTypeView[];
 }
 
 /** Everything the shop screen shows, worked out by the rules so the screen only lays it out. */
@@ -124,7 +146,26 @@ export function describeShop(
       name: BLACK_PIECES[kind].name,
       count,
     })),
+    newBlackTypes: blackTypesWhere((fromWave) => fromWave === shop.wave),
+    metBlackTypes: blackTypesWhere((fromWave) => fromWave < shop.wave),
   };
+}
+
+function blackTypesWhere(
+  matches: (fromWave: number) => boolean,
+): BlackTypeView[] {
+  return BLACK_TYPE_IDS.filter((type) =>
+    matches(BLACK_TYPES[type].fromWave),
+  ).map((type) => {
+    const stats = BLACK_TYPES[type];
+    return {
+      type,
+      name: stats.name,
+      pieceName: BLACK_PIECES[stats.piece].name,
+      colour: stats.colour,
+      power: stats.power,
+    };
+  });
 }
 
 function describeArmy(army: Army, lastWave: WaveReport): ArmyStats {

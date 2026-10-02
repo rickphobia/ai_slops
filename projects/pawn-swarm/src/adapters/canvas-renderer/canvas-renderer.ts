@@ -9,12 +9,14 @@ import {
   type Point,
   type Square,
 } from "../../board/square";
-import type { BlackKind } from "../../catalog/pieces";
+import { BLACK_TYPES } from "../../catalog/black-types";
+import { BLACK_PIECES, type BlackKind } from "../../catalog/pieces";
 import { StartupError } from "../../startup-error";
 import { frameIndexAt } from "../art/animation";
 import type { ArtId } from "../art/drawings";
 import { paintBoard } from "./board-art";
 import { drawEffect, drawParticles } from "./draw-effect";
+import { drawOrb } from "./draw-orb";
 import { createPoseDrawer } from "./draw-pose";
 import type { Effect } from "./effects";
 import type { ParticlePool } from "./particles";
@@ -44,6 +46,8 @@ const HOP_HEIGHT: Readonly<Record<BlackKind, number>> = {
 /** The biggest screen shake, in squares, at full strength. */
 const MAX_SHAKE_SQUARES = 0.28;
 const DYING_ROTATION = 0.7;
+/** The tint over the board while a Freeze power-up holds the black pieces. */
+const FREEZE_TINT = "rgb(191 243 255 / 14%)";
 
 /** Everything drawn besides the battle itself: made from events, aged with game time. */
 export interface Scene {
@@ -326,6 +330,34 @@ export function createCanvasRenderer(
     }
   };
 
+  /** A ring in the type's colour at a special black piece's feet, so it stands out in a wave. */
+  const drawTypeRing = (
+    piece: BlackPiece,
+    centre: Point,
+    squarePx: number,
+  ): void => {
+    if (piece.type === undefined) return;
+    const colour = BLACK_TYPES[piece.type].colour;
+    const width = BLACK_PIECES[piece.kind].bodyRadius * 2.6 * squarePx;
+    context.beginPath();
+    context.ellipse(
+      centre.x,
+      centre.y + squarePx * 0.4,
+      width / 2,
+      width * 0.2,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.globalAlpha = TYPE_DISC_ALPHA * 0.6;
+    context.fillStyle = colour;
+    context.fill();
+    context.globalAlpha = 1;
+    context.strokeStyle = colour;
+    context.lineWidth = Math.max(2, squarePx * 0.06);
+    context.stroke();
+  };
+
   const drawBlackPiece = (
     piece: BlackPiece,
     board: BoardSize,
@@ -359,9 +391,14 @@ export function createCanvasRenderer(
       );
       context.fill();
     }
+    drawTypeRing(piece, centre, squarePx);
     const raised = { x: centre.x, y: centre.y - lift };
     drawSprite(
-      artIdOf({ side: "black", kind: piece.kind }),
+      artIdOf({
+        side: "black",
+        kind: piece.kind,
+        ...(piece.type === undefined ? {} : { type: piece.type }),
+      }),
       raised,
       squarePx,
       frameIndexAt(nowSeconds, piece.id),
@@ -420,6 +457,19 @@ export function createCanvasRenderer(
         drawBlackPiece(piece, battle.board, squarePx, nowSeconds, scene.motion);
       }
       drawLandingWarnings(battle, squarePx);
+      for (const orb of battle.orbs) {
+        drawOrb(
+          context,
+          orb,
+          toCanvas(orb, battle.board, squarePx),
+          squarePx,
+          nowSeconds,
+        );
+      }
+      if (battle.powerUps.freeze !== undefined) {
+        context.fillStyle = FREEZE_TINT;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
       drawParticles(context, scene.particles, toPixels, squarePx);
       for (const effect of scene.effects) {
         if (effect.kind !== "blood-pool") {

@@ -48,6 +48,23 @@ describe("soundForEvent", () => {
     expect(soundForEvent(hurt("hit"))).toBe("black-hit");
     expect(soundForEvent(hurt("contact"))).toBeUndefined();
   });
+
+  it("sounds the hurting black powers and the power-ups, and keeps a priest's heal quiet", () => {
+    const power = (blackType: "priest" | "cannon"): BattleEvent => ({
+      type: "black-power",
+      id: 1,
+      blackType,
+      at,
+    });
+    expect(soundForEvent(power("cannon"))).toBe("blast");
+    expect(soundForEvent(power("priest"))).toBeUndefined();
+    expect(
+      soundForEvent({ type: "power-up", id: 2, powerUp: "heal", at }),
+    ).toBe("shop-buy");
+    expect(
+      soundForEvent({ type: "orb-drop", id: 2, powerUp: "heal", at }),
+    ).toBe("drop-pop");
+  });
 });
 
 describe("shop and music", () => {
@@ -63,12 +80,14 @@ describe("shop and music", () => {
     const king = {
       id: 99,
       kind: "king" as const,
+      type: undefined,
       square: { file: 8, rank: 8 },
       hp: 10,
       maxHp: 10,
       actLeft: 1,
       contactLeft: 1,
       summonLeft: 1,
+      powerLeft: 0,
       move: undefined,
     };
     const withKing = {
