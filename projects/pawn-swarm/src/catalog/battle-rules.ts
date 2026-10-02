@@ -20,8 +20,8 @@ export const BATTLE_RULES = {
   landingWarningSeconds: 1.2,
   /** Red squares show this long before summoned knights land. */
   summonWarningSeconds: 0.8,
-  /** Summoned knights land at most this many squares from the summoner along each axis. */
-  summonReach: 2,
+  /** Summoned knights land at most this many squares from the summoner along each axis: right next to it. */
+  summonReach: 1,
   /** A pawn this close (along each axis) to a hit square's centre is on it. Half a square plus a little slack. */
   squareHitReach: 0.5625,
 

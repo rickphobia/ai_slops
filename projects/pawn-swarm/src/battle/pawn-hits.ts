@@ -1,5 +1,6 @@
 import { centreOf, type Point, type Square } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import type { HurtCause } from "./battle-state";
 import type { SpatialGrid } from "./spatial-grid";
 import { isAlive, type StepContext, type WorkingPawn } from "./step-context";
 
@@ -31,7 +32,7 @@ export function hurtPawn(
   context: StepContext,
   pawn: WorkingPawn,
   damage: number,
-  cause: "hit" | "contact",
+  cause: HurtCause,
 ): void {
   if (!isAlive(pawn)) return;
   pawn.hp -= damage;

@@ -3,7 +3,6 @@ import {
   boardCentre,
   centreOf,
   isOnBoard,
-  isSameSquare,
   type Point,
   type Square,
   squareAt,
@@ -12,6 +11,7 @@ import { BATTLE_RULES } from "../catalog/battle-rules";
 import type { BlackKind } from "../catalog/pieces";
 import type { Random } from "../rng";
 import type { BlackPiece, Landing } from "./battle-state";
+import { isAmong, squaresHeldByBlack } from "./black-squares";
 
 /** There is no free square left for a black piece to land on. */
 export class BoardFullError extends Error {
@@ -40,9 +40,8 @@ export function planPushLandings(
   const rules = BATTLE_RULES.landing;
   const centre = swarmCentre(view);
   const pawnGap = pawnGapBySquare(view);
-  const taken = takenSquares(view);
-  const isFree = (square: Square): boolean =>
-    !taken.some((other) => isSameSquare(other, square));
+  const taken = squaresHeldByBlack(view.blackPieces, view.landings);
+  const isFree = (square: Square): boolean => !isAmong(taken, square);
   const isClear = (square: Square): boolean =>
     (pawnGap(square) ?? 0) >= rules.keepClearOfPawns;
 
@@ -73,7 +72,7 @@ export function planSummonLandings(
   random: Random,
 ): Landing[] {
   const reach = BATTLE_RULES.summonReach;
-  const taken = takenSquares(view);
+  const taken = squaresHeldByBlack(view.blackPieces, view.landings);
   const free: Square[] = [];
   for (let rankStep = -reach; rankStep <= reach; rankStep++) {
     for (let fileStep = -reach; fileStep <= reach; fileStep++) {
@@ -81,10 +80,7 @@ export function planSummonLandings(
         file: around.file + fileStep,
         rank: around.rank + rankStep,
       };
-      if (
-        isOnBoard(square, view.board) &&
-        !taken.some((other) => isSameSquare(other, square))
-      ) {
+      if (isOnBoard(square, view.board) && !isAmong(taken, square)) {
         free.push(square);
       }
     }
@@ -106,20 +102,6 @@ function landingOn(
   warningSeconds: number,
 ): Landing {
   return { kind, square, secondsLeft: warningSeconds, warningSeconds };
-}
-
-/** Squares black already holds: standing on, moving to, or about to land on. */
-function takenSquares(view: Omit<LandingView, "pawns">): Square[] {
-  return [
-    ...view.blackPieces
-      .filter((piece) => piece.hp > 0)
-      .flatMap((piece) =>
-        piece.move === undefined
-          ? [piece.square]
-          : [piece.square, piece.move.to],
-      ),
-    ...view.landings.map((landing) => landing.square),
-  ];
 }
 
 /** The middle of the swarm, or of the board when there are no pawns. */

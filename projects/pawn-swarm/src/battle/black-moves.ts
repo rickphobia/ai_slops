@@ -1,13 +1,9 @@
 import { pieceMoves } from "../board/moves";
-import {
-  centreOf,
-  isSameSquare,
-  type Point,
-  type Square,
-} from "../board/square";
+import { centreOf, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
 import { BLACK_PIECES } from "../catalog/pieces";
 import type { BlackMove } from "./battle-state";
+import { isAmong, squaresHeldByBlack } from "./black-squares";
 import { hitSquares } from "./pawn-hits";
 import type { SpatialGrid } from "./spatial-grid";
 import {
@@ -70,11 +66,12 @@ function chooseMove(
   const target = chooseTarget(context.pawns, centreOf(piece.square));
   if (target === undefined) return undefined;
 
+  const held = squaresHeldByBlack(context.blackPieces, context.landings, piece);
   const moves = pieceMoves(
     piece.square,
     BLACK_PIECES[piece.kind].move,
     context.board,
-    (square) => isTakenByAnotherBlackPiece(context, piece, square),
+    (square) => isAmong(held, square),
   );
   let best: (typeof moves)[number] | undefined;
   let bestScore = Infinity;
@@ -118,22 +115,4 @@ function chooseTarget(
     }
   }
   return nearest;
-}
-
-/** Black pieces never share or pass through a square: not one they stand on, are moving to, or are landing on. */
-function isTakenByAnotherBlackPiece(
-  context: StepContext,
-  mover: WorkingBlackPiece,
-  square: Square,
-): boolean {
-  return (
-    context.blackPieces.some(
-      (other) =>
-        other !== mover &&
-        isAlive(other) &&
-        (isSameSquare(other.square, square) ||
-          (other.move !== undefined && isSameSquare(other.move.to, square))),
-    ) ||
-    context.landings.some((landing) => isSameSquare(landing.square, square))
-  );
 }

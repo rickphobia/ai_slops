@@ -63,6 +63,9 @@ export interface Landing {
   readonly warningSeconds: number;
 }
 
+/** How a pawn got hurt: by a black move landing on its square, or by touching a black piece. */
+export type HurtCause = "hit" | "contact";
+
 export type BattleOutcome = "ongoing" | "won" | "lost";
 
 /** What happened during the last step: for logs and on-screen effects. Rules never read these. */
@@ -80,7 +83,7 @@ export type BattleEvent =
       readonly type: "pawn-hurt";
       readonly pawnId: number;
       readonly damage: number;
-      readonly cause: "hit" | "contact";
+      readonly cause: HurtCause;
       readonly at: Point;
     }
   | {

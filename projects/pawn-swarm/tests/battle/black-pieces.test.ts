@@ -384,8 +384,8 @@ describe("the king", () => {
         secondsLeft: 0.8,
         warningSeconds: 0.8,
       });
-      expect(Math.abs(landing.square.file - 8)).toBeLessThanOrEqual(2);
-      expect(Math.abs(landing.square.rank - 5)).toBeLessThanOrEqual(2);
+      expect(Math.abs(landing.square.file - 8)).toBeLessThanOrEqual(1);
+      expect(Math.abs(landing.square.rank - 5)).toBeLessThanOrEqual(1);
       expect(isSameSquare(landing.square, king.square)).toBe(false);
     }
     expect(

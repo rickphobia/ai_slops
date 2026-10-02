@@ -20,3 +20,8 @@ The paused old-ticket-04 branch `pawn-swarm/04-enemy-roster-drops-10-waves` has 
 - [x] Survivors carry over between waves at full HP; run reaches `won` on the king's death, `lost` at zero pawns (scripted tests)
 - [x] End screens with wave reached, biggest swarm, pieces taken, seed, "New run"
 - [x] `npm run balance` (or similar) plays N headless runs and prints win rate, waves reached and peak swarm; documented in the README
+
+**Notes from the build:**
+
+- The spec's "More black pieces incoming" toast is logged at `info` and sent as a `push` battle event, but not shown on screen yet: there is no toast UI, and ticket 13 is reworking the page. Show it when toasts arrive.
+- The balance bot has nothing to do until the shop (06) and skills (07) exist, so its win rate measures the plain swarm only.
