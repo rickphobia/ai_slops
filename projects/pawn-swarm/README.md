@@ -4,7 +4,7 @@ A browser auto-battler on a chess board: your white pawns are your army and your
 
 ## Status
 
-`idea` — spec written (`docs/spec.md`), no code yet. Setup, run and test commands arrive with ticket 01 (walking skeleton).
+`idea` — spec written (1-pawn start, 10 waves, active skills) (`docs/spec.md`), no code yet. Setup, run and test commands arrive with ticket 01 (walking skeleton).
 
 ## Docs
 

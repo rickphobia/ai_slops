@@ -53,3 +53,10 @@ How rare and strong a pawn type is: common, rare or epic. Gates which wave it ca
 
 **Promote**:
 A pawn turning into a stronger piece on reaching black's back rank.
+
+**Passive**:
+A pawn type's always-on ability.
+
+**Skill**:
+A pawn type's ability the player fires by hand during a battle, with a cooldown.
+_Avoid_: active, ultimate, spell
