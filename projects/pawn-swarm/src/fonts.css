@@ -1,0 +1,5 @@
+/* Self-hosted so the game needs no font CDN: Cinzel for display, Crimson Pro for body text. */
+@import "@fontsource/cinzel/600.css";
+@import "@fontsource/cinzel/800.css";
+@import "@fontsource/crimson-pro/400.css";
+@import "@fontsource/crimson-pro/600.css";
