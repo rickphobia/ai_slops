@@ -25,8 +25,8 @@
         --black-edge: #4a1a16;
         --font-display: "Cinzel", Georgia, serif;
         --font-body: "Crimson Pro", Georgia, serif;
-        /* The board is 16 × 11 squares; leave room above it for the HUD. */
-        --board-width: min(94vw, calc((94vh - 72px) * 16 / 11));
+        /* The board is 16 × 11 squares; leave room above it for the HUD and below it for the skill bar. */
+        --board-width: min(94vw, calc((94vh - 150px) * 16 / 11));
       }
       body {
         margin: 0;
@@ -146,6 +146,105 @@
         border-color: var(--ember);
         background: var(--ember);
         color: var(--bg);
+      }
+      #skills {
+        width: var(--board-width);
+        min-height: 54px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+      #skills[hidden] {
+        visibility: hidden;
+      }
+      .skill {
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 10rem;
+        padding: 4px 30px 6px 4px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: linear-gradient(var(--panel-raised), var(--panel));
+        color: var(--fg);
+        font-family: var(--font-body);
+        text-align: left;
+        cursor: pointer;
+      }
+      .skill:hover:not(:disabled) {
+        border-color: var(--muted);
+      }
+      .skill:focus-visible {
+        outline: 2px solid var(--bone);
+        outline-offset: 2px;
+      }
+      .skill[data-state="ready"] {
+        border-color: var(--blood-bright);
+        box-shadow: 0 0 12px rgb(196 48 42 / 35%);
+      }
+      .skill[data-state="queued"] {
+        border-color: var(--ember);
+      }
+      .skill:disabled {
+        cursor: default;
+      }
+      .skill[data-state="cooldown"] .skill-icon,
+      .skill[data-state="cooldown"] .skill-name {
+        opacity: 0.5;
+      }
+      /* The drawings leave room around the piece; let it spill into the padding. */
+      .skill-icon svg {
+        display: block;
+        width: 48px;
+        height: 48px;
+        margin: -6px -4px -4px;
+      }
+      .skill-words {
+        display: flex;
+        flex-direction: column;
+      }
+      .skill-name {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--bone);
+      }
+      .skill-status {
+        font-size: 0.85rem;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .skill[data-state="queued"] .skill-status {
+        color: var(--ember);
+      }
+      .skill-hotkey {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        min-width: 1.1em;
+        padding: 0 3px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        font-family: var(--font-display);
+        font-size: 0.75rem;
+        text-align: center;
+        color: var(--muted);
+      }
+      /* Fills from left to right as the cooldown runs out. */
+      .skill-recharge {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 3px;
+        background: var(--blood-bright);
+        transform-origin: left;
+      }
+      .skill[data-state="ready"] .skill-recharge {
+        background: var(--ember);
       }
       #end-screen {
         position: fixed;
@@ -424,6 +523,7 @@
       </div>
     </header>
     <canvas id="board" aria-label="Chess board"></canvas>
+    <nav id="skills" aria-label="Skills" hidden></nav>
     <section id="shop" role="dialog" aria-labelledby="shop-title" hidden>
       <div class="shop-sheet">
         <header>

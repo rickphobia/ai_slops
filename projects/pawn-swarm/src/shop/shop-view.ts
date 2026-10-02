@@ -81,7 +81,11 @@ export function describeShop(
         hp: stats.hp,
         attack: stats.attack,
         passive: stats.passive,
-        skill: stats.skill,
+        skill: {
+          name: stats.skill.name,
+          cooldown: stats.skill.cooldown,
+          text: stats.skill.text,
+        },
         plainPawnsUsed: recruitCost(offer.type, shop.wave),
         recruited: shop.recruited[offer.type] ?? 0,
         maxRecruits: SHOP_RULES.maxRecruitsPerTypePerWave,

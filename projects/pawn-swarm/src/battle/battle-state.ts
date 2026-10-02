@@ -1,6 +1,7 @@
 import type { BoardSize, Point, Square } from "../board/square";
 import type { BlackKind, PawnTypeId } from "../catalog/pieces";
 import type { RngState } from "../rng";
+import type { SkillTimers } from "../skills/skills";
 
 export type Axis = "x" | "y";
 
@@ -70,6 +71,7 @@ export type BattleOutcome = "ongoing" | "won" | "lost";
 
 /** What happened during the last step: for logs and on-screen effects. Rules never read these. */
 export type BattleEvent =
+  /** A pawn's blow to a black piece: its own strike, or a skill's hit (Volley, Fork). */
   | {
       readonly type: "strike";
       readonly pawnId: number;
@@ -107,6 +109,12 @@ export type BattleEvent =
       readonly count: number;
       readonly pushesLeft: number;
     }
+  /** The player fired a skill: every pawn of the type took part. */
+  | {
+      readonly type: "skill";
+      readonly pawnType: PawnTypeId;
+      readonly pawns: number;
+    }
   | {
       readonly type: "summon";
       readonly id: number;
@@ -135,14 +143,21 @@ export interface BattleState {
   /** The id the next new piece gets. */
   readonly nextId: number;
   readonly rng: RngState;
+  /** Game seconds until each type's skill can be used again. */
+  readonly skillCooldowns: SkillTimers;
+  /** Game seconds each type's lasting skill (Charge, Hold the line) still runs. */
+  readonly lastingSkills: SkillTimers;
   readonly outcome: BattleOutcome;
   readonly events: readonly BattleEvent[];
 }
 
 /** What the player did this step, so a seed plus the recorded inputs replays a battle exactly. */
 export interface StepInputs {
-  /** Skills fired this step. Skills arrive in ticket 07; until then there are none to fire. */
-  readonly skillUses: readonly never[];
+  /**
+   * Skills fired this step, by pawn type. A use the rules refuse (no pawns of
+   * the type, still on cooldown, or already used this step) does nothing.
+   */
+  readonly skillUses: readonly PawnTypeId[];
 }
 
 export const NO_INPUTS: StepInputs = { skillUses: [] };

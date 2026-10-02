@@ -14,6 +14,7 @@ import {
   type BlackKind,
   PAWN_TYPES,
 } from "../../src/catalog/pieces";
+import type { SkillTimers } from "../../src/skills/skills";
 
 /** Test setups: exact pieces at exact places, with catalog stats. */
 
@@ -89,6 +90,8 @@ export function battleWith(parts: {
   pushSecondsLeft?: number;
   wave?: number;
   rng?: number;
+  skillCooldowns?: SkillTimers;
+  lastingSkills?: SkillTimers;
 }): BattleState {
   const pieces = [...parts.pawns, ...(parts.blackPieces ?? [])];
   return {
@@ -103,6 +106,8 @@ export function battleWith(parts: {
     pushSecondsLeft: parts.pushSecondsLeft ?? 99,
     nextId: Math.max(0, ...pieces.map((piece) => piece.id)) + 1,
     rng: parts.rng ?? 1,
+    skillCooldowns: parts.skillCooldowns ?? {},
+    lastingSkills: parts.lastingSkills ?? {},
     outcome: "ongoing",
     events: [],
   };

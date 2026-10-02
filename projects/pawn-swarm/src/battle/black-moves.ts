@@ -1,10 +1,11 @@
 import { pieceMoves } from "../board/moves";
 import { centreOf, type Point } from "../board/square";
 import { BATTLE_RULES } from "../catalog/battle-rules";
-import { BLACK_PIECES, PAWN_TYPES } from "../catalog/pieces";
+import { BLACK_PIECES } from "../catalog/pieces";
 import type { BlackMove } from "./battle-state";
 import { isAmong, squaresHeldByBlack } from "./black-squares";
 import { hitSquares } from "./pawn-hits";
+import { drawsBlackWithin } from "./skill-effects";
 import type { SpatialGrid } from "./spatial-grid";
 import {
   hasRunOut,
@@ -63,7 +64,7 @@ function chooseMove(
   context: StepContext,
   piece: WorkingBlackPiece,
 ): BlackMove | undefined {
-  const target = chooseTarget(context.pawns, centreOf(piece.square));
+  const target = chooseTarget(context, centreOf(piece.square));
   if (target === undefined) return undefined;
 
   const held = squaresHeldByBlack(context.blackPieces, context.landings, piece);
@@ -101,21 +102,21 @@ function chooseMove(
  * (a shield) if one is close enough, otherwise the nearest pawn.
  */
 function chooseTarget(
-  pawns: readonly WorkingPawn[],
+  context: StepContext,
   from: Point,
 ): WorkingPawn | undefined {
   let nearest: WorkingPawn | undefined;
   let nearestDistance = Infinity;
   let drawingPawn: WorkingPawn | undefined;
   let drawingPawnDistance = Infinity;
-  for (const pawn of pawns) {
+  for (const pawn of context.pawns) {
     if (!isAlive(pawn)) continue;
     const pawnDistance = Math.hypot(pawn.x - from.x, pawn.y - from.y);
     if (pawnDistance < nearestDistance) {
       nearest = pawn;
       nearestDistance = pawnDistance;
     }
-    const drawsWithin = PAWN_TYPES[pawn.type].drawsBlackWithin;
+    const drawsWithin = drawsBlackWithin(context, pawn.type);
     if (
       drawsWithin !== undefined &&
       pawnDistance <= drawsWithin &&

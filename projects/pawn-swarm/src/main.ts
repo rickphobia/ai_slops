@@ -5,8 +5,9 @@ import { createBattleControls } from "./adapters/dom-ui/battle-controls";
 import { createEndScreen } from "./adapters/dom-ui/end-screen";
 import { createHud, type HudStatus } from "./adapters/dom-ui/hud";
 import { createShopScreen } from "./adapters/dom-ui/shop-screen";
-import { NO_INPUTS } from "./battle/battle-state";
+import { createSkillBar } from "./adapters/dom-ui/skill-bar";
 import { blackPiecesLeft, REAL_MS_PER_STEP, STEP_SECONDS } from "./battle/step";
+import type { PawnTypeId } from "./catalog/pieces";
 import { ConfigError, loadConfig } from "./config";
 import { startingPawnsFromQuery } from "./debug-options";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
@@ -20,6 +21,7 @@ import {
   startRun,
 } from "./run/run";
 import { ShopError } from "./shop/shop";
+import { describeSkillBar, skillBlocker } from "./skills/skills";
 import { StartupError } from "./startup-error";
 import { createTickClock } from "./tick-clock";
 
@@ -98,6 +100,15 @@ function logStep(previous: RunState, next: RunState, log: Logger): void {
   const stepNumber = next.battle.stepNumber;
   for (const event of next.battle.events) {
     log.debug(`battle ${event.type}`, { step: stepNumber, ...event });
+    if (event.type === "skill") {
+      // `step` is the one a replay feeds the skill into: the step it fired on.
+      log.info("skill used", {
+        wave: next.wave,
+        step: previous.battle.stepNumber,
+        skill: event.pawnType,
+        pawns: event.pawns,
+      });
+    }
     if (event.type === "push") {
       log.info("more black pieces incoming", {
         wave: next.wave,
@@ -171,6 +182,26 @@ async function start(): Promise<void> {
 
   const hud = createHud(document);
   let run = beginRun(config.defaultSeed);
+  /** Skills the player asked for since the last step: they fire on the next one, even if that waits on a pause. */
+  let queuedSkills: PawnTypeId[] = [];
+  const skillBar = createSkillBar(document, (type) => {
+    if (run.phase !== "battle" || run.battle.outcome !== "ongoing") return;
+    if (queuedSkills.includes(type)) return;
+    const blocker = skillBlocker(
+      run.battle.skillCooldowns,
+      run.battle.pawns,
+      type,
+    );
+    if (blocker !== undefined) {
+      logger.debug("skill not ready", {
+        skill: type,
+        blocker,
+        step: run.battle.stepNumber,
+      });
+      return;
+    }
+    queuedSkills.push(type);
+  });
   const clock = createTickClock({
     tickMs: REAL_MS_PER_STEP,
     startMs: performance.now(),
@@ -187,6 +218,7 @@ async function start(): Promise<void> {
     onTogglePause: () => {
       setPaused(!clock.state().paused);
     },
+    isBattleShown: () => run.phase === "battle",
     onSpeed: (speed) => {
       clock.setSpeed(speed);
       controls.show(clock.state());
@@ -215,6 +247,7 @@ async function start(): Promise<void> {
   });
   const endScreen = createEndScreen(document, () => {
     run = beginRun(randomSeed());
+    queuedSkills = [];
     shopScreen.hide();
     // The speed carries over to the next run; a pause doesn't.
     if (clock.state().paused) setPaused(false);
@@ -228,7 +261,8 @@ async function start(): Promise<void> {
     const dueSteps = clock.takeDueTicks(nowMs);
     for (let index = 0; index < dueSteps && run.phase === "battle"; index++) {
       const previous = run;
-      run = advanceRun(run, NO_INPUTS);
+      run = advanceRun(run, { skillUses: queuedSkills });
+      queuedSkills = [];
       logStep(previous, run, logger);
       effects.advance(STEP_SECONDS);
       effects.add(run.battle.events);
@@ -249,6 +283,17 @@ async function start(): Promise<void> {
     try {
       runDueSteps(nowMs);
       hud.update(hudStatus(run));
+      if (run.phase === "battle" && run.battle.outcome === "ongoing") {
+        skillBar.show(
+          describeSkillBar(
+            run.battle.skillCooldowns,
+            run.battle.pawns,
+            queuedSkills,
+          ),
+        );
+      } else {
+        skillBar.hide();
+      }
       renderer.draw(run.battle, effects.list(), nowMs / 1000);
       requestAnimationFrame(frame);
     } catch (error) {

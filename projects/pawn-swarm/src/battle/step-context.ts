@@ -1,6 +1,7 @@
 import type { BoardSize } from "../board/square";
 import type { BlackKind } from "../catalog/pieces";
 import type { Random } from "../rng";
+import type { SkillTimers } from "../skills/skills";
 import type {
   BattleEvent,
   BlackPiece,
@@ -33,6 +34,8 @@ export interface StepContext {
   pushSize: number;
   pushSecondsLeft: number;
   nextId: number;
+  skillCooldowns: SkillTimers;
+  lastingSkills: SkillTimers;
   /** Set when the king dies: the battle is won at the end of the step. */
   kingDown: boolean;
 }
