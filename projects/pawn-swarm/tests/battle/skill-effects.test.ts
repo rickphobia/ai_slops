@@ -204,8 +204,8 @@ describe("Volley", () => {
 });
 
 describe("Fork", () => {
-  // A twin on (5.5, 5.5); knights on a diagonal neighbour, on a side
-  // neighbour and 2 squares away.
+  // A twin on (5.5, 5.5); knights on a side neighbour, on a diagonal
+  // neighbour (1.41 away, just out of reach) and 2 squares away.
   const start = battleWith({
     pawns: [pawnAt(1, 5.5, 5.5, { type: "twin", strikeCooldownLeft: 99 })],
     blackPieces: [
@@ -215,17 +215,25 @@ describe("Fork", () => {
     ],
   });
 
-  it("hits every black piece around each twin for 2", () => {
+  it("hits every black piece within 1.375 squares of each twin for 2", () => {
     const next = fire(start, "twin");
     expect([2, 3, 4].map((id) => blackPieceById(next, id)?.hp)).toEqual([
-      8, 8, 10,
+      10, 8, 10,
     ]);
+  });
+
+  it("reaches a diagonal neighbour when the twin stands toward it", () => {
+    const leaning = battleWith({
+      pawns: [pawnAt(1, 5.8, 5.8, { type: "twin", strikeCooldownLeft: 99 })],
+      blackPieces: [knightOn(2, { file: 6, rank: 6 }, { hp: 10 })],
+    });
+    expect(blackPieceById(fire(leaning, "twin"), 2)?.hp).toBe(8);
   });
 
   it("kills drop pawns like any kill", () => {
     const weak = battleWith({
       pawns: [pawnAt(1, 5.5, 5.5, { type: "twin", strikeCooldownLeft: 99 })],
-      blackPieces: [knightOn(2, { file: 6, rank: 6 }, { hp: 2 })],
+      blackPieces: [knightOn(2, { file: 6, rank: 5 }, { hp: 2 })],
       pushes: [["knight"]],
     });
     const next = fire(weak, "twin");

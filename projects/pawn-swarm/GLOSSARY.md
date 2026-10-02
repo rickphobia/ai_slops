@@ -106,5 +106,11 @@ A Promoter pawn turning into a white queen on reaching a board edge.
 A pawn type's always-on ability.
 
 **Skill**:
-A pawn type's ability the player fires by hand during a battle, with a cooldown.
+A pawn type's ability the player fires by hand during a battle, with a cooldown. It fires for every pawn of that type at once; one pressed while paused fires on the next step.
+
+**Skill bar**:
+The row of skill buttons under the board during a battle: one per pawn type on the board, with hotkeys 1–9.
+
+**Lasting skill**:
+A skill whose effect runs for a few seconds after it fires, such as Charge or Hold the line.
 _Avoid_: active, ultimate, spell

@@ -1,4 +1,5 @@
 import { BATTLE_RULES } from "../catalog/battle-rules";
+import { hasRunOut } from "../battle/step-context";
 import { PAWN_TYPES, type PawnTypeId } from "../catalog/pieces";
 
 /** Game seconds left on a timer per pawn type: a skill's cooldown, or how long its effect still lasts. A missing type has run out. */
@@ -16,14 +17,6 @@ export interface SkillUse {
 
 /** Hotkeys go 1 to 9; skill buttons past the ninth have none. */
 export const MAX_HOTKEYS = 9;
-
-/**
- * Whether a timer has run out. Subtracting 1/60 over and over drifts a hair
- * above 0, so allow for that.
- */
-function hasRunOut(secondsLeft: number): boolean {
-  return secondsLeft <= 1e-9;
-}
 
 /** Why the skill of `type` can't be used, or `undefined` when it can. */
 export function skillBlocker(

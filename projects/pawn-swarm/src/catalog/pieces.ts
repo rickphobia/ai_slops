@@ -116,7 +116,7 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Hold the line",
       cooldown: 20,
       text: "Shields take no damage for 4s and pull black pieces from further away.",
-      lasting: { seconds: 4, takesNoDamage: true, drawsBlackWithin: 6.8 },
+      lasting: { seconds: 4, takesNoDamage: true, drawsBlackWithin: 6.875 },
     },
     shop: { rarity: "common", basePrice: 3 },
   },
@@ -155,8 +155,8 @@ export const PAWN_TYPES: Readonly<Record<PawnTypeId, PawnStats>> = {
       name: "Fork",
       cooldown: 12,
       text: "Each twin hits every black piece around it for 2.",
-      // Reaches the centres of the 8 squares around it (a diagonal one is 1.41 away).
-      hit: { damage: 2, area: { shape: "around", radius: 1.5 } },
+      // The prototype's reach: the squares beside it, and a diagonal one only when the twin stands toward it (its centre is 1.41 away from a twin on a square centre).
+      hit: { damage: 2, area: { shape: "around", radius: 1.375 } },
     },
     shop: { rarity: "common", basePrice: 3 },
   },

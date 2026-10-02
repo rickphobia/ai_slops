@@ -35,7 +35,10 @@ export function createSkillBar(
         ? event.target.closest<HTMLButtonElement>("button[data-type]")
         : null;
     if (button === null || button.disabled) return;
-    onUse(button.dataset.type as PawnTypeId);
+    const type = [...parts.keys()].find(
+      (shown) => shown === button.dataset.type,
+    );
+    if (type !== undefined) onUse(type);
   });
 
   root.addEventListener("keydown", (event) => {

@@ -183,7 +183,8 @@
       }
       .skill[data-state="ready"] {
         border-color: var(--blood-bright);
-        box-shadow: 0 0 12px rgb(196 48 42 / 35%);
+        box-shadow: 0 0 12px
+          color-mix(in srgb, var(--blood-bright) 35%, transparent);
       }
       .skill[data-state="queued"] {
         border-color: var(--ember);
