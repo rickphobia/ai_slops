@@ -1,10 +1,5 @@
-import { SPEEDS, type Speed } from "../../tick-clock";
+import { SPEEDS, type Speed, type TickClockState } from "../../tick-clock";
 import { requireElement } from "./require-element";
-
-export interface BattleControlsState {
-  readonly paused: boolean;
-  readonly speed: Speed;
-}
 
 export interface BattleControlsActions {
   onTogglePause(): void;
@@ -12,10 +7,10 @@ export interface BattleControlsActions {
 }
 
 export interface BattleControls {
-  show(state: BattleControlsState): void;
+  show(state: TickClockState): void;
 }
 
-/** Pause and speed buttons. They report clicks; the entrypoint owns the state and passes it back to `show`. */
+/** Pause and speed buttons. They report clicks; the clock owns the state and the entrypoint passes it back to `show`. */
 export function createBattleControls(
   root: Document,
   actions: BattleControlsActions,

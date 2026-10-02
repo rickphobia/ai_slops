@@ -6,9 +6,8 @@ import { ConfigError, loadConfig } from "./config";
 import { createConsoleLogger, logLevelFromQuery, type Logger } from "./logger";
 import { advanceRun, type RunState, startRun } from "./run/run";
 import { StartupError } from "./startup-error";
-import { createTickClock, type Speed } from "./tick-clock";
+import { createTickClock } from "./tick-clock";
 
-/** After a long gap (hidden tab) don't fast-forward through all of it in one frame. */
 const MAX_TICKS_PER_FRAME = 5;
 
 const logger = createConsoleLogger(logLevelFromQuery(window.location.search));
@@ -73,36 +72,36 @@ function start(): void {
   const hud = createHud(document);
   let run = beginRun(config.defaultSeed);
   hud.update(hudStatus(run));
-  const endScreen = createEndScreen(document, () => {
-    run = beginRun(randomSeed());
-    hud.update(hudStatus(run));
-    endScreen.hide();
-  });
-
   const clock = createTickClock({
     tickMs: config.tickMs,
     startMs: performance.now(),
     maxTicksPerFrame: MAX_TICKS_PER_FRAME,
   });
-  let paused = false;
-  let speed: Speed = 1;
+  const setPaused = (paused: boolean): void => {
+    clock.setPaused(paused);
+    controls.show(clock.state());
+    logger.info(paused ? "battle paused" : "battle resumed", {
+      tick: run.battle.tick,
+    });
+  };
   const controls = createBattleControls(document, {
     onTogglePause: () => {
-      paused = !paused;
-      clock.setPaused(paused);
-      controls.show({ paused, speed });
-      logger.info(paused ? "battle paused" : "battle resumed", {
-        tick: run.battle.tick,
-      });
+      setPaused(!clock.state().paused);
     },
-    onSpeed: (next) => {
-      speed = next;
+    onSpeed: (speed) => {
       clock.setSpeed(speed);
-      controls.show({ paused, speed });
+      controls.show(clock.state());
       logger.info("battle speed set", { speed, tick: run.battle.tick });
     },
   });
-  controls.show({ paused, speed });
+  controls.show(clock.state());
+  const endScreen = createEndScreen(document, () => {
+    run = beginRun(randomSeed());
+    hud.update(hudStatus(run));
+    // The speed carries over to the next run; a pause doesn't.
+    if (clock.state().paused) setPaused(false);
+    endScreen.hide();
+  });
 
   // Ticks run on game time, not frames: each frame runs however many ticks are due.
   // Only the clock knows the speed, so the same seed plays the same ticks at any speed.

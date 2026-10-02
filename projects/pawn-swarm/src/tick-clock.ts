@@ -11,6 +11,11 @@ export interface TickClockSetup {
   readonly maxTicksPerFrame: number;
 }
 
+export interface TickClockState {
+  readonly paused: boolean;
+  readonly speed: Speed;
+}
+
 export interface TickClock {
   /** Returns how many ticks are due at `nowMs` and counts them as taken. */
   takeDueTicks(nowMs: number): number;
@@ -18,6 +23,7 @@ export interface TickClock {
   setSpeed(speed: Speed): void;
   /** While paused no time builds up, so resuming carries on from the same point. */
   setPaused(paused: boolean): void;
+  state(): TickClockState;
 }
 
 /** Turns real time into battle ticks. It never touches battle state, so it can't change a result. */
@@ -45,5 +51,6 @@ export function createTickClock(setup: TickClockSetup): TickClock {
     setPaused: (next) => {
       paused = next;
     },
+    state: () => ({ paused, speed }),
   };
 }

@@ -66,6 +66,12 @@
       #pause {
         min-width: 5.5rem;
       }
+      /* Amber, not the speed green, so "paused" doesn't read as a fifth speed. */
+      #battle-controls #pause[aria-pressed="true"] {
+        border-color: #e0a84f;
+        background: #e0a84f;
+        color: #1a1a1a;
+      }
       #end-screen {
         position: fixed;
         inset: 0;

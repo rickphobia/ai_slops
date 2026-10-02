@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { advanceRun, type RunState, startRun } from "../src/run/run";
-import { createTickClock, SPEEDS, type Speed } from "../src/tick-clock";
+import {
+  createTickClock,
+  SPEEDS,
+  type Speed,
+  type TickClock,
+} from "../src/tick-clock";
 
 const FRAME_MS = 16;
 
+function clockAt(maxTicksPerFrame = 100): TickClock {
+  return createTickClock({ tickMs: 250, startMs: 0, maxTicksPerFrame });
+}
+
 /** Plays a run the way the game loop does: frames of real time, ticks as the clock allows. */
 function playByClock(speed: Speed, pauseEveryFrames?: number): RunState {
-  const clock = createTickClock({
-    tickMs: 250,
-    startMs: 0,
-    maxTicksPerFrame: 5,
-  });
+  const clock = clockAt(5);
   clock.setSpeed(speed);
   let run = startRun({ seed: 7, boardSize: 16 });
   for (let frame = 1; frame < 100_000 && run.phase === "battle"; frame++) {
@@ -27,11 +32,7 @@ function playByClock(speed: Speed, pauseEveryFrames?: number): RunState {
 
 describe("tick clock", () => {
   it("makes one tick due per tick length at 1x", () => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 100,
-    });
+    const clock = clockAt();
     expect(clock.takeDueTicks(1000)).toBe(4);
   });
 
@@ -40,42 +41,34 @@ describe("tick clock", () => {
     [1.5, 6],
     [2, 8],
   ] as const)("at %sx makes %i ticks due in 1000 ms", (speed, ticks) => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 100,
-    });
+    const clock = clockAt();
     clock.setSpeed(speed);
     expect(clock.takeDueTicks(1000)).toBe(ticks);
   });
 
   it("applies a speed change only to time after it", () => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 100,
-    });
+    const clock = clockAt();
     expect(clock.takeDueTicks(375)).toBe(1); // 125 ms carried over at 1x
     clock.setSpeed(2);
     expect(clock.takeDueTicks(437.5)).toBe(1); // 125 + 62.5 * 2 = 250
   });
 
+  it("reports its speed and whether it is paused", () => {
+    const clock = clockAt();
+    expect(clock.state()).toEqual({ paused: false, speed: 1 });
+    clock.setSpeed(1.5);
+    clock.setPaused(true);
+    expect(clock.state()).toEqual({ paused: true, speed: 1.5 });
+  });
+
   it("makes no ticks due while paused", () => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 100,
-    });
+    const clock = clockAt();
     clock.setPaused(true);
     expect(clock.takeDueTicks(10_000)).toBe(0);
   });
 
   it("resumes where it paused, keeping the part-tick it had built up", () => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 100,
-    });
+    const clock = clockAt();
     expect(clock.takeDueTicks(200)).toBe(0);
     clock.setPaused(true);
     expect(clock.takeDueTicks(5000)).toBe(0);
@@ -85,11 +78,7 @@ describe("tick clock", () => {
   });
 
   it("caps the ticks of one frame and drops the rest of a long gap", () => {
-    const clock = createTickClock({
-      tickMs: 250,
-      startMs: 0,
-      maxTicksPerFrame: 5,
-    });
+    const clock = clockAt(5);
     expect(clock.takeDueTicks(60_000)).toBe(5); // a hidden tab for a minute
     expect(clock.takeDueTicks(60_250)).toBe(1);
   });
