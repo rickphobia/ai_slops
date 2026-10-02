@@ -6,7 +6,7 @@ set -Eeuo pipefail
 
 REPO_URL="${PAWN_SWARM_REPO_URL:-https://github.com/rickphobia/ai_slops.git}"
 BRANCH="${PAWN_SWARM_BRANCH:-main}"
-SRC_DIR="${PAWN_SWARM_SRC_DIR:-$HOME/homelab/src/ai_slops}"
+SRC_DIR="${PAWN_SWARM_SRC_DIR:-$HOME/homelab/dev/ai_slops}"
 SITE_ROOT="${PAWN_SWARM_SITE_ROOT:-$HOME/homelab/html}"
 SITE_SUBPATH="${PAWN_SWARM_SITE_SUBPATH:-ai-projects/pawn-swarm}"
 # Keep in step with .nvmrc.

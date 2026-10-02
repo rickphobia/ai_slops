@@ -17,7 +17,7 @@
 ## Plan
 
 `deploy/update-site.sh`, run on the Beelink:
-1. Fetch `main` into a checkout kept outside the site root (e.g. `~/homelab/src/ai_slops`).
+1. Fetch `main` into a checkout kept outside the site root (e.g. `~/homelab/dev/ai_slops`).
 2. Build inside a pinned `node` Docker image (`npm ci && npm run build`), so the server needs no Node install.
 3. Copy `dist/` to a temp folder next to `~/homelab/html/ai-projects/pawn-swarm/`, then swap the two folders, so visitors never see half a deploy. Keep the previous build as `pawn-swarm.previous` for a one-command rollback.
 4. Exit non-zero with a clear message on any failed step. The live site stays untouched when the build fails.
