@@ -25,6 +25,10 @@ export interface WhitePawn {
   /** Velocity from a drop burst, in squares per second. It fades out on its own. */
   readonly burstX: number;
   readonly burstY: number;
+  /** Seconds it stays knocked out: it can't move or strike. 0 when awake. */
+  readonly stunLeft: number;
+  /** Seconds until a medic's next heal; only counts for pawn types that heal. */
+  readonly healLeft: number;
 }
 
 /**
@@ -114,6 +118,21 @@ export type BattleEvent =
       readonly type: "skill";
       readonly pawnType: PawnTypeId;
       readonly pawns: number;
+    }
+  /** A white pawn got HP back (a medic's pulse or Triage). */
+  | {
+      readonly type: "heal";
+      readonly pawnId: number;
+      readonly amount: number;
+      readonly at: Point;
+    }
+  /** A bomb pawn blew up: a ring `radius` squares wide. */
+  | {
+      readonly type: "blast";
+      readonly pawnId: number;
+      readonly radius: number;
+      readonly stunned: number;
+      readonly at: Point;
     }
   | {
       readonly type: "summon";

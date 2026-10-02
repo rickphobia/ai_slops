@@ -87,6 +87,21 @@ export const SOUND_RECIPES: Readonly<Record<SoundName, Recipe>> = {
     v.tone("square", 500, 250, 0.08, 0.28);
     v.tone("square", 500, 250, 0.08, 0.28, 0.07);
   },
+  "skill-triage": (v) => {
+    v.tone("sine", 440, 880, 0.35, 0.3);
+    v.tone("sine", 660, 1320, 0.35, 0.2, 0.08);
+  },
+  "skill-rally": (v) => {
+    v.tone("square", 262, 262, 0.15, 0.3);
+    v.tone("square", 392, 392, 0.3, 0.3, 0.14);
+  },
+  "skill-detonate": (v) => {
+    v.tone("sawtooth", 300, 120, 0.12, 0.3);
+  },
+  blast: (v) => {
+    v.tone("sine", 120, 30, 0.6, 0.85);
+    v.noise(2500, 100, 0.5, 0.7);
+  },
   "wave-start": (v) => {
     v.tone("sawtooth", 110, 110, 0.5, 0.45);
     v.tone("sawtooth", 82, 82, 0.8, 0.45, 0.35);

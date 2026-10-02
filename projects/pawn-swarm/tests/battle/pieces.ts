@@ -38,6 +38,8 @@ export function pawnAt(
     axis: "y",
     burstX: 0,
     burstY: 0,
+    stunLeft: 0,
+    healLeft: 0,
     ...overrides,
   };
 }

@@ -68,6 +68,8 @@ export const EFFECT_COLOURS = {
   stomp: "#ffcf7a",
   blood: "#7d0f12",
   bloodDark: "#4a0709",
+  heal: "#8fcf6b",
+  blast: "#ff6b4a",
 } as const;
 
 /** Most particles alive at once; the pool replaces the oldest past this. */
@@ -311,6 +313,25 @@ export function createEffects(
         );
         addRing(EFFECT_COLOURS.landing, event.at, 1.1, 0.3);
         addShake(LANDING_SHAKE[event.kind]);
+        return;
+      case "heal":
+        addText(`+${String(event.amount)}`, EFFECT_COLOURS.heal, {
+          x: event.at.x,
+          y: event.at.y + 0.4,
+        });
+        return;
+      case "blast":
+        addRing(EFFECT_COLOURS.blast, event.at, event.radius, 0.35);
+        burst(
+          "spark",
+          EFFECT_COLOURS.blast,
+          event.at,
+          18,
+          [1.25, 5],
+          [0.06, 0.12],
+          [0.35, 0.65],
+        );
+        addShake(0.3);
         return;
       case "stomp":
         addRing(EFFECT_COLOURS.stomp, event.at, 1.4, 0.2);

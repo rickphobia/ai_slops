@@ -9,6 +9,9 @@ const SKILL_SOUNDS: Readonly<Record<PawnTypeId, SoundName>> = {
   shield: "skill-hold",
   spear: "skill-volley",
   twin: "skill-fork",
+  medic: "skill-triage",
+  banner: "skill-rally",
+  bomb: "skill-detonate",
 };
 
 const BLACK_DEATH_SOUNDS: Readonly<Record<BlackKind, SoundName>> = {
@@ -36,6 +39,10 @@ export function soundForEvent(event: BattleEvent): SoundName | undefined {
       return "landed";
     case "stomp":
       return "stomp";
+    case "blast":
+      return "blast";
+    case "heal":
+      return undefined;
     case "push":
       return "push";
     case "summon":
