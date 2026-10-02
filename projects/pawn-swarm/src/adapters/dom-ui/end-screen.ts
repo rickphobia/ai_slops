@@ -1,4 +1,4 @@
-import { StartupError } from "../startup-error";
+import { requireElement } from "./require-element";
 
 export interface RunResult {
   readonly outcome: "won" | "lost";
@@ -34,16 +34,4 @@ export function createEndScreen(
       panel.hidden = true;
     },
   };
-}
-
-function requireElement<T extends HTMLElement>(
-  root: Document,
-  id: string,
-  type: new () => T,
-): T {
-  const element = root.getElementById(id);
-  if (!(element instanceof type)) {
-    throw new StartupError(`index.html is missing #${id}.`);
-  }
-  return element;
 }
