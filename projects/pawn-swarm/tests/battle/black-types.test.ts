@@ -413,6 +413,8 @@ describe("Storm", () => {
       pawns: [
         pawnAt(10, 8.5, 5.5, bystander),
         pawnAt(11, 10, 6.5, bystander),
+        // 2.2 squares away: just inside the 2.3 reach.
+        pawnAt(13, 10.2, 5.5, bystander),
         pawnAt(12, 8.5, 8.5, bystander),
       ],
       blackPieces: [storm],
@@ -422,6 +424,7 @@ describe("Storm", () => {
     expect(pawnById(first ?? start, 10)?.hp).toBe(18);
     expect(pawnById(first ?? start, 11)?.hp).toBe(18);
     expect(pawnById(first ?? start, 12)?.hp).toBe(20);
+    expect(pawnById(first ?? start, 13)?.hp).toBe(18);
     expect(eventsOfType(states, "black-power")).toHaveLength(2);
   });
 });

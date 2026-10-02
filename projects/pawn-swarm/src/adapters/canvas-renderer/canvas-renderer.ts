@@ -1,7 +1,6 @@
 import type {
   BattleState,
   BlackPiece,
-  PowerUpOrb,
   WhitePawn,
 } from "../../battle/battle-state";
 import {
@@ -12,12 +11,12 @@ import {
 } from "../../board/square";
 import { BLACK_TYPES } from "../../catalog/black-types";
 import { BLACK_PIECES, type BlackKind } from "../../catalog/pieces";
-import { POWER_UP_RULES, POWER_UPS } from "../../catalog/power-ups";
 import { StartupError } from "../../startup-error";
 import { frameIndexAt } from "../art/animation";
 import type { ArtId } from "../art/drawings";
 import { paintBoard } from "./board-art";
 import { drawEffect, drawParticles } from "./draw-effect";
+import { drawOrb } from "./draw-orb";
 import { createPoseDrawer } from "./draw-pose";
 import type { Effect } from "./effects";
 import type { ParticlePool } from "./particles";
@@ -49,9 +48,6 @@ const MAX_SHAKE_SQUARES = 0.28;
 const DYING_ROTATION = 0.7;
 /** The tint over the board while a Freeze power-up holds the black pieces. */
 const FREEZE_TINT = "rgb(191 243 255 / 14%)";
-const ORB_RADIUS_SQUARES = 0.26;
-/** How many times a dying orb blinks per game second. */
-const ORB_BLINKS_PER_SECOND = 4;
 
 /** Everything drawn besides the battle itself: made from events, aged with game time. */
 export interface Scene {
@@ -362,56 +358,6 @@ export function createCanvasRenderer(
     context.stroke();
   };
 
-  /** A power-up orb: a glowing disc with its symbol, pulsing, and blinking when it is about to vanish. */
-  const drawOrb = (
-    orb: PowerUpOrb,
-    board: BoardSize,
-    squarePx: number,
-    nowSeconds: number,
-  ): void => {
-    const blinkingOut =
-      orb.secondsLeft < POWER_UP_RULES.blinkSeconds &&
-      Math.floor(orb.secondsLeft * ORB_BLINKS_PER_SECOND * 2) % 2 === 0;
-    if (blinkingOut) return;
-    const stats = POWER_UPS[orb.powerUp];
-    const centre = toCanvas(orb, board, squarePx);
-    const radius =
-      squarePx *
-      ORB_RADIUS_SQUARES *
-      (1 + 0.1 * Math.sin(nowSeconds * 8 + orb.id));
-    const glow = context.createRadialGradient(
-      centre.x,
-      centre.y,
-      radius * 0.2,
-      centre.x,
-      centre.y,
-      radius * 1.8,
-    );
-    glow.addColorStop(0, stats.colour);
-    glow.addColorStop(1, "rgb(0 0 0 / 0%)");
-    context.globalAlpha = 0.55;
-    context.fillStyle = glow;
-    context.fillRect(
-      centre.x - radius * 1.8,
-      centre.y - radius * 1.8,
-      radius * 3.6,
-      radius * 3.6,
-    );
-    context.globalAlpha = 1;
-    context.beginPath();
-    context.arc(centre.x, centre.y, radius, 0, Math.PI * 2);
-    context.fillStyle = stats.colour;
-    context.fill();
-    context.lineWidth = Math.max(2, squarePx * 0.05);
-    context.strokeStyle = "#15120e";
-    context.stroke();
-    context.font = `bold ${String(Math.round(radius * 1.3))}px sans-serif`;
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillStyle = "#15120e";
-    context.fillText(stats.symbol, centre.x, centre.y + radius * 0.05);
-  };
-
   const drawBlackPiece = (
     piece: BlackPiece,
     board: BoardSize,
@@ -512,7 +458,13 @@ export function createCanvasRenderer(
       }
       drawLandingWarnings(battle, squarePx);
       for (const orb of battle.orbs) {
-        drawOrb(orb, battle.board, squarePx, nowSeconds);
+        drawOrb(
+          context,
+          orb,
+          toCanvas(orb, battle.board, squarePx),
+          squarePx,
+          nowSeconds,
+        );
       }
       if (battle.powerUps.freeze !== undefined) {
         context.fillStyle = FREEZE_TINT;

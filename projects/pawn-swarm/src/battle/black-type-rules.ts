@@ -9,6 +9,12 @@ import {
 import { BLACK_PIECES, type BlackKind } from "../catalog/pieces";
 import type { Random } from "../rng";
 
+/** What decides how a black piece behaves: its kind and its special type, if any. */
+export interface TypedPiece {
+  readonly kind: BlackKind;
+  readonly type: BlackTypeId | undefined;
+}
+
 /** The chance of each unlocked type for a piece of its kind in `wave`: 18% the wave it unlocks, +7% per wave after, at most 45%. */
 export function blackTypeChance(type: BlackTypeId, wave: number): number {
   const { firstChance, chancePerWave, maxChance } = BLACK_TYPE_RULES;
@@ -47,10 +53,7 @@ export function hpFactorOf(type: BlackTypeId | undefined): number {
 }
 
 /** Seconds a piece waits between moves. */
-export function actEveryOf(piece: {
-  readonly kind: BlackKind;
-  readonly type: BlackTypeId | undefined;
-}): number {
+export function actEveryOf(piece: TypedPiece): number {
   return (
     BLACK_PIECES[piece.kind].actEvery *
     (typeStatsOf(piece)?.actEveryFactor ?? 1)
@@ -58,10 +61,7 @@ export function actEveryOf(piece: {
 }
 
 /** A piece's move, with a sniper's longer reach and a stomper's wider landing. */
-export function movePatternOf(piece: {
-  readonly kind: BlackKind;
-  readonly type: BlackTypeId | undefined;
-}): MovePattern {
+export function movePatternOf(piece: TypedPiece): MovePattern {
   const move = BLACK_PIECES[piece.kind].move;
   const type = typeStatsOf(piece);
   return {
@@ -72,20 +72,14 @@ export function movePatternOf(piece: {
 }
 
 /** Damage a piece's moves do to every pawn on a hit square. */
-export function attackOf(piece: {
-  readonly kind: BlackKind;
-  readonly type: BlackTypeId | undefined;
-}): number {
+export function attackOf(piece: TypedPiece): number {
   return (
     BLACK_PIECES[piece.kind].attack + (typeStatsOf(piece)?.extraAttack ?? 0)
   );
 }
 
 /** Plain pawns a kill of this piece drops, before crowding: a special type drops one more. */
-export function baseDropOf(piece: {
-  readonly kind: BlackKind;
-  readonly type: BlackTypeId | undefined;
-}): number {
+export function baseDropOf(piece: TypedPiece): number {
   return (
     BLACK_PIECES[piece.kind].drop +
     (piece.type === undefined ? 0 : BLACK_TYPE_RULES.extraDrop)
@@ -93,9 +87,8 @@ export function baseDropOf(piece: {
 }
 
 /** The knights a piece calls on a timer: the king's, or a summoner's. */
-export function summonsOf(piece: {
-  readonly kind: BlackKind;
-  readonly type: BlackTypeId | undefined;
-}): { readonly knights: number; readonly everySeconds: number } | undefined {
+export function summonsOf(
+  piece: TypedPiece,
+): { readonly knights: number; readonly everySeconds: number } | undefined {
   return BLACK_PIECES[piece.kind].summons ?? typeStatsOf(piece)?.summons;
 }
