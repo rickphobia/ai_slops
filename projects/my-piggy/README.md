@@ -4,7 +4,7 @@ A first-person horror game: you wake up as your own human head on a pig's body, 
 
 ## Status
 
-`in progress` — tickets 01–03 and 05 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk as the Piggy through a dark, foggy house with a PS1 look (bedroom, long hallway, kitchen), nudging doors open with your head. Wind, a fridge hum and the odd creak play underneath; sounds behind walls and closed doors are muffled. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum and no body yet; those come with tickets 04 and 06–08 in `docs/tickets/`.
+`in progress` — tickets 01–05 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk, creep or trot as the Piggy through a dark, foggy house with a PS1 look (bedroom, long hallway, kitchen), nudging doors open with your head, while your body's urge builds into snorts, squeals and lunges that you can hold back (Space) or quiet by giving in at a bowl or the bin (E). Wind, a fridge hum and the odd creak play underneath; sounds behind walls and closed doors are muffled. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum yet, so outbursts have no consequence beyond the noise; she comes with tickets 06–08 in `docs/tickets/`.
 
 ## Requirements
 
@@ -28,10 +28,11 @@ scripts/setup-godot.sh                                              # Godot + we
 
 ```bash
 godot --path .          # play: click the title screen, then WASD to walk, mouse to look, Esc to pause
+godot --path . -- --debug  # the same, with the debug overlay (humanity and urge)
 godot --path . --editor # open the project in the Godot editor
 ```
 
-Walk into a door to push it open; the faster you push, the louder it creaks. Leave the bedroom, go down the hallway into the kitchen and walk up to the back door (the one with the glass, far right) to end the night. **F9** puts you back at the checkpoint of the space you are in: a debug key until being caught exists (ticket 07).
+Walk into a door to push it open; the faster you push, the louder it creaks. Leave the bedroom, go down the hallway into the kitchen and walk up to the back door (the one with the glass, far right) to end the night. Hold **Ctrl** or **C** to creep, **Shift** to trot. The urge builds on its own (faster while trotting); heavy breathing, a twitching view and a grunt warn you, then the body has an outburst. Hold **Space** at that moment to hold it back: you slow to a crawl, and the longer you hold, the louder it is when it comes. Press **E** at a give-in spot (the grey discs: a bowl in the bedroom, a bowl and the bin in the kitchen) to give in: a few seconds with your face in the bowl, then the urge is gone. Each spot works once per checkpoint. **F9** puts you back at the checkpoint of the space you are in: a debug key until being caught exists (ticket 07).
 
 ## Test
 
@@ -141,6 +142,22 @@ The game reads no environment variables; the deploy scripts do (see "Deploy"). G
 | `door_creak_quietest_radius` | How far a door creak is heard when the door is barely pushed, metres | 0–30 |
 | `door_creak_loudest_radius` | How far it is heard when pushed at `door_creak_loudest_speed` or faster, metres; not below the quietest | 0.1–30 |
 | `door_creak_loudest_speed` | Push speed at which a door creaks its loudest, metres per second | 0.1–10 |
+| `creep_speed`, `trot_speed` | Creep (Ctrl/C) and trot (Shift) speeds, m/s; creep ≤ walk ≤ trot | 0.1–10 |
+| `urge_rise_at_rest`, `urge_rise_trotting` | How much the urge (0–100, outburst at 100) rises per second | 0.1–50 |
+| `urge_warning` | Urge at which the warning signs start | 1–99 |
+| `urge_after_outburst` | Urge left after an outburst; below `urge_warning` | 0–99 |
+| `suppressed_rise_increase` | Each suppressed outburst raises the urge rise rate by this fraction, for the rest of the space | 0–1 |
+| `suppress_speed_factor` | Speed while holding back an outburst, as a fraction of normal | 0–1 |
+| `suppress_loudness_per_second` | How much louder the held-back outburst gets per second, as a fraction | 0–1 |
+| `suppress_limit_seconds` | How long an outburst can be held back before it happens anyway | 0.5–30 |
+| `give_in_seconds` | How long giving in takes (and the view is held in the bowl) | 0.5–10 |
+| `give_in_humanity_cost` | Humanity (hidden, starts at 100) lost per give-in | 0–100 |
+| `give_in_noise_radius` | How far giving in is heard, metres | 0–30 |
+| `give_in_reach` | How close to a give-in spot the Piggy must be to press E, metres | 0.2–5 |
+| `snort_radius`, `squeal_radius`, `lunge_radius` | How far each kind of outburst is heard, metres | 0–50 |
+| `lunge_distance` | How far a lunge throws the Piggy forward, metres | 0–3 |
+| `outburst_camera_jerk` | How far an outburst jerks the view, radians | 0–1 |
+| `warning_camera_twitch` | How far the view twitches during the warning signs, radians | 0–0.2 |
 
 The player's own settings (mouse sensitivity as a multiplier of 0.25–3, master volume 0–1) are set in the pause menu and saved to `user://settings.cfg`, which the web build keeps in the browser. See `src/config/player_settings.gd`.
 
@@ -150,16 +167,19 @@ The rules of the game live in plain classes that know nothing about the scene tr
 
 - `src/main.tscn` is the entry scene. `src/main.gd` loads and checks the tuning and the player's settings, starts a `Night`, spawns the Piggy in the house, shows the title screen, runs the opening, the pause menu and the end card, owns the mouse, and keeps the logger up to date. Each physics step it asks the house which space the Piggy is in and tells the Night.
 - `src/rules/game_flow.gd` — title screen, opening, playing, paused, ended: when the player has control.
-- `src/rules/night.gd` — one playthrough. The main test seam. It knows the current space, takes a checkpoint (`src/rules/checkpoint.gd`: the space and the Piggy's `PiggyPose`) on entering a new one, restores it, and ends at the back door.
+- `src/rules/night.gd` — one playthrough. The main test seam. It knows the current space, moves the body on each step, takes a checkpoint (`src/rules/checkpoint.gd`: the space, the Piggy's `PiggyPose` and the body's state) on entering a new one, restores it, and ends at the back door.
+- `src/rules/body.gd` — the pig body: urge, hidden humanity, outbursts, suppressing and giving in. Each step returns `BodyEvent`s (`body_event.gd`), each with a position and a loudness (noise radius) for the noise ticket. `body_state.gd` is its part of a checkpoint. The Night owns it.
 - `src/rules/door_creak.gd` — how loud a door push is: a noise radius from the push speed.
 - `src/config/tuning.gd` — the tuning table and its checks.
 - `src/config/player_settings.gd` — the player's sensitivity and volume, kept between visits.
-- `src/adapters/piggy_controller.gd` — first-person movement and mouse look, via the input map in `project.godot`; pushes the doors it walks into.
+- `src/adapters/piggy_controller.gd` — first-person movement (creep, walk, trot) and mouse look, via the input map in `project.godot`; pushes the doors it walks into; lunges, camera jerks and twitches, and the head pressed into the bowl while giving in, when main says the body did them.
+- `src/adapters/body_sounds.gd` — the body's own sounds: heavy breathing, grunt, snort, squeal, chewing.
+- `src/adapters/debug_overlay.gd` — humanity and urge in a corner, only with `?debug=1` in the URL or `-- --debug` on the command line.
 - `src/adapters/house.tscn` + `house.gd` — the grey-box house: the three spaces, a box per space under `SpaceBounds` (they meet in the middle of the wall between), the back-door exit, and the walkable area for pathfinding (`Walkable`, baked from the CSG collision shapes when the house loads). The only file that knows the layout. Later tickets attach to its named markers under `Markers`: `PiggySpawn`, `GiveInSpots/BedroomBowl`, `GiveInSpots/KitchenSlopBowl`, `GiveInSpots/KitchenBin`, `HallwayMirror`, `BackDoorGlass` (both facing into the room), `MumStart`, and `MumRoute/Point1…Point5` in walking order.
 - `src/adapters/door.tscn` + `door.gd` — a door that swings away from the push and creaks once per push; its `creaked` signal carries the noise radius for the noise ticket.
 - `src/adapters/end_card.gd` — the plain end card.
 - `src/adapters/title_screen.gd`, `src/adapters/pause_menu.gd` — the two menus, built in code.
-- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat, creaks, wind and fridge hum, until real sounds arrive.
+- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat, creaks, wind, fridge hum and body sounds, until real sounds arrive.
 - `src/adapters/look/` — the PS1 look. `ps1_surface.gdshader` (vertex wobble, a tiny unfiltered grime texture in world space) is used by the materials `plaster`, `wood`, `glass` and `fridge` (`.tres`); `ps1_screen.gd` + `ps1_screen.gdshader` is a full-screen pass for low resolution, few colours and dithering. Fog, darkness and the lamps and moonlight are set in `house.tscn` (`WorldEnvironment`, `*Lamp`, `Moonlight`).
 - `src/adapters/sound_occlusion.gd` — the muffled channel: each physics step it casts a ray from the Piggy's camera to every registered 3D sound and sends it to the `Muffled` bus (low-pass, quieter, defined in `default_bus_layout.tres`) when a wall or closed door is in the way. Register new 3D sounds (Mum, body sounds) with `register()`.
 - `src/adapters/ambient_bed.gd` — wind, the fridge hum (`FridgeHum` in the house) and random creaks near the player; no music.
@@ -193,6 +213,7 @@ docs/                               # spec, tickets, decisions
 - `godot --headless --import` printing `SCRIPT ERROR ... has no static type` means a declaration is missing its type. Add one.
 - Web build is blank: check the browser console, and check that `.wasm` is served as `application/wasm`.
 - Mouse won't capture after resuming: some browsers refuse for a moment after Escape. Click the game to capture it.
+- Body: add `?debug=1` to the URL (or run `godot --path . -- --debug`) to see humanity and urge. Outbursts and give-ins are logged at info level with their noise radius; warnings and suppressing at debug.
 - Checkpoints: the log says `Entered hallway: checkpoint taken` and `Checkpoint restored: back to the start of hallway`. Door creaks are logged at debug level with their noise radius.
 - The house layout lives in `src/adapters/house.tscn`. If you move walls, also move the matching box under `SpaceBounds`, or space changes happen in the wrong place; `tests/adapters/test_house.gd` checks the markers sit in the right spaces and that Mum can walk her route.
 - Too dark or too bright: the ambient light and fog are on `WorldEnvironment` in `house.tscn`, the lamps are `BedroomLamp`, `HallwayLamp`, `KitchenLamp` and `Moonlight`. The PS1 strength is in the shader uniforms (`snap_grid`, `pixel_size`, `colour_levels`).

@@ -9,7 +9,7 @@ func _pose(position: Vector3, yaw: float = 0.0, pitch: float = 0.0) -> PiggyPose
 
 
 func _night() -> Night:
-	return Night.new(_pose(WAKE_POSE_POSITION))
+	return Night.new(_pose(WAKE_POSE_POSITION), NightTestTuning.table())
 
 
 func test_new_night_starts_in_the_bedroom() -> void:
@@ -19,8 +19,8 @@ func test_new_night_starts_in_the_bedroom() -> void:
 func test_each_step_of_the_night_is_counted() -> void:
 	var night := _night()
 
-	night.advance()
-	night.advance()
+	night.advance(0.1, false, false, Vector3.ZERO)
+	night.advance(0.1, false, false, Vector3.ZERO)
 
 	assert_eq(night.step, 2)
 

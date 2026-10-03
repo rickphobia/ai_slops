@@ -9,7 +9,11 @@ signal settings_changed
 
 const CONTROLS := [
 	"W A S D: walk",
+	"Ctrl or C (hold): creep",
+	"Shift (hold): trot",
 	"Mouse: look",
+	"Space (hold): hold back an outburst",
+	"E: give in, at a bowl or the bin",
 	"Escape: pause",
 ]
 
