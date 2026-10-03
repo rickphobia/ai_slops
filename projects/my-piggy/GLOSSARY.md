@@ -37,7 +37,7 @@ Rotten food left out (or put out) for the Piggy. What it looks like depends on h
 ## Senses and lies
 
 **Pig vision**:
-The Piggy's blurry, washed-out view of the world. It gets more pig-like as humanity drops.
+The Piggy's blurry view of the world. It gets blurrier as humanity drops; colour is left to the rot.
 
 **Hallucination**:
 Anything the game shows or plays that isn't real, chosen by humanity: slop looking like snacks, the mirror showing your old face, Mum's voice from an empty room.
@@ -45,6 +45,10 @@ _Avoid_: illusion, vision, sanity effect
 
 **Reflection**:
 A mirror or dark window where the Piggy can see their own body.
+
+**Rot**:
+How far the house has turned from a cosy family home into a grotesque flesh-house, set by humanity in three stages: cosy, soured, grotesque. In the first playable it is a hallucination; in the full game it turns out to be real.
+_Avoid_: decay, corruption, atmosphere (for this meaning)
 
 ## The night
 
