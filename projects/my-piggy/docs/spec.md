@@ -167,6 +167,7 @@ Godot adapters (thin, smoke-tested):
 - **Mum:** walks at 1.4 m/s on her route, 2.0 m/s when investigating, 3.6 m/s when chasing (the Piggy trots at 3.2 m/s, so you can't simply outrun her). Torch cone 35°, 10 m range. She searches for 20 seconds before going back to her route; after losing sight in a chase she searches the last seen spot.
 - **Caught:** Mum within 1 m of the Piggy while chasing.
 - **After being caught:** the checkpoint does not keep Mum. She comes back unaware, walking her route, at least 8 m from the Piggy on foot and not seeing them, with nothing remembered of where they were; she hunts again only if the Piggy makes a noise she hears or steps into her torch beam. None of her route points is within 3 m of where a space's checkpoint is taken.
+- **Getting into the kitchen:** each loop of her route she spends at least 8 seconds in the kitchen with her torch off the doorway and the first metre inside it (she walks to the back wall), and just inside the doorway there is cover (a counter) her torch never finds on her route.
 
 ### Content and assets
 
