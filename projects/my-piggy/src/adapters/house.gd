@@ -3,6 +3,7 @@ extends Node3D
 ## The grey-box house: bedroom, hallway, kitchen, their doors, the walkable area for
 ## pathfinding, and the named markers later tickets attach to (give-in spots, mirror,
 ## back-door glass, Mum's start and route). This is the only file that knows the layout.
+## Lit by a few dim lamps and moonlight through the back door, in fog.
 ## Says which space a point is in and whether it is at the back door; main tells the Night.
 
 ## A door creaked: its noise radius in metres and where it came from.
@@ -49,6 +50,19 @@ func space_at(point: Vector3) -> StringName:
 
 func is_at_back_door(point: Vector3) -> bool:
 	return _box_contains(_back_door_exit, point)
+
+
+## The fridge's hum, in the kitchen. The ambient bed gives it its sound.
+func fridge_hum() -> AudioStreamPlayer3D:
+	return $FridgeHum
+
+
+## Every 3D sound the house makes (door creaks, the fridge), for the muffled channel.
+func positional_sounds() -> Array[AudioStreamPlayer3D]:
+	var sounds: Array[AudioStreamPlayer3D] = []
+	for player: AudioStreamPlayer3D in find_children("*", "AudioStreamPlayer3D", true, false):
+		sounds.append(player)
+	return sounds
 
 
 ## The walkable area for pathfinding (Mum will walk on it).

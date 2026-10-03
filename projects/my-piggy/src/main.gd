@@ -1,7 +1,8 @@
 extends Node
 ## Entry scene: loads and checks the tuning and the player's settings, starts the night,
 ## and wires the rules to the adapters: title screen, opening, house, Piggy, pause menu,
-## end card. Tells the Night which space the Piggy is in and when they reach the back door.
+## end card, the PS1 look and the ambient sound. Tells the Night which space the Piggy is
+## in and when they reach the back door.
 ## Owns the mouse (captured while playing, free otherwise). Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
@@ -19,6 +20,8 @@ var _piggy: PiggyController
 var _title: TitleScreen
 var _pause_menu: PauseMenu
 var _dark: ColorRect
+var _occlusion: SoundOcclusion
+var _ambient: AmbientBed
 var _opening_sounds: Array[AudioStreamPlayer] = []
 ## True once the mouse has really been captured since play (re)started. The browser takes
 ## the mouse back on Escape before the game sees the key, so losing a capture we had
@@ -50,6 +53,17 @@ func _ready() -> void:
 	add_child(_piggy)
 	_piggy.place(PiggyPose.new(spawn.global_position, spawn.global_rotation.y, 0.0))
 	_apply_settings()
+
+	# The look and the sound: the PS1 screen pass, the muffled channel, the ambient bed.
+	add_child(Ps1Screen.new())
+	_occlusion = SoundOcclusion.new()
+	_occlusion.listener = _piggy.ears()
+	add_child(_occlusion)
+	for sound in _house.positional_sounds():
+		_occlusion.register(sound)
+	_ambient = AmbientBed.new()
+	add_child(_ambient)
+	_ambient.setup(_house.fridge_hum(), _piggy.ears(), _occlusion)
 
 	_night = Night.new(_piggy.pose())
 	_update_log_context()
@@ -125,6 +139,7 @@ func _on_start_clicked() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	for player in _opening_sounds:
 		player.play()
+	_ambient.start()
 	GameLog.info("Opening started")
 
 

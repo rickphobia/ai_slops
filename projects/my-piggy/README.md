@@ -4,7 +4,7 @@ A first-person horror game: you wake up as your own human head on a pig's body, 
 
 ## Status
 
-`in progress` — tickets 01–03 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk as the Piggy through a grey-box house (bedroom, long hallway, kitchen), nudging doors open with your head. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum and no body yet; those come with tickets 04–08 in `docs/tickets/`.
+`in progress` — tickets 01–03 and 05 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk as the Piggy through a dark, foggy house with a PS1 look (bedroom, long hallway, kitchen), nudging doors open with your head. Wind, a fridge hum and the odd creak play underneath; sounds behind walls and closed doors are muffled. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum and no body yet; those come with tickets 04 and 06–08 in `docs/tickets/`.
 
 ## Requirements
 
@@ -159,7 +159,10 @@ The rules of the game live in plain classes that know nothing about the scene tr
 - `src/adapters/door.tscn` + `door.gd` — a door that swings away from the push and creaks once per push; its `creaked` signal carries the noise radius for the noise ticket.
 - `src/adapters/end_card.gd` — the plain end card.
 - `src/adapters/title_screen.gd`, `src/adapters/pause_menu.gd` — the two menus, built in code.
-- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat and door creak, until real sounds arrive.
+- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat, creaks, wind and fridge hum, until real sounds arrive.
+- `src/adapters/look/` — the PS1 look. `ps1_surface.gdshader` (vertex wobble, a tiny unfiltered grime texture in world space) is used by the materials `plaster`, `wood`, `glass` and `fridge` (`.tres`); `ps1_screen.gd` + `ps1_screen.gdshader` is a full-screen pass for low resolution, few colours and dithering. Fog, darkness and the lamps and moonlight are set in `house.tscn` (`WorldEnvironment`, `*Lamp`, `Moonlight`).
+- `src/adapters/sound_occlusion.gd` — the muffled channel: each physics step it casts a ray from the Piggy's camera to every registered 3D sound and sends it to the `Muffled` bus (low-pass, quieter, defined in `default_bus_layout.tres`) when a wall or closed door is in the way. Register new 3D sounds (Mum, body sounds) with `register()`.
+- `src/adapters/ambient_bed.gd` — wind, the fridge hum (`FridgeHum` in the house) and random creaks near the player; no music.
 - `src/adapters/game_log.gd` — the logger. Levels are debug, info, warning and error; every line carries the step and space name: `[info] step=0 space=bedroom Night started`.
 
 ## Folder layout
@@ -167,11 +170,14 @@ The rules of the game live in plain classes that know nothing about the scene tr
 ```
 project.godot, export_presets.cfg   # Godot settings; web export preset
 data/tuning.tres                    # the tuning table
+default_bus_layout.tres             # audio buses: Master and Muffled
+CREDITS.md                          # every outside asset and its licence
 src/
   main.gd, main.tscn                # entry scene
   config/                           # tuning table and its checks
   rules/                            # Night, checkpoints, door creak, GameFlow: pure rules, no scene tree
   adapters/                         # house and doors, piggy controller, menus, end card, sounds, logger
+    look/                           # PS1 shaders and materials
 tests/                              # mirrors src/ (GUT)
 addons/gut/                         # GUT 9.7.1, the test framework (vendored, unmodified)
 scripts/                            # check.sh, setup-godot.sh, godot-pin.env (the pinned version)
@@ -189,6 +195,8 @@ docs/                               # spec, tickets, decisions
 - Mouse won't capture after resuming: some browsers refuse for a moment after Escape. Click the game to capture it.
 - Checkpoints: the log says `Entered hallway: checkpoint taken` and `Checkpoint restored: back to the start of hallway`. Door creaks are logged at debug level with their noise radius.
 - The house layout lives in `src/adapters/house.tscn`. If you move walls, also move the matching box under `SpaceBounds`, or space changes happen in the wrong place; `tests/adapters/test_house.gd` checks the markers sit in the right spaces and that Mum can walk her route.
+- Too dark or too bright: the ambient light and fog are on `WorldEnvironment` in `house.tscn`, the lamps are `BedroomLamp`, `HallwayLamp`, `KitchenLamp` and `Moonlight`. The PS1 strength is in the shader uniforms (`snap_grid`, `pixel_size`, `colour_levels`).
+- A sound isn't muffled behind a wall: it must be registered with `SoundOcclusion`, and the wall must have collision (`use_collision` on CSG).
 - Deploy failed: the last line of `update-site.sh` names the step. The live site was left as it was.
 
 ## Decisions

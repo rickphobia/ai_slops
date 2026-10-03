@@ -134,3 +134,17 @@ func _piggy_facing_bedroom_door() -> PiggyController:
 	add_child_autofree(piggy)
 	piggy.place(PiggyPose.new(Vector3(0.2, 0.05, -3.2), 0.0, 0.0))
 	return piggy
+
+
+func test_the_fridge_hums_in_the_kitchen() -> void:
+	var house := _house()
+
+	assert_eq(house.space_at(house.fridge_hum().global_position), &"kitchen")
+
+
+func test_every_door_creak_and_the_fridge_go_to_the_muffled_channel() -> void:
+	var house := _house()
+
+	# Two doors' creaks and the fridge.
+	assert_eq(house.positional_sounds().size(), 3)
+	assert_has(house.positional_sounds(), house.fridge_hum())
