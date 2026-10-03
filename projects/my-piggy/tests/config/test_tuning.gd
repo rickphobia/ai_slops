@@ -8,6 +8,7 @@ func _good_table() -> Tuning:
 	var tuning := Tuning.new()
 	tuning.walk_speed = 2.0
 	tuning.mouse_sensitivity = 0.003
+	tuning.opening_seconds = 4.0
 	return tuning
 
 
@@ -16,8 +17,8 @@ func test_a_complete_table_has_no_problems() -> void:
 
 
 func test_a_missing_value_is_reported_by_field_name() -> void:
-	var tuning := Tuning.new()
-	tuning.walk_speed = 2.0
+	var tuning := _good_table()
+	tuning.mouse_sensitivity = NAN
 
 	var problems := tuning.problems()
 
@@ -48,7 +49,7 @@ func test_a_value_that_is_too_low_is_reported_by_field_name() -> void:
 
 
 func test_every_bad_field_is_reported_at_once() -> void:
-	assert_eq(Tuning.new().problems().size(), 2)
+	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size())
 
 
 func test_a_file_that_does_not_exist_loads_as_nothing() -> void:

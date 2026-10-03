@@ -41,3 +41,14 @@ func test_piggy_walks_forward_at_walk_speed_when_forward_is_held() -> void:
 	var seconds := 30.0 / Engine.physics_ticks_per_second
 	assert_gt(walked, 0.5 * TEST_WALK_SPEED * seconds)
 	assert_lt(after.z, start.z, "forward is towards -Z")
+
+
+func test_a_higher_sensitivity_turns_the_view_further_for_the_same_mouse_movement() -> void:
+	var normal := _spawn_piggy()
+	var fast := _spawn_piggy()
+	fast.set_sensitivity_scale(2.0)
+
+	normal.look(Vector2(10.0, 0.0))
+	fast.look(Vector2(10.0, 0.0))
+
+	assert_almost_eq(fast.rotation.y, normal.rotation.y * 2.0, 0.0001)
