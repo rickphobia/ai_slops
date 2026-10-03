@@ -4,18 +4,24 @@ extends RefCounted
 ## Pure rules: no scene tree, nodes, physics, rendering or audio. The adapters say which
 ## space the Piggy is in, what the player is doing and when they reach the back door;
 ## the Night decides the rest. Every noise the Piggy makes goes to Mum, who hears it if
-## it reaches her through the house (asked of the DistanceProvider).
+## it reaches her through the house (asked of the DistanceProvider). Mum sees the Piggy in
+## her torch beam and chases; reaching them while chasing catches them, which stops the
+## night until the checkpoint is restored.
 
 ## The Piggy made a noise, heard or not (the debug overlay draws it).
 signal noise_made(noise: PiggyNoise)
 ## Mum heard a noise and is coming to look.
 signal noise_heard(heard: HeardNoise)
+## Mum caught the Piggy. Nothing moves until restore_checkpoint().
+signal caught
 
 const FIRST_SPACE: StringName = &"bedroom"
 
 var space: StringName = FIRST_SPACE
 var step: int = 0
 var has_ended: bool = false
+## Mum has caught the Piggy and the checkpoint has not been restored yet.
+var is_caught: bool = false
 ## The Piggy's body: urge and the hidden humanity. Read it; change it through the Night.
 var body: Body
 ## Mum's alert level and where she is headed. Her actor moves her and reports back to it.
@@ -41,35 +47,36 @@ func _init(
 	_distances = distances
 	body = Body.new(tuning, rng)
 	mum = FamilyBrain.new(tuning.mum_search_seconds, mum_start)
-	_checkpoint = Checkpoint.new(FIRST_SPACE, wake_pose, body.state())
+	_checkpoint = Checkpoint.new(FIRST_SPACE, wake_pose, body.state(), mum.state())
 
 
 ## Moves the night on by one step of `delta` seconds, with the Piggy at `at` moving at
-## `gait`. Returns what the body did; its noises and footsteps go to Mum.
+## `gait`. Returns what the body did; its noises and footsteps go to Mum, who then looks.
 func advance(
 	delta: float, trotting: bool, suppress_held: bool, at: Vector3, gait := PiggyNoise.Gait.STILL
 ) -> Array[BodyEvent]:
 	step += 1
-	if has_ended:
+	if has_ended or is_caught:
 		return [] as Array[BodyEvent]
 	mum.advance(delta)
 	var events := body.advance(delta, trotting, suppress_held, at)
 	for event in events:
 		_make_noise(PiggyNoise.from_body_event(event))
 	_step_feet(delta, gait, at)
+	_mum_looks(at)
 	return events
 
 
 ## The Piggy pushed a door that creaked this loud (a noise radius, metres).
 func door_creaked(radius: float, at: Vector3) -> void:
-	if not has_ended:
+	if not has_ended and not is_caught:
 		_make_noise(PiggyNoise.from_door(radius, at))
 
 
 ## Starts giving in at a give-in spot. Returns the event, or null if the spot was used
 ## since the last checkpoint or the Piggy is already giving in.
 func give_in(spot: StringName, at: Vector3) -> BodyEvent:
-	if has_ended:
+	if has_ended or is_caught:
 		return null
 	var started := body.give_in(spot, at)
 	if started != null:
@@ -80,19 +87,22 @@ func give_in(spot: StringName, at: Vector3) -> BodyEvent:
 ## Tells the Night which space the Piggy is in now. Moving into a different space takes
 ## a checkpoint at this pose. Returns true when a checkpoint was taken.
 func enter_space(entered: StringName, pose: PiggyPose) -> bool:
-	if has_ended or entered == space:
+	if has_ended or is_caught or entered == space:
 		return false
 	space = entered
 	body.reset_rise_rate()
-	_checkpoint = Checkpoint.new(entered, pose, body.state())
+	_checkpoint = Checkpoint.new(entered, pose, body.state(), mum.state())
 	return true
 
 
 ## Puts the night back to the last checkpoint. Returns where and how the Piggy must be
 ## put back; the caller moves them there.
+## Mum is put back too; her actor must be moved to `mum.position`.
 func restore_checkpoint() -> PiggyPose:
 	space = _checkpoint.space
+	is_caught = false
 	body.restore(_checkpoint.body)
+	mum.restore(_checkpoint.mum)
 	return _checkpoint.piggy_pose
 
 
@@ -110,6 +120,22 @@ func _step_feet(delta: float, gait: PiggyNoise.Gait, at: Vector3) -> void:
 		return
 	_footstep_seconds_left += _tuning.footstep_seconds
 	_make_noise(PiggyNoise.footstep(gait, at, _tuning))
+
+
+## Mum chases while the Piggy is in her torch beam, searches where she last saw them when
+## they get out of it, and catches them if she gets close enough while chasing.
+func _mum_looks(at: Vector3) -> void:
+	if TorchSight.sees(mum.position, mum.facing, at, _tuning, _distances):
+		mum.see(at)
+	else:
+		mum.lost_sight()
+	if mum.alert != FamilyBrain.Alert.CHASING:
+		return
+	var apart := at - mum.position
+	apart.y = 0.0
+	if apart.length() <= _tuning.mum_caught_distance:
+		is_caught = true
+		caught.emit()
 
 
 func _make_noise(noise: PiggyNoise) -> void:

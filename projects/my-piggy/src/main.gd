@@ -4,7 +4,8 @@ extends Node
 ## end card, the PS1 look, the ambient sound and Mum (her body, and the house distances her
 ## hearing uses). Tells the Night which space the Piggy is
 ## in, what the player is doing and when they reach the back door, and passes what the
-## body did on to the Piggy and its sounds.
+## body did on to the Piggy and its sounds. When Mum catches the Piggy it plays the capture
+## scene, then restores the checkpoint.
 ## Owns the mouse (captured while playing, free otherwise). Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
@@ -27,6 +28,9 @@ var _pause_menu: PauseMenu
 var _dark: ColorRect
 var _occlusion: SoundOcclusion
 var _ambient: AmbientBed
+var _capture_layer: CanvasLayer
+## ?debug=1 or -- --debug: the overlay, noise rings and the restore-checkpoint key.
+var _debug: bool = false
 var _opening_sounds: Array[AudioStreamPlayer] = []
 ## True once the mouse has really been captured since play (re)started. The browser takes
 ## the mouse back on Escape before the game sees the key, so losing a capture we had
@@ -77,6 +81,7 @@ func _ready() -> void:
 	var mum_start := _house.mum_start().global_position
 	_night = Night.new(_piggy.pose(), tuning, RandomNumberGenerator.new(), distances, mum_start)
 	_night.noise_heard.connect(_on_noise_heard)
+	_night.caught.connect(_on_caught)
 	_night.mum.alert_changed.connect(_on_mum_alert_changed)
 	_mum = Mum.new()
 	_mum.setup(tuning, _night.mum, _house.mum_route(), RandomNumberGenerator.new())
@@ -113,7 +118,8 @@ func _ready() -> void:
 	_pause_menu.resume_clicked.connect(_resume)
 	_pause_menu.settings_changed.connect(_on_settings_changed)
 	_add_layer(_pause_menu, MENU_LAYER)
-	if DebugOverlay.is_requested(DebugOverlay.page_query(), OS.get_cmdline_user_args()):
+	_debug = DebugOverlay.is_requested(DebugOverlay.page_query(), OS.get_cmdline_user_args())
+	if _debug:
 		var overlay := DebugOverlay.new()
 		overlay.setup(_night)
 		_add_layer(overlay, MENU_LAYER)
@@ -162,8 +168,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif _flow.stage == GameFlow.Stage.PAUSED:
 			_resume()
 		return
-	# Until being caught exists (ticket 07), this is the only way to try a restore in game.
-	if event.is_action_pressed("debug_restore_checkpoint") and _flow.has_control():
+	if (
+		_debug
+		and event.is_action_pressed("debug_restore_checkpoint")
+		and _flow.has_control()
+		and not _night.is_caught
+	):
 		_restore_checkpoint()
 		return
 	if event.is_action_pressed("give_in") and _flow.has_control():
@@ -227,9 +237,34 @@ func _follow_piggy() -> void:
 
 func _restore_checkpoint() -> void:
 	_piggy.place(_night.restore_checkpoint())
+	_mum.place(_night.mum.position)
 	_body_sounds.stop_all()
 	_update_log_context()
 	GameLog.info("Checkpoint restored: back to the start of %s" % _night.space)
+
+
+## Freezes the Piggy and Mum and plays the capture scene; the restore comes when it ends.
+func _on_caught() -> void:
+	GameLog.info("Caught by Mum")
+	_piggy.process_mode = Node.PROCESS_MODE_DISABLED
+	_mum.process_mode = Node.PROCESS_MODE_DISABLED
+	_body_sounds.stop_all()
+	var scene := CaptureScene.new()
+	scene.finished.connect(_restart_after_capture)
+	_capture_layer = CanvasLayer.new()
+	_capture_layer.layer = DARK_LAYER
+	# Main keeps running while paused; the scene must pause with the game.
+	_capture_layer.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_capture_layer.add_child(scene)
+	add_child(_capture_layer)
+
+
+func _restart_after_capture() -> void:
+	_capture_layer.queue_free()
+	_capture_layer = null
+	_restore_checkpoint()
+	_piggy.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_mum.process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
 func _end_night() -> void:
