@@ -1,0 +1,44 @@
+name: repo
+
+# Checks the repo-level tooling: the CI gate script and the Claude Code settings files.
+on:
+  push:
+    paths:
+      - ".github/**"
+      - ".claude/settings.json"
+      - "projects/*/.claude/settings.json"
+  pull_request:
+    paths:
+      - ".github/**"
+      - ".claude/settings.json"
+      - "projects/*/.claude/settings.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # shellcheck and jq come preinstalled on the runner.
+      - run: shellcheck .github/scripts/*.sh
+      # A session reads .claude/settings.json only from the folder it starts in, so each project
+      # carries a copy of the root rules. A project may add rules but must keep the root ones.
+      - name: Every project's settings keep the root guardrails
+        run: |
+          jq empty .claude/settings.json
+          for copy in projects/*/.claude/settings.json; do
+            jq -e --slurpfile root .claude/settings.json '
+              ($root[0].permissions.deny - (.permissions.deny // []) | length == 0) and
+              ($root[0].permissions.ask - (.permissions.ask // []) | length == 0)
+            ' "$copy" >/dev/null || { echo "$copy is missing rules from .claude/settings.json"; exit 1; }
+          done
+          for project in projects/*/; do
+            [[ -f ${project}.claude/settings.json ]] || { echo "${project} has no .claude/settings.json"; exit 1; }
+          done
