@@ -77,8 +77,10 @@ start_preview() { # start_preview <N> <sha>
   stop_unit "$1"
   rm -f "$state/stopped-$1"
   echo "PR #$1: building ${2:0:7} for port $(port_of "$1")"
+  # try-pr.sh exits 130 when stopped; count that as a clean stop, not a failed build, or sync
+  # would skip this commit as failed.
   systemd-run --user --quiet --unit "try-pr-$1" --description "try-pr $1 $2" \
-    --working-directory "$repo" --setenv "PATH=$PATH" \
+    --working-directory "$repo" --setenv "PATH=$PATH" --property "SuccessExitStatus=130" \
     "$state/try-pr.sh" "$1" --port "$(port_of "$1")"
 }
 
