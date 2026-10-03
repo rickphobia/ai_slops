@@ -64,6 +64,9 @@ main() {
   log "$step"
   rm -rf "$project_dir/build/web" "$project_dir/.godot"
   mkdir -p "$project_dir/build/web"
+  # Which build this is, shown on the title screen (src/config/build_version.gd).
+  printf 'main %s · %s\n' "${commit:0:7}" "$(git -C "$SRC_DIR" log -1 --format=%cs "$commit")" \
+    >"$project_dir/version.txt"
   # Run as the current user so the build files are not owned by root. The import comes first
   # because a fresh checkout has no .godot cache and the export needs one.
   docker run --rm \

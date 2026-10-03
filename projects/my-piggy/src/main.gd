@@ -123,6 +123,8 @@ func _ready() -> void:
 		_opening_sounds.append(player)
 
 	_title = TitleScreen.new()
+	_title.version = BuildVersion.read()
+	GameLog.info("Build: %s" % _title.version)
 	_title.start_clicked.connect(_on_start_clicked)
 	_add_layer(_title, MENU_LAYER)
 	_pause_menu = PauseMenu.new()

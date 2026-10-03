@@ -30,10 +30,11 @@ usage() {
 web_projects=(my-piggy pawn-swarm)
 
 # Builds the project in the current folder and prints the folder to serve. Each web project's
-# build steps come from its README.
+# build steps come from its README. $2 names the build ("PR #41 · 1ae5b74").
 build_web() {
   case $1 in
     my-piggy)
+      printf '%s\n' "$2" >version.txt # shown on the title screen
       command -v godot >/dev/null || die "godot not found; run projects/my-piggy/scripts/setup-godot.sh"
       godot --headless --import >&2
       mkdir -p build/web
@@ -102,7 +103,7 @@ main() {
   printf 'Building PR #%s (%s, %s)…\n' "$pr" "$project" "$(git rev-parse --short "$sha")"
   cd "$worktree/projects/$project"
   local site
-  site=$(build_web "$project")
+  site=$(build_web "$project" "PR #$pr · $(git rev-parse --short "$sha")")
 
   # The server listens on localhost only; Tailscale serves it over HTTPS on the same port number.
   local host url

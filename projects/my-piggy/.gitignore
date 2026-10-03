@@ -10,3 +10,6 @@ build/
 
 # Downloaded tool packages; install tools from requirements.txt or the system instead
 *.whl
+
+# Which build this is, written by the build scripts before an export (see src/config/build_version.gd)
+version.txt

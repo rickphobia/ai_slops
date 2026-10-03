@@ -92,6 +92,18 @@ curl -I https://rickphobia.com/ai-projects/my-piggy/index.wasm  # expect Content
 
 A `404` means nginx maps `/ai-projects/` somewhere other than `~/homelab/html/ai-projects/`; fix its `root`/`location` and reload nginx. A wrong `.wasm` type means nginx's `mime.types` is missing `application/wasm wasm;`; add it and reload. Record what you found here: checked 2026-10-03, the page returns `200` and `index.wasm` is served as `application/wasm`. Cloudflare sits in front of nginx (responses carry `server: cloudflare`).
 
+### Browser caching (once, on the Beelink)
+
+`index.html` and `index.pck` keep their names on every deploy, so without a `Cache-Control` header a browser may keep showing the previous build. `deploy/nginx.conf` makes browsers check with the server on each visit (a cheap 304 when nothing changed). Install it into the homelab's nginx drop-box, check it, and reload:
+
+```bash
+cp projects/my-piggy/deploy/nginx.conf ~/homelab/nginx/projects/my-piggy.conf
+docker exec portfolio-nginx nginx -t && docker exec portfolio-nginx nginx -s reload
+curl -sI https://rickphobia.com/ai-projects/my-piggy/index.pck | grep -i cache-control   # no-cache
+```
+
+The title screen's bottom-right corner shows which build is running (`main <commit> · <date>`; a PR preview shows `PR #<N> · <commit>`, a local or CI build `dev build`), so you can tell at a glance whether you have the latest.
+
 ### Cloudflare caching (optional)
 
 By default Cloudflare does not cache `.wasm` files (`cf-cache-status: DYNAMIC`), so every visit downloads the 40 MB engine from the Beelink over the home upload. To have Cloudflare keep a copy instead, add a cache rule in the Cloudflare dashboard (rickphobia.com → Caching → Cache Rules → Create rule):
