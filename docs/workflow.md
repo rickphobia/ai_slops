@@ -15,7 +15,7 @@ Experienced engineers all land on the same loop: **spec → plan → build in sm
 | 5 | Split into tickets | `/to-tickets` | `docs/tickets/01-…md`, `02-…md`, each with **Blocked by** and **Touches**, plus which can run in parallel. You approve the breakdown |
 | 6 | Build the skeleton | `scripts/next-tickets.sh <name>` (or a new session: `/implement projects/<name>/docs/tickets/01-…md`) | Project runs, one test passes, CI green. One PR |
 | 7 | Build in parallel | `scripts/next-tickets.sh <name>`: one background session per ticket that can start now | One PR per ticket |
-| 8 | Review and merge | Try the PR: its `▶ Try this version` link, or on the Beelink `pr-list` (every green PR is built and served automatically at `http://192.168.1.30:<9000 + PR number>/`; see "Previews on the Beelink"), skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
+| 8 | Review and merge | Try the PR: its `▶ Try this version` link, or on the Beelink `pr-list` (every green PR is built and served automatically at `https://beelink-mini-s.taildfbd18.ts.net:<9000 + PR number>/` on your Tailscale devices; see "Previews on the Beelink"), skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
 | 9 | Deploy | On the Beelink: `projects/<name>/deploy/update-site.sh`, or ask a local session to run it | Live at `rickphobia.com/ai-projects/<name>/` |
 | 10 | Repeat 7–9 | Run `scripts/next-tickets.sh <name>` again after each merge | — |
 
@@ -49,7 +49,7 @@ It reads the tickets from `origin/main` and starts a ticket when its status is `
 
 ## Previews on the Beelink
 
-my-piggy's build is too big for a `▶ Try this version` link, so the Beelink serves every PR itself. `scripts/previews.sh install` (once) starts a systemd user timer that, every 5 minutes, builds each open PR whose `ci-gate` is green and serves it at `http://192.168.1.30:<9000 + PR number>/` (PR 41 → port 9041). A new push is rebuilt once it is green; a merged or closed PR's preview stops. It runs only scripts, no Claude, so it costs no tokens.
+my-piggy's build is too big for a `▶ Try this version` link, so the Beelink serves every PR itself. `scripts/previews.sh install` (once) starts a systemd user timer that, every 5 minutes, builds each open PR whose `ci-gate` is green and serves it at `https://beelink-mini-s.taildfbd18.ts.net:<9000 + PR number>/` (PR 41 → port 9041). Browsers only run a Godot build over HTTPS or on localhost, so it goes through Tailscale HTTPS: open it on a device signed in to your tailnet. Setup once: `sudo tailscale set --operator=$USER`, so the scripts can add the HTTPS ports without sudo. Without that, a preview only opens on the Beelink itself (`http://localhost:<port>/`). A new push is rebuilt once it is green; a merged or closed PR's preview stops. It runs only scripts, no Claude, so it costs no tokens.
 
 ```bash
 scripts/previews.sh list     # open PRs, ci-gate result, preview link (shell function: pr-list)
