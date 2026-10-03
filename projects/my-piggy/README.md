@@ -4,7 +4,7 @@ A first-person horror game: you wake up as your own human head on a pig's body, 
 
 ## Status
 
-`in progress` — tickets 01–05 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk, creep or trot as the Piggy through a dark, foggy house with a PS1 look (bedroom, long hallway, kitchen), nudging doors open with your head, while your body's urge builds into snorts, squeals and lunges that you can hold back (Space) or quiet by giving in at a bowl or the bin (E). Wind, a fridge hum and the odd creak play underneath; sounds behind walls and closed doors are muffled. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum yet, so outbursts have no consequence beyond the noise; she comes with tickets 06–08 in `docs/tickets/`.
+`in progress` — tickets 01–06 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk, creep or trot as the Piggy through a dark, foggy house with a PS1 look (bedroom, long hallway, kitchen), nudging doors open with your head, while your body's urge builds into snorts, squeals and lunges that you can hold back (Space) or quiet by giving in at a bowl or the bin (E). Wind, a fridge hum and the odd creak play underneath; sounds behind walls and closed doors are muffled. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. Mum walks her route through the kitchen and hallway humming "This Little Piggy"; your footsteps, door pushes, outbursts and giving in are noises she can hear (walls and closed doors cut them down), and when she does she comes to look, searches the spot for a while talking softly, then goes back to her route. She can't see or catch you yet: that is ticket 07, and hallucinations are ticket 08, in `docs/tickets/`.
 
 ## Requirements
 
@@ -28,7 +28,7 @@ scripts/setup-godot.sh                                              # Godot + we
 
 ```bash
 godot --path .          # play: click the title screen, then WASD to walk, mouse to look, Esc to pause
-godot --path . -- --debug  # the same, with the debug overlay (humanity and urge)
+godot --path . -- --debug  # the same, with the debug overlay (humanity, urge, Mum's alert level, noise rings)
 godot --path . --editor # open the project in the Godot editor
 ```
 
@@ -158,6 +158,13 @@ The game reads no environment variables; the deploy scripts do (see "Deploy"). G
 | `lunge_distance` | How far a lunge throws the Piggy forward, metres | 0–3 |
 | `outburst_camera_jerk` | How far an outburst jerks the view, radians | 0–1 |
 | `warning_camera_twitch` | How far the view twitches during the warning signs, radians | 0–0.2 |
+| `creep_noise_radius`, `walk_noise_radius`, `trot_noise_radius` | How far each footstep is heard at that gait, metres (0 is silent) | 0–30 |
+| `footstep_seconds` | Seconds between the Piggy's footstep noises while moving | 0.1–2 |
+| `noise_cut_per_barrier` | How much each closed door or wall between a noise and Mum cuts its radius, as a fraction | 0–1 |
+| `mum_walk_speed`, `mum_investigate_speed` | Mum's speed on her route and while searching, and going to a noise, m/s | 0.1–10 |
+| `mum_search_seconds` | How long Mum searches around a noise before going back to her route | 1–120 |
+| `mum_search_radius` | How far from the noise she looks while searching, metres | 0.5–10 |
+| `mum_line_seconds` | Seconds between Mum's lines while she investigates or searches | 1–60 |
 
 The player's own settings (mouse sensitivity as a multiplier of 0.25–3, master volume 0–1) are set in the pause menu and saved to `user://settings.cfg`, which the web build keeps in the browser. See `src/config/player_settings.gd`.
 
@@ -165,21 +172,25 @@ The player's own settings (mouse sensitivity as a multiplier of 0.25–3, master
 
 The rules of the game live in plain classes that know nothing about the scene tree; Godot scenes are thin adapters around them. Like a referee and the players: the rules read what happened and decide, and never touch the ball.
 
-- `src/main.tscn` is the entry scene. `src/main.gd` loads and checks the tuning and the player's settings, starts a `Night`, spawns the Piggy in the house, shows the title screen, runs the opening, the pause menu and the end card, owns the mouse, and keeps the logger up to date. Each physics step it asks the house which space the Piggy is in and tells the Night.
+- `src/main.tscn` is the entry scene. `src/main.gd` loads and checks the tuning and the player's settings, starts a `Night` (with the house's distances for hearing), spawns the Piggy and Mum in the house, shows the title screen, runs the opening, the pause menu and the end card, owns the mouse, and keeps the logger up to date. Each physics step it asks the house which space the Piggy is in and tells the Night.
 - `src/rules/game_flow.gd` — title screen, opening, playing, paused, ended: when the player has control.
 - `src/rules/night.gd` — one playthrough. The main test seam. It knows the current space, moves the body on each step, takes a checkpoint (`src/rules/checkpoint.gd`: the space, the Piggy's `PiggyPose` and the body's state) on entering a new one, restores it, and ends at the back door.
 - `src/rules/body.gd` — the pig body: urge, hidden humanity, outbursts, suppressing and giving in. Each step returns `BodyEvent`s (`body_event.gd`), each with a position and a loudness (noise radius) for the noise ticket. `body_state.gd` is its part of a checkpoint. The Night owns it.
 - `src/rules/door_creak.gd` — how loud a door push is: a noise radius from the push speed.
+- `src/rules/piggy_noise.gd` — a **noise**: what made it, where, and how loud (a radius in metres). Made from footsteps (by gait), the Piggy's door pushes and body events. Decides whether a listener hears it from the `SoundPath` (`sound_path.gd`: path distance and the closed doors and walls in between) that a `DistanceProvider` (`distance_provider.gd`) gives; each barrier cuts the radius by `noise_cut_per_barrier`. Named `PiggyNoise` because Godot already has a `Noise` class. The Night makes the noises and hands each one Mum hears to her brain (`heard_noise.gd`).
+- `src/rules/family_brain.gd` — one family member's alert level (unaware → investigating → searching → unaware after `mum_search_seconds`) and where they are headed. The Night owns Mum's.
 - `src/config/tuning.gd` — the tuning table and its checks.
 - `src/config/player_settings.gd` — the player's sensitivity and volume, kept between visits.
 - `src/adapters/piggy_controller.gd` — first-person movement (creep, walk, trot) and mouse look, via the input map in `project.godot`; pushes the doors it walks into; lunges, camera jerks and twitches, and the head pressed into the bowl while giving in, when main says the body did them.
 - `src/adapters/body_sounds.gd` — the body's own sounds: heavy breathing, grunt, snort, squeal, chewing.
-- `src/adapters/debug_overlay.gd` — humanity and urge in a corner, only with `?debug=1` in the URL or `-- --debug` on the command line.
+- `src/adapters/debug_overlay.gd` — humanity, urge and Mum's alert level in a corner, only with `?debug=1` in the URL or `-- --debug` on the command line. With it, `noise_rings.gd` draws a ring for each noise the Piggy makes, as wide as its radius: red if Mum heard it.
+- `src/adapters/house_distances.gd` — the house's `DistanceProvider`: path distance over the walkable area, and the walls and closed doors on the straight line between the two points (rays at head height). The only part of hearing that uses Godot.
+- `src/adapters/mum.gd` — Mum's body (a grey capsule for now): walks where her brain says over the walkable area, pushes doors she walks into (her own pushes are not noises), hums while unaware and says placeholder lines while investigating or searching, in a higher voice when she has just heard you. Her humming, footsteps and voice are 3D sounds on the muffled channel.
 - `src/adapters/house.tscn` + `house.gd` — the grey-box house: the three spaces, a box per space under `SpaceBounds` (they meet in the middle of the wall between), the back-door exit, and the walkable area for pathfinding (`Walkable`, baked from the CSG collision shapes when the house loads). The only file that knows the layout. Later tickets attach to its named markers under `Markers`: `PiggySpawn`, `GiveInSpots/BedroomBowl`, `GiveInSpots/KitchenSlopBowl`, `GiveInSpots/KitchenBin`, `HallwayMirror`, `BackDoorGlass` (both facing into the room), `MumStart`, and `MumRoute/Point1…Point5` in walking order.
-- `src/adapters/door.tscn` + `door.gd` — a door that swings away from the push and creaks once per push; its `creaked` signal carries the noise radius for the noise ticket.
+- `src/adapters/door.tscn` + `door.gd` — a door that swings away from the push and creaks once per push; its `creaked` signal carries the noise radius and who pushed it.
 - `src/adapters/end_card.gd` — the plain end card.
 - `src/adapters/title_screen.gd`, `src/adapters/pause_menu.gd` — the two menus, built in code.
-- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat, creaks, wind, fridge hum and body sounds, until real sounds arrive.
+- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat, creaks, wind, fridge hum, body sounds and Mum's humming, lines and footsteps, until real sounds arrive.
 - `src/adapters/look/` — the PS1 look. `ps1_surface.gdshader` (vertex wobble, a tiny unfiltered grime texture in world space) is used by the materials `plaster`, `wood`, `glass` and `fridge` (`.tres`); `ps1_screen.gd` + `ps1_screen.gdshader` is a full-screen pass for low resolution, few colours and dithering. Fog, darkness and the lamps and moonlight are set in `house.tscn` (`WorldEnvironment`, `*Lamp`, `Moonlight`).
 - `src/adapters/sound_occlusion.gd` — the muffled channel: each physics step it casts a ray from the Piggy's camera to every registered 3D sound and sends it to the `Muffled` bus (low-pass, quieter, defined in `default_bus_layout.tres`) when a wall or closed door is in the way. Register new 3D sounds (Mum, body sounds) with `register()`.
 - `src/adapters/ambient_bed.gd` — wind, the fridge hum (`FridgeHum` in the house) and random creaks near the player; no music.
@@ -195,7 +206,7 @@ CREDITS.md                          # every outside asset and its licence
 src/
   main.gd, main.tscn                # entry scene
   config/                           # tuning table and its checks
-  rules/                            # Night, checkpoints, door creak, GameFlow: pure rules, no scene tree
+  rules/                            # Night, body, noise, family brain, checkpoints, GameFlow: pure rules, no scene tree
   adapters/                         # house and doors, piggy controller, menus, end card, sounds, logger
     look/                           # PS1 shaders and materials
 tests/                              # mirrors src/ (GUT)

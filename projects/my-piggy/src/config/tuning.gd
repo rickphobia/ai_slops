@@ -32,6 +32,16 @@ const LIMITS: Dictionary = {
 	"lunge_distance": [0.0, 3.0],
 	"outburst_camera_jerk": [0.0, 1.0],
 	"warning_camera_twitch": [0.0, 0.2],
+	"creep_noise_radius": [0.0, 30.0],
+	"walk_noise_radius": [0.0, 30.0],
+	"trot_noise_radius": [0.0, 30.0],
+	"footstep_seconds": [0.1, 2.0],
+	"noise_cut_per_barrier": [0.0, 1.0],
+	"mum_walk_speed": [0.1, 10.0],
+	"mum_investigate_speed": [0.1, 10.0],
+	"mum_search_seconds": [1.0, 120.0],
+	"mum_search_radius": [0.5, 10.0],
+	"mum_line_seconds": [1.0, 60.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
@@ -87,6 +97,27 @@ const LIMITS: Dictionary = {
 @export var outburst_camera_jerk: float = NAN
 ## How far the camera twitches during the warning signs, in radians.
 @export var warning_camera_twitch: float = NAN
+## How far each creeping footstep is heard, in metres.
+@export var creep_noise_radius: float = NAN
+## How far each walking footstep is heard, in metres.
+@export var walk_noise_radius: float = NAN
+## How far each trotting footstep is heard, in metres.
+@export var trot_noise_radius: float = NAN
+## Seconds between the Piggy's footstep noises while moving.
+@export var footstep_seconds: float = NAN
+## How much each closed door or wall between a noise and a listener cuts its radius, as a
+## fraction (0.4 leaves 60% per barrier).
+@export var noise_cut_per_barrier: float = NAN
+## How fast Mum walks her route and searches, in metres per second.
+@export var mum_walk_speed: float = NAN
+## How fast Mum goes to a noise she heard, in metres per second.
+@export var mum_investigate_speed: float = NAN
+## How long Mum searches around a noise before going back to her route, in seconds.
+@export var mum_search_seconds: float = NAN
+## How far from the noise Mum looks while searching, in metres.
+@export var mum_search_radius: float = NAN
+## Seconds between Mum's lines while she investigates or searches.
+@export var mum_line_seconds: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded

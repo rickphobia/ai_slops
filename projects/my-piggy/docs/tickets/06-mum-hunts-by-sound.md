@@ -4,15 +4,15 @@
 
 **Blocked by:** 04 (The body)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** Noise, family brain, Mum's actor (movement, humming, lines), house distance provider, debug overlay (noise rings, alert level), Night (wiring Mum in)
 
-- [ ] Noise is a rules class that turns movement, door pushes and body events into noises with a position and loudness, and decides who hears them using a distance it is given (tested with a fake distance provider)
-- [ ] Each closed door or wall between a noise and a listener cuts its range by the tuned amount (tested)
-- [ ] Family brain is a rules class: unaware → investigating → searching → back to unaware after the tuned search time (tested through Night with scripted noises)
-- [ ] The house distance provider answers "path distance and number of doors and walls between these two points" using the walkable area; it is the only part of hearing that uses Godot
-- [ ] Mum walks her route at her tuned speed, goes to a heard noise at investigate speed, and searches around it
-- [ ] Mum's humming, footsteps and lines are 3D sounds, muffled through walls; humming stops when she's investigating, and her lines change with her alert level (placeholders are fine)
-- [ ] `?debug=1` shows noise rings and Mum's alert level
-- [ ] Logs record each noise heard (source, loudness, distance) and each alert level change
+- [x] Noise is a rules class that turns movement, door pushes and body events into noises with a position and loudness, and decides who hears them using a distance it is given (tested with a fake distance provider)
+- [x] Each closed door or wall between a noise and a listener cuts its range by the tuned amount (tested)
+- [x] Family brain is a rules class: unaware → investigating → searching → back to unaware after the tuned search time (tested through Night with scripted noises)
+- [x] The house distance provider answers "path distance and number of doors and walls between these two points" using the walkable area; it is the only part of hearing that uses Godot
+- [x] Mum walks her route at her tuned speed, goes to a heard noise at investigate speed, and searches around it
+- [x] Mum's humming, footsteps and lines are 3D sounds, muffled through walls; humming stops when she's investigating, and her lines change with her alert level (placeholders are fine)
+- [x] `?debug=1` shows noise rings and Mum's alert level
+- [x] Logs record each noise heard (source, loudness, distance) and each alert level change

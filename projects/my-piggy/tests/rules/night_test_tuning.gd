@@ -32,4 +32,14 @@ static func table() -> Tuning:
 	tuning.lunge_distance = 0.8
 	tuning.outburst_camera_jerk = 0.2
 	tuning.warning_camera_twitch = 0.02
+	tuning.creep_noise_radius = 0.0
+	tuning.walk_noise_radius = 3.0
+	tuning.trot_noise_radius = 9.0
+	tuning.footstep_seconds = 0.5
+	tuning.noise_cut_per_barrier = 0.5
+	tuning.mum_walk_speed = 1.0
+	tuning.mum_investigate_speed = 2.0
+	tuning.mum_search_seconds = 20.0
+	tuning.mum_search_radius = 3.0
+	tuning.mum_line_seconds = 5.0
 	return tuning

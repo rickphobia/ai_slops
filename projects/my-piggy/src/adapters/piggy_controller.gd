@@ -79,7 +79,7 @@ func _physics_process(delta: float) -> void:
 	# Sliding cancels the part of the velocity that runs into a door, so remember the push first.
 	var pushing := velocity
 	move_and_slide()
-	_push_doors(pushing)
+	Door.push_touched(self, pushing)
 	_move_camera(delta)
 
 
@@ -132,6 +132,17 @@ func start_give_in(spot: Vector3, seconds: float) -> void:
 	_apply_camera()
 
 
+## How the Piggy is moving, for footstep noises: still, creeping, walking or trotting.
+func gait() -> PiggyNoise.Gait:
+	if _wanted_direction() == Vector2.ZERO or _speed_factor <= 0.0:
+		return PiggyNoise.Gait.STILL
+	if Input.is_action_pressed("creep"):
+		return PiggyNoise.Gait.CREEP
+	if Input.is_action_pressed("trot"):
+		return PiggyNoise.Gait.TROT
+	return PiggyNoise.Gait.WALK
+
+
 func _wanted_direction() -> Vector2:
 	return Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 
@@ -155,14 +166,3 @@ func _move_camera(delta: float) -> void:
 func _apply_camera() -> void:
 	_camera.rotation.x = clampf(_pitch + _jerk.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_camera.rotation.y = _jerk.x
-
-
-## Each door the Piggy ran into this step is pushed once, at the first point it was touched.
-func _push_doors(pushing: Vector3) -> void:
-	var pushed: Array[Door] = []
-	for index in get_slide_collision_count():
-		var collision := get_slide_collision(index)
-		var door := collision.get_collider() as Door
-		if door != null and not pushed.has(door):
-			pushed.append(door)
-			door.push(pushing, collision.get_position())
