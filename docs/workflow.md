@@ -15,7 +15,7 @@ Experienced engineers all land on the same loop: **spec → plan → build in sm
 | 5 | Split into tickets | `/to-tickets` | `docs/tickets/01-…md`, `02-…md`, each with **Blocked by** and **Touches**, plus which can run in parallel. You approve the breakdown |
 | 6 | Build the skeleton | `scripts/next-tickets.sh <name>` (or a new session: `/implement projects/<name>/docs/tickets/01-…md`) | Project runs, one test passes, CI green. One PR |
 | 7 | Build in parallel | `scripts/next-tickets.sh <name>`: one background session per ticket that can start now | One PR per ticket |
-| 8 | Review and merge | Try the PR's `▶ Try this version` link if it has one, skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
+| 8 | Review and merge | Try the PR: its `▶ Try this version` link, or on the Beelink `scripts/try-pr.sh <PR number>` (builds it and serves it on the home network; for builds too big for a link), skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
 | 9 | Deploy | On the Beelink: `projects/<name>/deploy/update-site.sh`, or ask a local session to run it | Live at `rickphobia.com/ai-projects/<name>/` |
 | 10 | Repeat 7–9 | Run `scripts/next-tickets.sh <name>` again after each merge | — |
 
