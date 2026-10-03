@@ -20,6 +20,7 @@ func _ready() -> void:
 	# CSG builds its shapes in a deferred call queued as each one entered the tree, before
 	# this, so deferring the bake runs it after them.
 	_bake_walkable.call_deferred()
+	_show_give_in_spots()
 
 
 ## Hands the doors their numbers. Call once, before play.
@@ -32,6 +33,19 @@ func setup(tuning: Tuning) -> void:
 ## Where the Piggy wakes, and which way they face.
 func piggy_spawn() -> Marker3D:
 	return $Markers/PiggySpawn
+
+
+## The closest give-in spot within `reach` metres of a point (ignoring height), or null.
+## Its node name (e.g. BedroomBowl) is the spot's name for the Night.
+func give_in_spot_near(point: Vector3, reach: float) -> Marker3D:
+	var nearest: Marker3D = null
+	var nearest_distance := reach
+	for spot: Marker3D in $Markers/GiveInSpots.get_children():
+		var distance := Vector2(spot.global_position.x - point.x, spot.global_position.z - point.z)
+		if distance.length() <= nearest_distance:
+			nearest = spot
+			nearest_distance = distance.length()
+	return nearest
 
 
 ## The middle of the spot in front of the back door that ends the night.
@@ -70,6 +84,20 @@ func _bake_walkable() -> void:
 				continue
 			source.add_faces(faces.get_faces(), shape.global_transform)
 	NavigationServer3D.bake_from_source_geometry_data(_walkable.navigation_mesh, source)
+
+
+## A grey disc on the floor at each give-in spot so the player can find it, until ticket 05
+## brings the real bowls and bin.
+func _show_give_in_spots() -> void:
+	for spot: Marker3D in $Markers/GiveInSpots.get_children():
+		var disc := CylinderMesh.new()
+		disc.top_radius = 0.2
+		disc.bottom_radius = 0.2
+		disc.height = 0.08
+		var placeholder := MeshInstance3D.new()
+		placeholder.mesh = disc
+		placeholder.position.y = disc.height / 2.0
+		spot.add_child(placeholder)
 
 
 ## Space bounds are boxes checked with plain maths instead of physics overlap, so the answer is

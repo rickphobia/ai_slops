@@ -5,14 +5,7 @@ const SHIPPED_TABLE := "res://data/tuning.tres"
 
 
 func _good_table() -> Tuning:
-	var tuning := Tuning.new()
-	tuning.walk_speed = 2.0
-	tuning.mouse_sensitivity = 0.003
-	tuning.opening_seconds = 4.0
-	tuning.door_creak_quietest_radius = 2.0
-	tuning.door_creak_loudest_radius = 8.0
-	tuning.door_creak_loudest_speed = 3.0
-	return tuning
+	return NightTestTuning.table()
 
 
 func test_a_complete_table_has_no_problems() -> void:
@@ -32,12 +25,12 @@ func test_a_missing_value_is_reported_by_field_name() -> void:
 
 func test_a_value_that_is_too_high_is_reported_by_field_name() -> void:
 	var tuning := _good_table()
-	tuning.walk_speed = 500.0
+	tuning.opening_seconds = 500.0
 
 	var problems := tuning.problems()
 
 	assert_eq(problems.size(), 1)
-	assert_string_contains(problems[0], "walk_speed")
+	assert_string_contains(problems[0], "opening_seconds")
 	assert_string_contains(problems[0], "500")
 
 
@@ -74,3 +67,23 @@ func test_a_door_creak_whose_loudest_is_below_its_quietest_is_reported() -> void
 
 	assert_eq(problems.size(), 1)
 	assert_string_contains(problems[0], "door_creak_loudest_radius")
+
+
+func test_speeds_out_of_order_are_reported() -> void:
+	var tuning := _good_table()
+	tuning.creep_speed = tuning.walk_speed + 0.5
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "creep_speed")
+
+
+func test_an_urge_after_outburst_at_or_above_the_warning_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.urge_after_outburst = tuning.urge_warning
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "urge_after_outburst")

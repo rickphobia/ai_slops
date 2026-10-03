@@ -4,19 +4,19 @@
 
 **Blocked by:** 02 (Shareable link), 03 (The house)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** Body, tuning, Piggy controller (creep, trot, suppress slowdown, lunge, camera twitch, give-in interaction), body sounds, Night (body state in checkpoints), debug overlay (new)
 
-- [ ] Body is a rules class with no scene-tree dependency; tested through Night with a test tuning table
-- [ ] Urge rises at rest and faster while trotting; warning signs start at the warning threshold; an outburst happens at the peak if nothing is done (tested)
-- [ ] Each suppressed outburst makes the urge rise faster for the rest of the space (tested)
-- [ ] Holding suppress at the peak delays the outburst, slows movement, and raises the next outburst's loudness per second held; holding past the limit forces the outburst at that loudness (tested)
-- [ ] Giving in at a give-in spot takes a few seconds, drops the urge to 0, costs humanity, makes a quiet noise, and each spot works once per checkpoint (tested)
-- [ ] Humanity starts at 100, never rises, and is never shown outside the debug overlay
-- [ ] Checkpoints save and restore urge, humanity, the urge rise rate and used give-in spots (tested)
-- [ ] Body events carry a position and loudness so the noise ticket can consume them without changing Body
-- [ ] Creep (Ctrl or C), walk and trot (Shift) at tuned speeds; lunge outbursts move the Piggy a short distance; outbursts jerk the camera
-- [ ] Placeholder sounds for breathing, grunts, snorts, squeals and wet chewing; the give-in camera presses into the bowl and can't look away for its duration
-- [ ] `?debug=1` overlay shows humanity and urge; it is off by default
-- [ ] All new numbers live in the tuning table and are checked at startup
+- [x] Body is a rules class with no scene-tree dependency; tested through Night with a test tuning table
+- [x] Urge rises at rest and faster while trotting; warning signs start at the warning threshold; an outburst happens at the peak if nothing is done (tested)
+- [x] Each suppressed outburst makes the urge rise faster for the rest of the space (tested)
+- [x] Holding suppress at the peak delays the outburst, slows movement, and raises the next outburst's loudness per second held; holding past the limit forces the outburst at that loudness (tested)
+- [x] Giving in at a give-in spot takes a few seconds, drops the urge to 0, costs humanity, makes a quiet noise, and each spot works once per checkpoint (tested)
+- [x] Humanity starts at 100, never rises, and is never shown outside the debug overlay
+- [x] Checkpoints save and restore urge, humanity, the urge rise rate and used give-in spots (tested)
+- [x] Body events carry a position and loudness so the noise ticket can consume them without changing Body
+- [x] Creep (Ctrl or C), walk and trot (Shift) at tuned speeds; lunge outbursts move the Piggy a short distance; outbursts jerk the camera
+- [x] Placeholder sounds for breathing, grunts, snorts, squeals and wet chewing; the give-in camera presses into the bowl and can't look away for its duration
+- [x] `?debug=1` overlay shows humanity and urge; it is off by default
+- [x] All new numbers live in the tuning table and are checked at startup

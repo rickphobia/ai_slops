@@ -134,3 +134,15 @@ func _piggy_facing_bedroom_door() -> PiggyController:
 	add_child_autofree(piggy)
 	piggy.place(PiggyPose.new(Vector3(0.2, 0.05, -3.2), 0.0, 0.0))
 	return piggy
+
+
+func test_a_give_in_spot_is_found_within_reach_and_not_beyond() -> void:
+	var house := _house()
+	var bowl := _marker(house, "GiveInSpots/BedroomBowl")
+
+	var near := house.give_in_spot_near(bowl + Vector3(0.5, 0.3, 0.0), 1.0)
+	var far := house.give_in_spot_near(bowl + Vector3(1.5, 0.0, 0.0), 1.0)
+
+	assert_not_null(near)
+	assert_eq(near.name, &"BedroomBowl")
+	assert_null(far)

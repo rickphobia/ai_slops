@@ -79,3 +79,25 @@ func test_spaces_take_checkpoints_the_debug_key_restores_and_the_back_door_ends_
 	assert_true(_logged("Reached the back door: night over"))
 	assert_not_null(_find_one(main, "EndCard"))
 	assert_eq(piggy.process_mode, Node.PROCESS_MODE_DISABLED)
+
+
+func test_pressing_give_in_at_the_bedroom_bowl_starts_giving_in() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(2)
+	var title: TitleScreen = _find_one(main, "TitleScreen")
+	title.start_clicked.emit()
+	await wait_until(func() -> bool: return _logged("control given"), 30.0)
+	var piggy: PiggyController = _find_one(main, "PiggyController")
+	var house: House = _find_one(main, "House")
+	var bowl: Marker3D = house.get_node("Markers/GiveInSpots/BedroomBowl")
+
+	piggy.place(PiggyPose.new(bowl.global_position + Vector3(0.5, 0.05, 0.0), 0.0, 0.0))
+	await wait_physics_frames(2)
+	var give_in := InputEventAction.new()
+	give_in.action = "give_in"
+	give_in.pressed = true
+	Input.parse_input_event(give_in)
+	await wait_physics_frames(2)
+
+	assert_true(_logged("Giving in at BedroomBowl"))
+	assert_lt(piggy.pose().pitch, -1.0, "head pressed into the bowl")

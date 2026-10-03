@@ -53,6 +53,67 @@ static func creak() -> AudioStreamWAV:
 	return _to_stream(samples, false)
 
 
+## A low grunt: a rough, falling buzz in the throat.
+static func grunt() -> AudioStreamWAV:
+	return _buzz(0.5, 110.0, 70.0, 0.15, 0.7)
+
+
+## A snort: a short blast of air through the nose.
+static func snort() -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 3
+	var count := int(0.35 * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var smoothed := 0.0
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		smoothed += 0.25 * (noise.randf_range(-1.0, 1.0) - smoothed)
+		var flutter := 0.6 + 0.4 * sin(TAU * 38.0 * seconds)
+		samples[index] = smoothed * 2.0 * flutter * exp(-seconds * 7.0)
+	return _to_stream(samples, false)
+
+
+## A squeal: a high, rising, harsh shriek.
+static func squeal() -> AudioStreamWAV:
+	return _buzz(0.9, 700.0, 1300.0, 0.5, 0.6)
+
+
+## Wet chewing for the length of a give-in: soft smacks a few times a second.
+static func chewing(seconds: float) -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 5
+	var count := int(seconds * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var smoothed := 0.0
+	for index in count:
+		var time := float(index) / MIX_RATE
+		smoothed += 0.4 * (noise.randf_range(-1.0, 1.0) - smoothed)
+		var since_smack := fmod(time, 0.32)
+		samples[index] = smoothed * exp(-since_smack * 25.0) * 0.9
+	return _to_stream(samples, false)
+
+
+## A saw wave gliding from one pitch to another, roughened with noise, faded in and out.
+static func _buzz(
+	seconds: float, from_hz: float, to_hz: float, roughness: float, loudness: float
+) -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 9
+	var count := int(seconds * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var phase := 0.0
+	for index in count:
+		var progress := float(index) / count
+		phase += lerpf(from_hz, to_hz, progress) / MIX_RATE
+		var saw := 2.0 * fmod(phase, 1.0) - 1.0
+		var rough := saw + noise.randf_range(-roughness, roughness)
+		samples[index] = rough * loudness * sin(PI * progress)
+	return _to_stream(samples, false)
+
+
 static func _breath_envelope(seconds: float) -> float:
 	if seconds < INHALE_SECONDS:
 		return sin(PI * seconds / INHALE_SECONDS) * 0.6
