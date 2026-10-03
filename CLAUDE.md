@@ -22,8 +22,8 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 ## Hosting and how we work here
 
 - **Hosting:** the owner runs their own nginx in Docker on a home server (Beelink, Ubuntu), site root `~/homelab/html`, public at `rickphobia.com`. Web projects go under `/ai-projects/<name>/`. GitHub can't reach the server, so it pulls: `projects/<name>/deploy/update-site.sh` builds `main` and swaps it in. A bug fix reaches the site by merging the PR, then running that script on the server (no re-clone; it keeps its own checkout in `~/homelab/dev`). See `projects/pawn-swarm/README.md` ("Deploy") as the model for other projects.
-- **Sessions and PRs:** one ticket per session, branch and PR, run on Sonnet. The session watches its own PR until it is green; the owner reviews and merges. Never merge for them.
-- **Keep dev cost low:** follow "Keeping token use down" in `docs/workflow.md`. In short: Sonnet by default (Opus only for spec and tickets), short sessions, no PR watching for small changes, batch small fixes, `/review-diff` only for big changes, no agents or workflows unless asked, read only the files the task needs.
+- **Sessions and PRs:** one ticket per session, branch and PR, run on Opus 5.5 with the effort the ticket needs (see `docs/workflow.md`). The session watches its own PR until it is green; the owner reviews and merges. Never merge for them.
+- **Keep dev cost low:** follow "Keeping token use down" in `docs/workflow.md`. In short: Opus 5.5 at low or medium effort (effort is the cost dial, not the model), short sessions, no PR watching for small changes, batch small fixes, `/review-diff` only for big changes, no agents or workflows unless asked, read only the files the task needs.
 
 ## Before you start
 
