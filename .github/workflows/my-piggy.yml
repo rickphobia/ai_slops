@@ -1,0 +1,53 @@
+name: my-piggy
+
+on:
+  push:
+    paths:
+      - "projects/my-piggy/**"
+      - ".github/workflows/my-piggy.yml"
+  pull_request:
+    paths:
+      - "projects/my-piggy/**"
+      - ".github/workflows/my-piggy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: my-piggy-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: projects/my-piggy
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: projects/my-piggy/requirements.txt
+      - run: pip install -r requirements.txt
+      # Godot and its export templates come from the official release for the version pinned in
+      # scripts/godot-pin.env and are checked against the pinned checksums. The cache key holds
+      # the pin file's hash, so changing the version downloads the new one.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/bin/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ hashFiles('projects/my-piggy/scripts/godot-pin.env') }}
+      - run: scripts/setup-godot.sh
+      - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # Format check, lint, type check (headless import, warnings are errors) and tests.
+      # The steps live in scripts/check.sh so you can run the same thing locally.
+      - run: GDTOOLKIT_BIN="$(dirname "$(command -v gdlint)")" scripts/check.sh
+      # Prove the web export still builds.
+      - run: mkdir -p build/web && godot --headless --export-release Web build/web/index.html
+      - run: test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
+      - run: shellcheck -x -P SCRIPTDIR scripts/*.sh
