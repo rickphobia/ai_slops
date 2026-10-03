@@ -48,6 +48,8 @@ const LIMITS: Dictionary = {
 	"pig_vision_full_at_humanity": [0.0, 99.0],
 	"snouty_breathing_below_humanity": [0.0, 100.0],
 	"pig_breathing_below_humanity": [0.0, 100.0],
+	"rot_soured_below_humanity": [0.0, 100.0],
+	"rot_grotesque_below_humanity": [0.0, 100.0],
 	"mum_chase_speed": [0.1, 10.0],
 	"mum_torch_cone_degrees": [1.0, 170.0],
 	"mum_torch_range": [0.5, 50.0],
@@ -142,6 +144,10 @@ const LIMITS: Dictionary = {
 @export var snouty_breathing_below_humanity: float = NAN
 ## Below this humanity they sound like a pig's. Not above snouty_breathing_below_humanity.
 @export var pig_breathing_below_humanity: float = NAN
+## Below this humanity the house's spaces rot from cosy to soured.
+@export var rot_soured_below_humanity: float = NAN
+## Below this humanity they rot on to grotesque. Not above rot_soured_below_humanity.
+@export var rot_grotesque_below_humanity: float = NAN
 ## How fast Mum chases the Piggy once she has seen them, in metres per second.
 @export var mum_chase_speed: float = NAN
 ## How wide Mum's torch beam is, edge to edge, in degrees. She only sees the Piggy inside it.
@@ -212,6 +218,13 @@ func problems() -> Array[String]:
 					"pig_breathing_below_humanity (%s) must not be above snouty_breathing_below_humanity (%s)"
 					% [pig_breathing_below_humanity, snouty_breathing_below_humanity]
 				)
+			)
+		)
+	if rot_grotesque_below_humanity > rot_soured_below_humanity:
+		found.append(
+			(
+				"rot_grotesque_below_humanity (%s) must not be above rot_soured_below_humanity (%s)"
+				% [rot_grotesque_below_humanity, rot_soured_below_humanity]
 			)
 		)
 	return found

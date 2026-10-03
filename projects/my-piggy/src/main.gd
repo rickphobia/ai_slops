@@ -1,8 +1,8 @@
 extends Node
 ## Entry scene: loads and checks the tuning and the player's settings, starts the night,
 ## and wires the rules to the adapters: title screen, opening, house, Piggy, pause menu,
-## end card, the PS1 look, the ambient sound and Mum (her body, and the house distances her
-## hearing uses). Tells the Night which space the Piggy is
+## end card, the PS1 look, the rot sets, the ambient sound and Mum (her body, and the house
+## distances her hearing uses). Tells the Night which space the Piggy is
 ## in, what the player is doing and when they reach the back door, and passes what the
 ## body did on to the Piggy and its sounds. When Mum catches the Piggy it plays the capture
 ## scene, then restores the checkpoint.
@@ -30,6 +30,7 @@ var _occlusion: SoundOcclusion
 var _ambient: AmbientBed
 var _screen: Ps1Screen
 var _lying_objects: LyingObjects
+var _rot_sets: RotSets
 var _capture_layer: CanvasLayer
 ## ?debug=1 or -- --debug: the overlay, noise rings and the restore-checkpoint key.
 var _debug: bool = false
@@ -108,6 +109,13 @@ func _ready() -> void:
 	_lying_objects.ignored = [_piggy.get_rid()]
 	for sound in _lying_objects.sounds():
 		_occlusion.register(sound)
+	_rot_sets = RotSets.new()
+	_rot_sets.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_rot_sets.rot_changed.connect(_on_rot_changed)
+	add_child(_rot_sets)
+	_rot_sets.setup(_night, _house)
+	_rot_sets.eyes = _piggy.ears()
+	_rot_sets.ignored = [_piggy.get_rid()]
 	_body_sounds = BodySounds.new()
 	_body_sounds.setup(tuning.give_in_seconds)
 	add_child(_body_sounds)
@@ -345,6 +353,10 @@ func _on_door_creaked(noise_radius: float, at: Vector3, pushed_by: Node3D) -> vo
 	GameLog.debug("Door creaked at %s: noise radius %.1f m" % [at, noise_radius])
 	if pushed_by == _piggy:
 		_night.door_creaked(noise_radius, at)
+
+
+func _on_rot_changed(space: StringName, stage: Hallucinations.Rot) -> void:
+	_ambient.set_rot(space, stage, _house.space_box(space).get_center())
 
 
 func _on_noise_heard(heard: HeardNoise) -> void:

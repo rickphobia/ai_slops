@@ -4,16 +4,16 @@
 
 **Blocked by:** 08 (Hallucinations)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** Hallucinations (rot stage), look (rot sets), house lighting (lamp colours), house props, ambient sound, debug overlay (rot stage)
 
-- [ ] Hallucinations decides each space's rot stage from humanity and whether the space is in view (tested, including the threshold edges and "never changes while in view")
-- [ ] Being caught puts the rot back to the checkpoint's stage (tested through Night)
-- [ ] Each space has a cosy, soured and grotesque set: materials, lamp colours and props (placeholders are fine)
-- [ ] Light levels and shadow layout are the same in all three sets (lamp colours change, lamp energy and placement don't)
-- [ ] The ambient bed has a sound set per stage (homely, souring, wet), still through the muffled channel
-- [ ] The rot thresholds live in the tuning table (cosy at 70 and above, soured 69–40, grotesque below 40)
-- [ ] The debug overlay shows each space's rot stage
-- [ ] Works in the web export
-- [ ] PR says how to try it (e.g. give in three and six times, leave a space and come back)
+- [x] Hallucinations decides each space's rot stage from humanity and whether the space is in view (tested, including the threshold edges and "never changes while in view")
+- [x] Being caught puts the rot back to the checkpoint's stage (tested through Night)
+- [x] Each space has a cosy, soured and grotesque set: materials, lamp colours and props (placeholders are fine)
+- [x] Light levels and shadow layout are the same in all three sets (lamp colours change, lamp energy and placement don't)
+- [x] The ambient bed has a sound set per stage (homely, souring, wet), still through the muffled channel
+- [x] The rot thresholds live in the tuning table (cosy at 70 and above, soured 69–40, grotesque below 40)
+- [x] The debug overlay shows each space's rot stage
+- [x] Works in the web export
+- [x] PR says how to try it (e.g. give in three and six times, leave a space and come back)

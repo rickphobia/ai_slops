@@ -27,7 +27,8 @@ var is_caught: bool = false
 var body: Body
 ## Mum's alert level and where she is headed. Her actor moves her and reports back to it.
 var mum: FamilyBrain
-## What the lying objects show, pig vision and the breathing set, all by the body's humanity.
+## What the lying objects show, each space's rot, pig vision and the breathing set, all by
+## the body's humanity.
 var hallucinations: Hallucinations
 
 var _checkpoint: Checkpoint
@@ -113,6 +114,7 @@ func restore_checkpoint() -> PiggyPose:
 	space = _checkpoint.space
 	is_caught = false
 	body.restore(_checkpoint.body)
+	hallucinations.put_rot_back(body.humanity)
 	mum.back_on_route(
 		RouteSpot.out_of_sight(_mum_route, _checkpoint.piggy_pose.position, _tuning, _distances)
 	)
@@ -132,6 +134,11 @@ func ending() -> Hallucinations.Ending:
 ## may change what they show.
 func look(delta: float, in_view: Array[StringName]) -> void:
 	hallucinations.advance(delta, body.humanity, in_view)
+
+
+## The Piggy can see into the spaces named in `in_view`; the rest may rot further or less.
+func look_at_spaces(in_view: Array[StringName]) -> void:
+	hallucinations.look_at_spaces(body.humanity, in_view)
 
 
 ## A footstep every footstep_seconds while moving; the first comes as soon as they move.

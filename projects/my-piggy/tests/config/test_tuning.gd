@@ -87,3 +87,13 @@ func test_an_urge_after_outburst_at_or_above_the_warning_is_reported() -> void:
 
 	assert_eq(problems.size(), 1)
 	assert_string_contains(problems[0], "urge_after_outburst")
+
+
+func test_the_grotesque_threshold_must_not_be_above_the_soured_one() -> void:
+	var tuning := _good_table()
+	tuning.rot_grotesque_below_humanity = 80.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "rot_grotesque_below_humanity")

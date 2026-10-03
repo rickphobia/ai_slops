@@ -52,7 +52,7 @@ static func breathing(seed: int = 1, piggishness: float = 0.0) -> AudioStreamWAV
 		phase += 85.0 / MIX_RATE
 		var grunt := (2.0 * fmod(phase, 1.0) - 1.0) * 0.25 * piggishness
 		samples[index] = (smoothed * 2.5 * flutter + grunt) * _breath_envelope(seconds)
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 ## One heartbeat: a low thump ("lub") and a softer one ("dub") just after. `piggishness`
@@ -68,7 +68,7 @@ static func heartbeat(piggishness: float = 0.0) -> AudioStreamWAV:
 		var seconds := float(index) / MIX_RATE
 		var beat := _thump(seconds, 0.0, 0.9, pitch) + _thump(seconds, 0.22, 0.6, pitch)
 		samples[index] = beat * (1.0 + piggishness * noise.randf_range(-0.5, 0.5))
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 ## One door creak, played once: a rough, wavering low saw, like a dry hinge.
@@ -83,7 +83,7 @@ static func creak() -> AudioStreamWAV:
 		phase += (140.0 + 60.0 * sin(TAU * 2.3 * seconds)) / MIX_RATE
 		smoothed += 0.3 * ((2.0 * fmod(phase, 1.0) - 1.0) - smoothed)
 		samples[index] = smoothed * 0.8 * sin(PI * seconds / CREAK_SECONDS)
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## A low grunt: a rough, falling buzz in the throat.
@@ -104,7 +104,7 @@ static func snort() -> AudioStreamWAV:
 		smoothed += 0.25 * (noise.randf_range(-1.0, 1.0) - smoothed)
 		var flutter := 0.6 + 0.4 * sin(TAU * 38.0 * seconds)
 		samples[index] = smoothed * 2.0 * flutter * exp(-seconds * 7.0)
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## A squeal: a high, rising, harsh shriek.
@@ -125,7 +125,7 @@ static func chewing(seconds: float) -> AudioStreamWAV:
 		smoothed += 0.4 * (noise.randf_range(-1.0, 1.0) - smoothed)
 		var since_smack := fmod(time, 0.32)
 		samples[index] = smoothed * exp(-since_smack * 25.0) * 0.9
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## Crunching snacks for the length of a give-in: short, dry, bright cracks.
@@ -139,7 +139,7 @@ static func crunching(seconds: float) -> AudioStreamWAV:
 		var time := float(index) / MIX_RATE
 		var since_bite := fmod(time, 0.24)
 		samples[index] = noise.randf_range(-1.0, 1.0) * exp(-since_bite * 60.0) * 0.7
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## Flies over rotten slop, looped: two thin, wandering buzzes.
@@ -157,7 +157,7 @@ static func flies() -> AudioStreamWAV:
 			phases[fly] += pitch / MIX_RATE
 			sample += sin(TAU * phases[fly]) * 0.12
 		samples[index] = sample
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 ## A saw wave gliding from one pitch to another, roughened with noise, faded in and out.
@@ -176,7 +176,7 @@ static func _buzz(
 		var saw := 2.0 * fmod(phase, 1.0) - 1.0
 		var rough := saw + noise.randf_range(-roughness, roughness)
 		samples[index] = rough * loudness * sin(PI * progress)
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## Mum's scream when she catches the Piggy: a long, rough shriek that climbs.
@@ -200,7 +200,7 @@ static func humming() -> AudioStreamWAV:
 			samples.append(voice * 0.5 * maxf(envelope, 0.0))
 	for index in int(HUM_PAUSE_SECONDS * MIX_RATE):
 		samples.append(0.0)
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 ## One of Mum's lines, as a murmur with one rise and fall per syllable until real recordings
@@ -220,7 +220,7 @@ static func spoken_line(syllables: int, pitch_hz: float) -> AudioStreamWAV:
 		var saw := 2.0 * fmod(phase, 1.0) - 1.0
 		var vowel := 0.5 * sin(TAU * phase) + 0.2 * saw
 		samples[index] = vowel * 0.7 * sin(PI * in_syllable)
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## One footstep on a wooden floor: a short, low knock.
@@ -236,7 +236,7 @@ static func footstep() -> AudioStreamWAV:
 		smoothed += 0.15 * (noise.randf_range(-1.0, 1.0) - smoothed)
 		var knock := sin(TAU * 90.0 * seconds) * 0.6 + smoothed * 1.5
 		samples[index] = knock * exp(-seconds * 30.0)
-	return _to_stream(samples, false)
+	return to_stream(samples, false)
 
 
 ## Wind outside, looped: low rumbling noise that rises and falls in one slow gust.
@@ -253,7 +253,7 @@ static func wind(seed: int = 2) -> AudioStreamWAV:
 		# Starts and ends at the same level, so the loop point doesn't jump.
 		var gust := 0.4 + 0.6 * pow(sin(PI * seconds / WIND_SECONDS), 2.0)
 		samples[index] = smoothed * 6.0 * gust
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 ## A fridge's hum, looped: the mains note and two quieter overtones.
@@ -264,7 +264,7 @@ static func fridge_hum() -> AudioStreamWAV:
 	for index in count:
 		var cycle := TAU * HUM_PITCH_HZ * float(index) / MIX_RATE
 		samples[index] = 0.5 * sin(cycle) + 0.25 * sin(2.0 * cycle) + 0.12 * sin(3.0 * cycle)
-	return _to_stream(samples)
+	return to_stream(samples)
 
 
 static func _breath_envelope(seconds: float) -> float:
@@ -283,7 +283,7 @@ static func _thump(
 	return sin(TAU * pitch_hz * since) * exp(-since * 18.0) * loudness
 
 
-static func _to_stream(samples: PackedFloat32Array, loops: bool = true) -> AudioStreamWAV:
+static func to_stream(samples: PackedFloat32Array, loops: bool = true) -> AudioStreamWAV:
 	var bytes := PackedByteArray()
 	bytes.resize(samples.size() * 2)
 	for index in samples.size():

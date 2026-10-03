@@ -31,3 +31,15 @@ func test_it_shows_humanity_urge_and_mums_alert_level() -> void:
 	assert_string_contains(overlay.text, "humanity 100")
 	assert_string_contains(overlay.text, "urge 20")
 	assert_string_contains(overlay.text, "mum unaware")
+
+
+func test_it_shows_each_spaces_rot_stage() -> void:
+	var night := Night.new(PiggyPose.new(Vector3.ZERO, 0.0, 0.0), NightTestTuning.table())
+	night.hallucinations.add_space(&"bedroom", 100.0)
+	night.hallucinations.add_space(&"kitchen", 50.0)
+	var overlay: DebugOverlay = add_child_autofree(DebugOverlay.new())
+	overlay.setup(night)
+
+	await wait_process_frames(1)
+
+	assert_string_contains(overlay.text, "rot bedroom cosy, kitchen soured")

@@ -81,6 +81,32 @@ func is_at_back_door(point: Vector3) -> bool:
 	return _box_contains(_back_door_exit, point)
 
 
+## The spaces of the house, named as space_at() names them.
+func spaces() -> Array[StringName]:
+	var names: Array[StringName] = []
+	for bounds: Area3D in _space_bounds.get_children():
+		names.append(StringName(bounds.name))
+	return names
+
+
+## A space's floor and walls (its shell under Walkable, e.g. Walkable/Bedroom). The walls
+## at the ends of the hallway belong to the bedroom and kitchen.
+func space_shell(space: StringName) -> CSGCombiner3D:
+	return _walkable.get_node(String(space).capitalize())
+
+
+## The lamp that lights a space, e.g. BedroomLamp.
+func space_lamp(space: StringName) -> OmniLight3D:
+	return get_node(String(space).capitalize() + "Lamp")
+
+
+## The inside of a space, wall to wall and floor to ceiling, in world coordinates.
+func space_box(space: StringName) -> AABB:
+	var shape: CollisionShape3D = _space_bounds.get_node(String(space)).get_child(0)
+	var box: BoxShape3D = shape.shape
+	return AABB(shape.global_position - box.size / 2.0, box.size)
+
+
 ## The fridge's hum, in the kitchen. The ambient bed gives it its sound.
 func fridge_hum() -> AudioStreamPlayer3D:
 	return $FridgeHum
