@@ -42,4 +42,10 @@ static func table() -> Tuning:
 	tuning.mum_search_seconds = 20.0
 	tuning.mum_search_radius = 3.0
 	tuning.mum_line_seconds = 5.0
+	tuning.snacks_below_humanity = 70.0
+	tuning.mirror_pig_only_below_humanity = 55.0
+	tuning.mirror_old_body_seconds = 1.0
+	tuning.pig_vision_full_at_humanity = 20.0
+	tuning.snouty_breathing_below_humanity = 85.0
+	tuning.pig_breathing_below_humanity = 40.0
 	return tuning

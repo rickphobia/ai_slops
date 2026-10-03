@@ -33,30 +33,40 @@ const HUM_PAUSE_SECONDS := 2.0
 const SYLLABLE_SECONDS := 0.28
 
 
-## Slow breathing: soft noise swelling in, then a longer breath out.
-static func breathing(seed: int = 1) -> AudioStreamWAV:
+## Slow breathing: soft noise swelling in, then a longer breath out. `piggishness` (0–1)
+## adds a wet, fluttering snout and a low grunt under the breath, for low humanity.
+static func breathing(seed: int = 1, piggishness: float = 0.0) -> AudioStreamWAV:
 	var noise := RandomNumberGenerator.new()
 	noise.seed = seed
 	var count := int(BREATH_SECONDS * MIX_RATE)
 	var samples := PackedFloat32Array()
 	samples.resize(count)
 	var smoothed := 0.0
+	var phase := 0.0
 	for index in count:
 		var seconds := float(index) / MIX_RATE
 		# A one-pole low-pass takes the hiss off white noise, which reads as air.
 		smoothed += 0.08 * (noise.randf_range(-1.0, 1.0) - smoothed)
-		samples[index] = smoothed * 2.5 * _breath_envelope(seconds)
+		var flutter := 1.0 - piggishness * 0.6 * (0.5 + 0.5 * sin(TAU * 30.0 * seconds))
+		phase += 85.0 / MIX_RATE
+		var grunt := (2.0 * fmod(phase, 1.0) - 1.0) * 0.25 * piggishness
+		samples[index] = (smoothed * 2.5 * flutter + grunt) * _breath_envelope(seconds)
 	return _to_stream(samples)
 
 
-## One heartbeat: a low thump ("lub") and a softer one ("dub") just after.
-static func heartbeat() -> AudioStreamWAV:
+## One heartbeat: a low thump ("lub") and a softer one ("dub") just after. `piggishness`
+## (0–1) makes it lower and wetter.
+static func heartbeat(piggishness: float = 0.0) -> AudioStreamWAV:
 	var count := int(HEARTBEAT_SECONDS * MIX_RATE)
 	var samples := PackedFloat32Array()
 	samples.resize(count)
+	var pitch := HEART_PITCH_HZ * (1.0 - 0.3 * piggishness)
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 4
 	for index in count:
 		var seconds := float(index) / MIX_RATE
-		samples[index] = _thump(seconds, 0.0, 0.9) + _thump(seconds, 0.22, 0.6)
+		var beat := _thump(seconds, 0.0, 0.9, pitch) + _thump(seconds, 0.22, 0.6, pitch)
+		samples[index] = beat * (1.0 + piggishness * noise.randf_range(-0.5, 0.5))
 	return _to_stream(samples)
 
 
@@ -115,6 +125,38 @@ static func chewing(seconds: float) -> AudioStreamWAV:
 		var since_smack := fmod(time, 0.32)
 		samples[index] = smoothed * exp(-since_smack * 25.0) * 0.9
 	return _to_stream(samples, false)
+
+
+## Crunching snacks for the length of a give-in: short, dry, bright cracks.
+static func crunching(seconds: float) -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 6
+	var count := int(seconds * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	for index in count:
+		var time := float(index) / MIX_RATE
+		var since_bite := fmod(time, 0.24)
+		samples[index] = noise.randf_range(-1.0, 1.0) * exp(-since_bite * 60.0) * 0.7
+	return _to_stream(samples, false)
+
+
+## Flies over rotten slop, looped: two thin, wandering buzzes.
+static func flies() -> AudioStreamWAV:
+	var count := int(2.0 * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var phases := PackedFloat64Array([0.0, 0.0])
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		var sample := 0.0
+		for fly in 2:
+			# Whole cycles of the wander per loop, so it loops without a jump in pitch.
+			var pitch := 210.0 + 40.0 * fly + 25.0 * sin(TAU * (1.5 + fly) * seconds)
+			phases[fly] += pitch / MIX_RATE
+			sample += sin(TAU * phases[fly]) * 0.12
+		samples[index] = sample
+	return _to_stream(samples)
 
 
 ## A saw wave gliding from one pitch to another, roughened with noise, faded in and out.
@@ -226,11 +268,13 @@ static func _breath_envelope(seconds: float) -> float:
 	return sin(PI * (seconds - INHALE_SECONDS) / out_seconds)
 
 
-static func _thump(seconds: float, start: float, loudness: float) -> float:
+static func _thump(
+	seconds: float, start: float, loudness: float, pitch_hz: float = HEART_PITCH_HZ
+) -> float:
 	var since := seconds - start
 	if since < 0.0:
 		return 0.0
-	return sin(TAU * HEART_PITCH_HZ * since) * exp(-since * 18.0) * loudness
+	return sin(TAU * pitch_hz * since) * exp(-since * 18.0) * loudness
 
 
 static func _to_stream(samples: PackedFloat32Array, loops: bool = true) -> AudioStreamWAV:

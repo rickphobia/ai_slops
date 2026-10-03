@@ -42,6 +42,12 @@ const LIMITS: Dictionary = {
 	"mum_search_seconds": [1.0, 120.0],
 	"mum_search_radius": [0.5, 10.0],
 	"mum_line_seconds": [1.0, 60.0],
+	"snacks_below_humanity": [0.0, 100.0],
+	"mirror_pig_only_below_humanity": [0.0, 100.0],
+	"mirror_old_body_seconds": [0.1, 10.0],
+	"pig_vision_full_at_humanity": [0.0, 99.0],
+	"snouty_breathing_below_humanity": [0.0, 100.0],
+	"pig_breathing_below_humanity": [0.0, 100.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
@@ -118,6 +124,19 @@ const LIMITS: Dictionary = {
 @export var mum_search_radius: float = NAN
 ## Seconds between Mum's lines while she investigates or searches.
 @export var mum_line_seconds: float = NAN
+## Below this humanity the slop bowls show the player's favourite snacks instead of slop.
+@export var snacks_below_humanity: float = NAN
+## Below this humanity the mirror (and the back-door glass) shows only the pig body, and
+## the night ends on the pig end card.
+@export var mirror_pig_only_below_humanity: float = NAN
+## How long the mirror shows the old human body before it flickers to the pig, in seconds.
+@export var mirror_old_body_seconds: float = NAN
+## Humanity at which pig vision is at full strength. It is off at 100 and grows evenly.
+@export var pig_vision_full_at_humanity: float = NAN
+## Below this humanity the Piggy's breathing and heartbeat start to sound snouty.
+@export var snouty_breathing_below_humanity: float = NAN
+## Below this humanity they sound like a pig's. Not above snouty_breathing_below_humanity.
+@export var pig_breathing_below_humanity: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded
@@ -167,6 +186,16 @@ func problems() -> Array[String]:
 			(
 				"urge_after_outburst is %s, but it must be below urge_warning (%s)"
 				% [urge_after_outburst, urge_warning]
+			)
+		)
+	if pig_breathing_below_humanity > snouty_breathing_below_humanity:
+		(
+			found
+			. append(
+				(
+					"pig_breathing_below_humanity (%s) must not be above snouty_breathing_below_humanity (%s)"
+					% [pig_breathing_below_humanity, snouty_breathing_below_humanity]
+				)
 			)
 		)
 	return found

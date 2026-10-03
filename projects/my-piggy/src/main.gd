@@ -27,6 +27,8 @@ var _pause_menu: PauseMenu
 var _dark: ColorRect
 var _occlusion: SoundOcclusion
 var _ambient: AmbientBed
+var _screen: Ps1Screen
+var _lying_objects: LyingObjects
 var _opening_sounds: Array[AudioStreamPlayer] = []
 ## True once the mouse has really been captured since play (re)started. The browser takes
 ## the mouse back on Escape before the game sees the key, so losing a capture we had
@@ -61,7 +63,8 @@ func _ready() -> void:
 	_apply_settings()
 
 	# The look and the sound: the PS1 screen pass, the muffled channel, the ambient bed.
-	add_child(Ps1Screen.new())
+	_screen = Ps1Screen.new()
+	add_child(_screen)
 	_occlusion = SoundOcclusion.new()
 	_occlusion.listener = _piggy.ears()
 	add_child(_occlusion)
@@ -86,6 +89,16 @@ func _ready() -> void:
 	_mum.global_position = mum_start
 	distances.ignored = [_piggy.get_rid(), _mum.get_rid()]
 	for sound in _mum.sounds():
+		_occlusion.register(sound)
+	_lying_objects = LyingObjects.new()
+	_lying_objects.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(_lying_objects)
+	_lying_objects.setup(
+		_night, _house.slop_bowls(), _house.hallway_mirror(), _house.back_door_glass()
+	)
+	_lying_objects.eyes = _piggy.ears()
+	_lying_objects.ignored = [_piggy.get_rid()]
+	for sound in _lying_objects.sounds():
 		_occlusion.register(sound)
 	_body_sounds = BodySounds.new()
 	_body_sounds.setup(tuning.give_in_seconds)
@@ -149,6 +162,7 @@ func _physics_process(delta: float) -> void:
 	_piggy.set_speed_factor(_night.body.speed_factor())
 	_piggy.set_warning(_night.body.is_warning())
 	_body_sounds.set_warning(_night.body.is_warning())
+	_show_humanity()
 	_update_log_context()
 	_follow_piggy()
 
@@ -238,8 +252,10 @@ func _end_night() -> void:
 	_piggy.process_mode = Node.PROCESS_MODE_DISABLED
 	_mum.process_mode = Node.PROCESS_MODE_DISABLED
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_add_layer(EndCard.new(), MENU_LAYER)
-	GameLog.info("Reached the back door: night over")
+	var ending := _night.ending()
+	_add_layer(EndCard.new(ending), MENU_LAYER)
+	var which: String = Hallucinations.Ending.find_key(ending)
+	GameLog.info("Reached the back door: night over, %s ending" % which.to_lower())
 
 
 ## Gives in at the give-in spot the Piggy is next to, if there is one they haven't used.
@@ -252,6 +268,11 @@ func _try_give_in() -> void:
 	if started == null:
 		GameLog.debug("Give-in spot %s already used since the checkpoint" % spot.name)
 		return
+	var eats_snacks := (
+		_house.slop_bowls().has(spot)
+		and _lying_objects.showing(spot.name) == Hallucinations.Shows.SNACKS
+	)
+	_body_sounds.set_eats_snacks(eats_snacks)
 	_piggy.start_give_in(spot.global_position, _tuning.give_in_seconds)
 	_on_body_event(started)
 	GameLog.info("Giving in at %s" % spot.name)
@@ -273,6 +294,14 @@ func _on_body_event(event: BodyEvent) -> void:
 			GameLog.info("Outburst: %s, noise radius %.1f m" % [which.to_lower(), event.loudness])
 		BodyEvent.Kind.GAVE_IN:
 			GameLog.info("Gave in: urge cleared")
+
+
+## What humanity does to the senses: pig vision and the breathing set. The lying objects
+## follow it on their own (LyingObjects).
+func _show_humanity() -> void:
+	var humanity := _night.body.humanity
+	_screen.set_pig_vision(_night.hallucinations.pig_vision(humanity))
+	_body_sounds.set_breathing(_night.hallucinations.breathing(humanity))
 
 
 ## Only the Piggy's door pushes are noises Mum hunts; she doesn't come to look at her own.

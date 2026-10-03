@@ -254,3 +254,30 @@ func test_the_body_stops_once_the_night_is_over() -> void:
 
 	assert_eq(night.body.urge, 0.0)
 	assert_null(night.give_in(BOWL, HERE))
+
+
+func test_the_night_ends_on_the_human_card_until_giving_in_takes_too_much_humanity() -> void:
+	var night := _night()
+	assert_eq(night.ending(), Hallucinations.Ending.HUMAN)
+
+	for spot: StringName in [&"a", &"b", &"c", &"d"]:
+		night.give_in(spot, HERE)
+		_run(night, 3.5)
+
+	assert_eq(night.body.humanity, 52.0)
+	assert_eq(night.ending(), Hallucinations.Ending.PIG)
+
+
+func test_slop_seen_while_giving_in_stays_slop_until_the_piggy_looks_away() -> void:
+	var night := _night()
+	var bowl: Array[StringName] = [BOWL]
+	night.hallucinations.add(BOWL, Hallucinations.Kind.SLOP_BOWL, night.body.humanity)
+	for spot: StringName in [&"a", &"b", &"c"]:
+		night.give_in(spot, HERE)
+		_run(night, 3.5)
+
+	night.look(0.1, bowl)
+	assert_eq(night.hallucinations.shows(BOWL), Hallucinations.Shows.SLOP)
+
+	night.look(0.1, [] as Array[StringName])
+	assert_eq(night.hallucinations.shows(BOWL), Hallucinations.Shows.SNACKS)

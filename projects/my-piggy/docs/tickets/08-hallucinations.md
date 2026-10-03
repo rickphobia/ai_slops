@@ -4,16 +4,16 @@
 
 **Blocked by:** 04 (The body), 05 (Look and atmosphere)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** Hallucinations, look (pig vision post-effect), slop bowl and mirror objects, breathing sound sets, end card
 
-- [ ] Hallucinations is a rules class: given humanity and whether an object is in view, it decides what each lying object shows, how strong pig vision is, and which breathing set plays (tested, including the threshold edges)
-- [ ] A lying object never changes while in view (tested)
-- [ ] Slop bowls show slop or snacks by humanity; the chewing sound changes with them
-- [ ] The hallway mirror shows the old body then flickers to the pig at high humanity, and only the pig below the threshold (placeholder models are fine)
-- [ ] Pig vision post-effect strength follows humanity and works in the web export
-- [ ] Breathing and heartbeat sound sets switch with humanity
-- [ ] End card text and the back-door glass reflection have at least two humanity variants
-- [ ] All thresholds live in the tuning table
-- [ ] PR says how to try it (e.g. give in at every spot, then visit the mirror)
+- [x] Hallucinations is a rules class: given humanity and whether an object is in view, it decides what each lying object shows, how strong pig vision is, and which breathing set plays (tested, including the threshold edges)
+- [x] A lying object never changes while in view (tested)
+- [x] Slop bowls show slop or snacks by humanity; the chewing sound changes with them
+- [x] The hallway mirror shows the old body then flickers to the pig at high humanity, and only the pig below the threshold (placeholder models are fine)
+- [x] Pig vision post-effect strength follows humanity and works in the web export
+- [x] Breathing and heartbeat sound sets switch with humanity
+- [x] End card text and the back-door glass reflection have at least two humanity variants
+- [x] All thresholds live in the tuning table
+- [x] PR says how to try it (e.g. give in at every spot, then visit the mirror)

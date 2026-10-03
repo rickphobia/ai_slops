@@ -20,6 +20,8 @@ var has_ended: bool = false
 var body: Body
 ## Mum's alert level and where she is headed. Her actor moves her and reports back to it.
 var mum: FamilyBrain
+## What the lying objects show, pig vision and the breathing set, all by the body's humanity.
+var hallucinations: Hallucinations
 
 var _checkpoint: Checkpoint
 var _tuning: Tuning
@@ -41,6 +43,7 @@ func _init(
 	_distances = distances
 	body = Body.new(tuning, rng)
 	mum = FamilyBrain.new(tuning.mum_search_seconds, mum_start)
+	hallucinations = Hallucinations.new(tuning)
 	_checkpoint = Checkpoint.new(FIRST_SPACE, wake_pose, body.state())
 
 
@@ -98,6 +101,17 @@ func restore_checkpoint() -> PiggyPose:
 
 func reach_back_door() -> void:
 	has_ended = true
+
+
+## Which end card the night ends on, by humanity now.
+func ending() -> Hallucinations.Ending:
+	return hallucinations.ending(body.humanity)
+
+
+## The Piggy can see the lying objects named in `in_view` for `delta` seconds; the rest
+## may change what they show.
+func look(delta: float, in_view: Array[StringName]) -> void:
+	hallucinations.advance(delta, body.humanity, in_view)
 
 
 ## A footstep every footstep_seconds while moving; the first comes as soon as they move.

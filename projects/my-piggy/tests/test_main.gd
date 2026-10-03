@@ -76,7 +76,7 @@ func test_spaces_take_checkpoints_the_debug_key_restores_and_the_back_door_ends_
 	var house: House = _find_one(main, "House")
 	piggy.place(PiggyPose.new(house.back_door_exit(), 0.0, 0.0))
 	await wait_physics_frames(3)
-	assert_true(_logged("Reached the back door: night over"))
+	assert_true(_logged("Reached the back door: night over, human ending"))
 	assert_not_null(_find_one(main, "EndCard"))
 	assert_eq(piggy.process_mode, Node.PROCESS_MODE_DISABLED)
 
