@@ -4,7 +4,7 @@ A first-person horror game: you wake up as your own human head on a pig's body, 
 
 ## Status
 
-`in progress` — tickets 01 and 02 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk and look around a grey-box room as the Piggy. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum, no body and no house yet; those come with tickets 03–08 in `docs/tickets/`.
+`in progress` — tickets 01–03 are done: a title screen, a few seconds of black with breathing and a heartbeat, then you walk as the Piggy through a grey-box house (bedroom, long hallway, kitchen), nudging doors open with your head. Each space you enter takes a checkpoint; the kitchen back door ends the night with an end card. Escape pauses, with sensitivity, volume and the controls. It deploys to `https://rickphobia.com/ai-projects/my-piggy/`. There is no Mum and no body yet; those come with tickets 04–08 in `docs/tickets/`.
 
 ## Requirements
 
@@ -30,6 +30,8 @@ scripts/setup-godot.sh                                              # Godot + we
 godot --path .          # play: click the title screen, then WASD to walk, mouse to look, Esc to pause
 godot --path . --editor # open the project in the Godot editor
 ```
+
+Walk into a door to push it open; the faster you push, the louder it creaks. Leave the bedroom, go down the hallway into the kitchen and walk up to the back door (the one with the glass, far right) to end the night. **F9** puts you back at the checkpoint of the space you are in: a debug key until being caught exists (ticket 07).
 
 ## Test
 
@@ -136,6 +138,9 @@ The game reads no environment variables; the deploy scripts do (see "Deploy"). G
 | `walk_speed` | How fast the Piggy walks, metres per second | 0.1–10 |
 | `mouse_sensitivity` | Radians the view turns per pixel of mouse movement, before the player's own setting | 0.0001–0.05 |
 | `opening_seconds` | How long the opening lasts: black, breathing and a heartbeat before control is given | 0.5–20 |
+| `door_creak_quietest_radius` | How far a door creak is heard when the door is barely pushed, metres | 0–30 |
+| `door_creak_loudest_radius` | How far it is heard when pushed at `door_creak_loudest_speed` or faster, metres; not below the quietest | 0.1–30 |
+| `door_creak_loudest_speed` | Push speed at which a door creaks its loudest, metres per second | 0.1–10 |
 
 The player's own settings (mouse sensitivity as a multiplier of 0.25–3, master volume 0–1) are set in the pause menu and saved to `user://settings.cfg`, which the web build keeps in the browser. See `src/config/player_settings.gd`.
 
@@ -143,16 +148,19 @@ The player's own settings (mouse sensitivity as a multiplier of 0.25–3, master
 
 The rules of the game live in plain classes that know nothing about the scene tree; Godot scenes are thin adapters around them. Like a referee and the players: the rules read what happened and decide, and never touch the ball.
 
-- `src/main.tscn` is the entry scene. `src/main.gd` loads and checks the tuning and the player's settings, starts a `Night`, spawns the Piggy, shows the title screen, runs the opening and the pause menu, owns the mouse, and keeps the logger up to date.
-- `src/rules/game_flow.gd` — title screen, opening, playing, paused: when the player has control.
-- `src/rules/night.gd` — one playthrough. The main test seam. Today it only knows its space (it starts in the bedroom) and how many steps have passed.
+- `src/main.tscn` is the entry scene. `src/main.gd` loads and checks the tuning and the player's settings, starts a `Night`, spawns the Piggy in the house, shows the title screen, runs the opening, the pause menu and the end card, owns the mouse, and keeps the logger up to date. Each physics step it asks the house which space the Piggy is in and tells the Night.
+- `src/rules/game_flow.gd` — title screen, opening, playing, paused, ended: when the player has control.
+- `src/rules/night.gd` — one playthrough. The main test seam. It knows the current space, takes a checkpoint (`src/rules/checkpoint.gd`: the space and the Piggy's `PiggyPose`) on entering a new one, restores it, and ends at the back door.
+- `src/rules/door_creak.gd` — how loud a door push is: a noise radius from the push speed.
 - `src/config/tuning.gd` — the tuning table and its checks.
 - `src/config/player_settings.gd` — the player's sensitivity and volume, kept between visits.
-- `src/adapters/piggy_controller.gd` — first-person movement and mouse look, via the input map in `project.godot`.
+- `src/adapters/piggy_controller.gd` — first-person movement and mouse look, via the input map in `project.godot`; pushes the doors it walks into.
+- `src/adapters/house.tscn` + `house.gd` — the grey-box house: the three spaces, a box per space under `SpaceBounds` (they meet in the middle of the wall between), the back-door exit, and the walkable area for pathfinding (`Walkable`, baked from the CSG collision shapes when the house loads). The only file that knows the layout. Later tickets attach to its named markers under `Markers`: `PiggySpawn`, `GiveInSpots/BedroomBowl`, `GiveInSpots/KitchenSlopBowl`, `GiveInSpots/KitchenBin`, `HallwayMirror`, `BackDoorGlass` (both facing into the room), `MumStart`, and `MumRoute/Point1…Point5` in walking order.
+- `src/adapters/door.tscn` + `door.gd` — a door that swings away from the push and creaks once per push; its `creaked` signal carries the noise radius for the noise ticket.
+- `src/adapters/end_card.gd` — the plain end card.
 - `src/adapters/title_screen.gd`, `src/adapters/pause_menu.gd` — the two menus, built in code.
-- `src/adapters/placeholder_sounds.gd` — synth breathing and heartbeat for the opening, until real sounds arrive.
+- `src/adapters/placeholder_sounds.gd` — synth breathing, heartbeat and door creak, until real sounds arrive.
 - `src/adapters/game_log.gd` — the logger. Levels are debug, info, warning and error; every line carries the step and space name: `[info] step=0 space=bedroom Night started`.
-- `src/adapters/grey_box_room.tscn` — the placeholder room.
 
 ## Folder layout
 
@@ -162,8 +170,8 @@ data/tuning.tres                    # the tuning table
 src/
   main.gd, main.tscn                # entry scene
   config/                           # tuning table and its checks
-  rules/                            # Night, GameFlow: pure rules, no scene tree
-  adapters/                         # piggy controller, menus, sounds, logger, room scene
+  rules/                            # Night, checkpoints, door creak, GameFlow: pure rules, no scene tree
+  adapters/                         # house and doors, piggy controller, menus, end card, sounds, logger
 tests/                              # mirrors src/ (GUT)
 addons/gut/                         # GUT 9.7.1, the test framework (vendored, unmodified)
 scripts/                            # check.sh, setup-godot.sh, godot-pin.env (the pinned version)
@@ -179,6 +187,8 @@ docs/                               # spec, tickets, decisions
 - `godot --headless --import` printing `SCRIPT ERROR ... has no static type` means a declaration is missing its type. Add one.
 - Web build is blank: check the browser console, and check that `.wasm` is served as `application/wasm`.
 - Mouse won't capture after resuming: some browsers refuse for a moment after Escape. Click the game to capture it.
+- Checkpoints: the log says `Entered hallway: checkpoint taken` and `Checkpoint restored: back to the start of hallway`. Door creaks are logged at debug level with their noise radius.
+- The house layout lives in `src/adapters/house.tscn`. If you move walls, also move the matching box under `SpaceBounds`, or space changes happen in the wrong place; `tests/adapters/test_house.gd` checks the markers sit in the right spaces and that Mum can walk her route.
 - Deploy failed: the last line of `update-site.sh` names the step. The live site was left as it was.
 
 ## Decisions

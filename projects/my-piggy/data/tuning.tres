@@ -7,3 +7,6 @@ script = ExtResource("1_tuning")
 walk_speed = 2.0
 mouse_sensitivity = 0.0025
 opening_seconds = 5.0
+door_creak_quietest_radius = 2.0
+door_creak_loudest_radius = 8.0
+door_creak_loudest_speed = 3.2

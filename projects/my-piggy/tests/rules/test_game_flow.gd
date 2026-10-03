@@ -86,3 +86,16 @@ func test_starting_twice_does_not_restart_the_opening() -> void:
 	flow.advance(0.5)
 
 	assert_true(flow.has_control())
+
+
+func test_the_end_of_the_night_takes_control_away_for_good() -> void:
+	var flow := _flow()
+	flow.start()
+	flow.advance(TEST_OPENING_SECONDS)
+
+	flow.end()
+	flow.pause()
+	flow.resume()
+
+	assert_eq(flow.stage, GameFlow.Stage.ENDED)
+	assert_false(flow.has_control())
