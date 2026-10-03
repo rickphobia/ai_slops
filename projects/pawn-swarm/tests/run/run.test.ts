@@ -227,13 +227,15 @@ describe("run", () => {
     expect(end.battle.pawns).toEqual([]);
   });
 
+  // Plays 8 full runs of every wave: about 5 s on a 4-core machine, which is over vitest's
+  // 5 s default, so it gets its own limit.
   it("plays the catalog's waves from one pawn to a win or a loss", () => {
     const outcomes = new Set<string>();
     for (let seed = 0; seed < 8; seed++) {
       outcomes.add(playRun(startRun({ seed })).phase);
     }
     expect(outcomes).not.toContain("battle");
-  });
+  }, 30_000);
 
   it("stays put once the run is over", () => {
     const end = playRun(startRun({ seed: 1, waves: [knights(200)] }));
