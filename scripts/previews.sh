@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Keeps a preview of every open PR running on this machine, ready to try before merging: once a
+# PR's ci-gate is green, its build is served at http://<this machine>:<9000 + PR number>/. A new
+# push gets a fresh build once it is green again; a merged or closed PR's preview is stopped.
+# Each preview is a systemd user service, try-pr-<N>, running scripts/try-pr.sh. No Claude.
+#
+# Usage: scripts/previews.sh <command>
+#   install    copy the scripts to ~/.local/state/ai-slops-previews and run `sync` every 5 minutes
+#   uninstall  stop the timer and every preview
+#   sync       start, refresh and stop previews to match the open PRs (what the timer runs)
+#   list       open PRs with their ci-gate result and preview link
+#   stop N     stop PR N's preview until its next push
+#
+# Settings (environment variables, all optional):
+#   PREVIEWS_REPO   the ai_slops checkout to work from (default ~/homelab/code/ai_slops)
+set -euo pipefail
+
+repo="${PREVIEWS_REPO:-$HOME/homelab/code/ai_slops}"
+state="$HOME/.local/state/ai-slops-previews"
+units="$HOME/.config/systemd/user"
+timer=ai-slops-previews
+# Shells started outside a desktop session (ssh, cron) may not set it; systemctl --user needs it.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+die() {
+  printf 'previews: %s\n' "$*" >&2
+  exit 1
+}
+
+usage() {
+  sed -n '7,12p' "$0" | sed 's/^# \{0,1\}//'
+  exit "${1:-0}"
+}
+
+ctl() { systemctl --user "$@"; }
+port_of() { echo $((9000 + $1)); }
+unit_state() { ctl show -p ActiveState --value "try-pr-$1.service"; }
+# The commit a preview was started for, kept in its description ("try-pr <N> <sha>").
+unit_sha() { ctl show -p Description --value "try-pr-$1.service" | awk '$1 == "try-pr" {print $3}'; }
+stopped_sha() { cat "$state/stopped-$1" 2>/dev/null || true; }
+preview_numbers() {
+  ctl list-units --all --plain --no-legend 'try-pr-*.service' | sed -n -E 's/^try-pr-([0-9]+)\.service.*/\1/p'
+}
+
+stop_unit() {
+  ctl stop "try-pr-$1.service" 2>/dev/null || true
+  ctl reset-failed "try-pr-$1.service" 2>/dev/null || true
+}
+
+# Prints "N<TAB>head sha<TAB>ci-gate result<TAB>project or -<TAB>title" for every open PR.
+open_prs() {
+  gh pr list --state open --limit 100 --json number,title,headRefOid,statusCheckRollup,files --jq '
+    .[] | [
+      .number,
+      .headRefOid,
+      ([.statusCheckRollup[]? | select(.name == "ci-gate")] | last | (.conclusion // .status // "none")),
+      ([.files[].path | capture("^projects/(?<p>[^/]+)/").p] | unique | if length == 1 then .[0] else "-" end),
+      .title
+    ] | @tsv'
+}
+
+# Copies main's versions of the scripts into the state folder, so the timer runs the latest ones.
+# A rename keeps a running preview on the copy it started with.
+refresh_scripts() {
+  git fetch -q origin main
+  git cat-file -e origin/main:scripts/previews.sh 2>/dev/null || return 0
+  local file
+  for file in previews.sh try-pr.sh; do
+    git show "origin/main:scripts/$file" >"$state/$file.new"
+    chmod +x "$state/$file.new"
+    mv "$state/$file.new" "$state/$file"
+  done
+}
+
+start_preview() { # start_preview <N> <sha>
+  stop_unit "$1"
+  rm -f "$state/stopped-$1"
+  echo "PR #$1: building ${2:0:7} for port $(port_of "$1")"
+  systemd-run --user --quiet --unit "try-pr-$1" --description "try-pr $1 $2" \
+    --working-directory "$repo" --setenv "PATH=$PATH" \
+    "$state/try-pr.sh" "$1" --port "$(port_of "$1")"
+}
+
+cmd_sync() {
+  cd "$repo"
+  refresh_scripts
+  local -a web
+  mapfile -t web < <("$state/try-pr.sh" --projects)
+  local -A open=()
+  local n sha gate project title state_now
+  while IFS=$'\t' read -r n sha gate project title; do
+    open[$n]=1
+    [[ $gate == SUCCESS && " ${web[*]} " == *" $project "* ]] || continue
+    [[ $(stopped_sha "$n") == "$sha" ]] && continue
+    state_now=$(unit_state "$n")
+    if [[ $(unit_sha "$n") == "$sha" && $state_now =~ ^(active|activating|failed)$ ]]; then
+      continue
+    fi
+    start_preview "$n" "$sha"
+  done < <(open_prs)
+
+  for n in $(preview_numbers); do
+    if [[ -z ${open[$n]:-} ]]; then
+      echo "PR #$n: closed, stopping its preview"
+      stop_unit "$n"
+      rm -f "$state/stopped-$n"
+    fi
+  done
+}
+
+cmd_list() {
+  cd "$repo"
+  local ip n sha gate project title port preview
+  ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  local -a web
+  mapfile -t web < <("$state/try-pr.sh" --projects 2>/dev/null || true)
+  while IFS=$'\t' read -r n sha gate project title; do
+    port=$(port_of "$n")
+    case $(unit_state "$n") in
+      active | activating)
+        if curl -s -o /dev/null --max-time 2 "http://localhost:$port/"; then
+          preview="http://$ip:$port/"
+          [[ $(unit_sha "$n") == "$sha" ]] || preview+="  (an older push; the new one builds once ci-gate passes)"
+        else
+          preview="building… (log: journalctl --user -u try-pr-$n)"
+        fi
+        ;;
+      failed) preview="build failed: journalctl --user -u try-pr-$n" ;;
+      *)
+        if [[ " ${web[*]} " != *" $project "* ]]; then
+          preview="none (nothing to build for '$project')"
+        elif [[ $(stopped_sha "$n") == "$sha" ]]; then
+          preview="stopped; starts again after the next push"
+        elif [[ $gate != SUCCESS ]]; then
+          preview="starts once ci-gate passes"
+        else
+          preview="starts within 5 minutes"
+        fi
+        ;;
+    esac
+    printf '#%-4s %-8s %s\n      %s\n' "$n" "${gate,,}" "$title" "$preview"
+  done < <(open_prs)
+  ctl is-active -q "$timer.timer" || echo "(the timer is off: scripts/previews.sh install)"
+}
+
+cmd_stop() {
+  local n=${1:?stop needs a PR number}
+  [[ $n =~ ^[0-9]+$ ]] || die "not a PR number: $n"
+  cd "$repo"
+  stop_unit "$n"
+  mkdir -p "$state"
+  gh pr view "$n" --json headRefOid --jq .headRefOid >"$state/stopped-$n"
+  echo "Stopped PR #$n's preview. It starts again after the PR's next push."
+}
+
+cmd_install() {
+  local source_dir
+  source_dir=$(cd "$(dirname "$0")" && pwd)
+  mkdir -p "$state" "$units"
+  if [[ $source_dir != "$state" ]]; then
+    install -m 755 "$source_dir/previews.sh" "$source_dir/try-pr.sh" "$state/"
+  fi
+  # The timer runs without a login shell, so it gets this shell's PATH (node, godot, gh).
+  cat >"$units/$timer.service" <<EOF
+[Unit]
+Description=Start, refresh and stop ai_slops PR previews
+
+[Service]
+Type=oneshot
+Environment=PATH=$PATH
+Environment=PREVIEWS_REPO=$repo
+ExecStart=$state/previews.sh sync
+EOF
+  cat >"$units/$timer.timer" <<EOF
+[Unit]
+Description=Sync ai_slops PR previews every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+EOF
+  ctl daemon-reload
+  ctl enable --now "$timer.timer"
+  ctl start "$timer.service"
+  echo "Installed. Previews sync every 5 minutes; see them with: scripts/previews.sh list"
+}
+
+cmd_uninstall() {
+  ctl disable --now "$timer.timer" 2>/dev/null || true
+  local n
+  for n in $(preview_numbers); do stop_unit "$n"; done
+  rm -f "$units/$timer.service" "$units/$timer.timer"
+  ctl daemon-reload
+  rm -rf "$state"
+  echo "Uninstalled: timer off, previews stopped."
+}
+
+case ${1:-} in
+  install) cmd_install ;;
+  uninstall) cmd_uninstall ;;
+  sync) cmd_sync ;;
+  list) cmd_list ;;
+  stop) cmd_stop "${2:-}" ;;
+  -h | --help) usage 0 ;;
+  *) usage 1 ;;
+esac
