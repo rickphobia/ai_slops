@@ -146,3 +146,17 @@ func test_a_give_in_spot_is_found_within_reach_and_not_beyond() -> void:
 	assert_not_null(near)
 	assert_eq(near.name, &"BedroomBowl")
 	assert_null(far)
+
+
+func test_the_fridge_hums_in_the_kitchen() -> void:
+	var house := _house()
+
+	assert_eq(house.space_at(house.fridge_hum().global_position), &"kitchen")
+
+
+func test_every_door_creak_and_the_fridge_go_to_the_muffled_channel() -> void:
+	var house := _house()
+
+	# Two doors' creaks and the fridge.
+	assert_eq(house.positional_sounds().size(), 3)
+	assert_has(house.positional_sounds(), house.fridge_hum())

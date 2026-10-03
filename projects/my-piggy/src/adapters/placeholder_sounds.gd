@@ -1,7 +1,8 @@
 class_name PlaceholderSounds
 extends RefCounted
-## Synth stand-ins for the opening's breathing and heartbeat and for door creaks, made in
-## code so there are no sound files to license. Ticket 05 replaces them with real ones.
+## Synth stand-ins for the opening's breathing and heartbeat, door and house creaks, wind
+## and the fridge hum, made in code so there are no sound files to license. Real recordings
+## can replace them later; record each one in CREDITS.md when it arrives.
 
 const MIX_RATE := 22050
 const BREATH_SECONDS := 4.0
@@ -9,6 +10,10 @@ const INHALE_SECONDS := 1.6
 const HEARTBEAT_SECONDS := 0.85  # about 70 beats a minute
 const HEART_PITCH_HZ := 48.0
 const CREAK_SECONDS := 0.7
+const WIND_SECONDS := 9.0
+## Mains hum. A whole number of cycles fits the loop, so it loops without a click.
+const HUM_PITCH_HZ := 50.0
+const HUM_SECONDS := 1.0
 
 
 ## Slow breathing: soft noise swelling in, then a longer breath out.
@@ -112,6 +117,34 @@ static func _buzz(
 		var rough := saw + noise.randf_range(-roughness, roughness)
 		samples[index] = rough * loudness * sin(PI * progress)
 	return _to_stream(samples, false)
+
+
+## Wind outside, looped: low rumbling noise that rises and falls in one slow gust.
+static func wind(seed: int = 2) -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = seed
+	var count := int(WIND_SECONDS * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var smoothed := 0.0
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		smoothed += 0.02 * (noise.randf_range(-1.0, 1.0) - smoothed)
+		# Starts and ends at the same level, so the loop point doesn't jump.
+		var gust := 0.4 + 0.6 * pow(sin(PI * seconds / WIND_SECONDS), 2.0)
+		samples[index] = smoothed * 6.0 * gust
+	return _to_stream(samples)
+
+
+## A fridge's hum, looped: the mains note and two quieter overtones.
+static func fridge_hum() -> AudioStreamWAV:
+	var count := int(HUM_SECONDS * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	for index in count:
+		var cycle := TAU * HUM_PITCH_HZ * float(index) / MIX_RATE
+		samples[index] = 0.5 * sin(cycle) + 0.25 * sin(2.0 * cycle) + 0.12 * sin(3.0 * cycle)
+	return _to_stream(samples)
 
 
 static func _breath_envelope(seconds: float) -> float:

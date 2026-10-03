@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Keeps a preview of every open PR running on this machine, ready to try before merging: once a
-# PR's ci-gate is green, its build is served at http://<this machine>:<9000 + PR number>/. A new
+# PR's ci-gate is green, its build is served at https://<machine>.<tailnet>.ts.net:<9000 + PR>/
+# to your Tailscale devices (see scripts/try-pr.sh). A new
 # push gets a fresh build once it is green again; a merged or closed PR's preview is stopped.
 # Each preview is a systemd user service, try-pr-<N>, running scripts/try-pr.sh. No Claude.
 #
@@ -76,8 +77,10 @@ start_preview() { # start_preview <N> <sha>
   stop_unit "$1"
   rm -f "$state/stopped-$1"
   echo "PR #$1: building ${2:0:7} for port $(port_of "$1")"
+  # try-pr.sh exits 130 when stopped; count that as a clean stop, not a failed build, or sync
+  # would skip this commit as failed.
   systemd-run --user --quiet --unit "try-pr-$1" --description "try-pr $1 $2" \
-    --working-directory "$repo" --setenv "PATH=$PATH" \
+    --working-directory "$repo" --setenv "PATH=$PATH" --property "SuccessExitStatus=130" \
     "$state/try-pr.sh" "$1" --port "$(port_of "$1")"
 }
 
@@ -110,8 +113,8 @@ cmd_sync() {
 
 cmd_list() {
   cd "$repo"
-  local ip n sha gate project title port preview
-  ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  local host n sha gate project title port preview
+  host=$(tailscale status --json 2>/dev/null | jq -r '(.CertDomains // [])[0] // empty' || true)
   local -a web
   mapfile -t web < <("$state/try-pr.sh" --projects 2>/dev/null || true)
   while IFS=$'\t' read -r n sha gate project title; do
@@ -119,7 +122,7 @@ cmd_list() {
     case $(unit_state "$n") in
       active | activating)
         if curl -s -o /dev/null --max-time 2 "http://localhost:$port/"; then
-          preview="http://$ip:$port/"
+          if [[ -n $host ]]; then preview="https://$host:$port/"; else preview="http://localhost:$port/"; fi
           [[ $(unit_sha "$n") == "$sha" ]] || preview+="  (an older push; the new one builds once ci-gate passes)"
         else
           preview="building… (log: journalctl --user -u try-pr-$n)"
