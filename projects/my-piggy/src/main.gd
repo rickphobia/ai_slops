@@ -82,12 +82,15 @@ func _ready() -> void:
 		_house.get_world_3d(), _house.walkable().get_navigation_map()
 	)
 	var mum_start := _house.mum_start().global_position
-	_night = Night.new(_piggy.pose(), tuning, RandomNumberGenerator.new(), distances, mum_start)
+	var mum_route := _house.mum_route()
+	_night = Night.new(
+		_piggy.pose(), tuning, RandomNumberGenerator.new(), distances, mum_start, mum_route
+	)
 	_night.noise_heard.connect(_on_noise_heard)
 	_night.caught.connect(_on_caught)
 	_night.mum.alert_changed.connect(_on_mum_alert_changed)
 	_mum = Mum.new()
-	_mum.setup(tuning, _night.mum, _house.mum_route(), RandomNumberGenerator.new())
+	_mum.setup(tuning, _night.mum, mum_route, RandomNumberGenerator.new())
 	_mum.process_mode = Node.PROCESS_MODE_DISABLED
 	_mum.said.connect(func(line: String) -> void: GameLog.debug('Mum: "%s"' % line))
 	add_child(_mum)
