@@ -13,11 +13,11 @@ Experienced engineers all land on the same loop: **spec → plan → build in sm
 | 3 | Get grilled | `/grill-with-docs` | Rounds of numbered questions, each with a recommended answer. Builds `GLOSSARY.md` and decision records as you go |
 | 4 | Write the spec | `/to-spec` | `docs/spec.md`. **Read it.** |
 | 5 | Split into tickets | `/to-tickets` | `docs/tickets/01-…md`, `02-…md`, each with **Blocked by** and **Touches**, plus which can run in parallel. You approve the breakdown |
-| 6 | Build the skeleton | New session: `/implement projects/<name>/docs/tickets/01-…md` | Project runs, one test passes, CI green. One PR |
-| 7 | Build in parallel | One new session per unblocked ticket: `/implement <ticket path>` | One PR per ticket |
+| 6 | Build the skeleton | `scripts/next-tickets.sh <name>` (or a new session: `/implement projects/<name>/docs/tickets/01-…md`) | Project runs, one test passes, CI green. One PR |
+| 7 | Build in parallel | `scripts/next-tickets.sh <name>`: one background session per ticket that can start now | One PR per ticket |
 | 8 | Review and merge | Try the PR's `▶ Try this version` link if it has one, skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
 | 9 | Deploy | On the Beelink: `projects/<name>/deploy/update-site.sh`, or ask a local session to run it | Live at `rickphobia.com/ai-projects/<name>/` |
-| 10 | Repeat 7–9 | Until all tickets are `done` | — |
+| 10 | Repeat 7–9 | Run `scripts/next-tickets.sh <name>` again after each merge | — |
 
 New feature on an existing project: start again at step 2 — `/to-spec` writes `docs/specs/<feature>.md` and `/to-tickets` continues the numbering.
 
@@ -30,6 +30,22 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 - **On the Beelink, each parallel session needs its own worktree.** Cloud sessions each get their own clone; local sessions share `~/homelab/code/ai_slops` and would switch branches under each other. Start the extra ones from the repo root with `claude -w <project>-<NN>`: a worktree under `.claude/worktrees/`, on its own branch from `origin/main`, removed when you exit if it has nothing unsaved.
 - Each ticket's session watches its own PR until it is green and mergeable: it fixes merge conflicts (by merging `main` in) and failing CI by itself, so a PR only waits on you once it is green. A cloud session keeps watching until merge and answers review comments; a local one runs `gh pr checks --watch`, tells you it is ready, and stops (reopen it with `claude --resume` to answer comments). You still review and merge.
 - Merge one PR at a time; merging one can make the next conflict, and its session then fixes that.
+
+## Starting tickets with `scripts/next-tickets.sh`
+
+On the Beelink, from `~/homelab/code/ai_slops` (any branch):
+
+```bash
+scripts/next-tickets.sh my-piggy --dry-run   # show the plan, start nothing
+scripts/next-tickets.sh my-piggy             # show the plan, ask, then start
+scripts/next-tickets.sh my-piggy 04 05       # consider only these tickets
+```
+
+It reads the tickets from `origin/main` and starts a ticket when its status is `ready`, every ticket in **Blocked by** is `done`, nobody is working on it (no `<project>/<NN>-…` branch, no open PR, no running session named `<project>-<NN>`), and none of its **Touches** areas is taken by a running or starting ticket. Each one runs as `claude --bg` with Opus 5.5 in auto permission mode, at the ticket's **Effort** (default: medium for 01, low otherwise), and moves into its own worktree before it edits anything.
+
+**Answering them.** Run `claude agents` (agent view). A session that needs you is under **Needs input** with the question or permission prompt on its row: press `Space` to reply in place, or `Enter` to open the full session. While agent view is open, Claude Code sends a terminal notification when a session needs input, finishes or fails; in any other session the footer shows `← N agents` waiting. Sessions stop and wait for the guardrail prompts (force-push, `rm -rf` …) and for questions `/implement` asks.
+
+**Cost.** A background session costs the same as opening a new session by hand: same model, same prompt caching, same start-up read of `CLAUDE.md` and the ticket. Running three at once spends the same tokens sooner; it doesn't add any. Two things do add cost: a session left waiting for more than an hour loses its cache, so answer within the hour; and auto mode's safety check on risky actions uses a little extra.
 
 ## What protects `main`
 

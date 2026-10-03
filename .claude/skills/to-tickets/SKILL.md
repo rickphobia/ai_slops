@@ -78,7 +78,9 @@ Commit the ticket files on their own (`<name>: Add tickets for <feature>`) so ev
 
 **Status:** ready
 
-**Touches:** the areas (modules or folders) this ticket will likely change.
+**Touches:** the areas (modules or folders) this ticket will likely change. Use the same name for the same area in every ticket: `scripts/next-tickets.sh` compares them word for word.
+
+**Effort:** `low` for small tickets, `medium` for the walking skeleton and tricky logic. `scripts/next-tickets.sh` starts the ticket at this effort.
 
 - [ ] Acceptance criterion 1
 - [ ] Acceptance criterion 2
