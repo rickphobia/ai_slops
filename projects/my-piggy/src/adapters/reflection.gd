@@ -21,21 +21,21 @@ var _flicker_left: float = 0.0
 func _ready() -> void:
 	var glass := QuadMesh.new()
 	glass.size = Vector2(0.7, 1.3)
-	add_child(_piece(glass, GLASS, Vector3(0.0, 0.0, 0.01)))
+	add_child(PlainShapes.piece(glass, GLASS, Vector3(0.0, 0.0, 0.01)))
 
 	var torso := CapsuleMesh.new()
 	torso.radius = 0.12
 	torso.height = 0.6
-	_old_body.add_child(_piece(torso, SHIRT, Vector3(0.0, -0.2, 0.05)))
-	_old_body.add_child(_piece(_head(), SKIN, Vector3(0.0, 0.25, 0.05)))
+	_old_body.add_child(PlainShapes.piece(torso, SHIRT, Vector3(0.0, -0.2, 0.05)))
+	_old_body.add_child(PlainShapes.piece(_head(), SKIN, Vector3(0.0, 0.25, 0.05)))
 
 	var belly := CapsuleMesh.new()
 	belly.radius = 0.15
 	belly.height = 0.55
-	var pig := _piece(belly, PIG_PINK, Vector3(0.05, -0.35, 0.05))
+	var pig := PlainShapes.piece(belly, PIG_PINK, Vector3(0.05, -0.35, 0.05))
 	pig.rotation.z = PI / 2.0
 	_pig_body.add_child(pig)
-	_pig_body.add_child(_piece(_head(), SKIN, Vector3(-0.25, -0.2, 0.05)))
+	_pig_body.add_child(PlainShapes.piece(_head(), SKIN, Vector3(-0.25, -0.2, 0.05)))
 
 	add_child(_old_body)
 	add_child(_pig_body)
@@ -76,13 +76,3 @@ static func _head() -> SphereMesh:
 	head.radius = 0.1
 	head.height = 0.22
 	return head
-
-
-static func _piece(mesh: PrimitiveMesh, colour: Color, at: Vector3) -> MeshInstance3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = colour
-	mesh.material = material
-	var piece := MeshInstance3D.new()
-	piece.mesh = mesh
-	piece.position = at
-	return piece

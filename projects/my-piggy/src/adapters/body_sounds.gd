@@ -54,6 +54,8 @@ func set_breathing(breathing_set: Hallucinations.Breathing) -> void:
 		return
 	_breathing_set = breathing_set
 	_use_set(breathing_set)
+	var which: String = Hallucinations.Breathing.find_key(breathing_set)
+	GameLog.debug("Breathing set: %s" % which.to_lower())
 
 
 ## Whether the next give-in eats snacks (crunching) or slop (wet chewing).

@@ -268,11 +268,7 @@ func _try_give_in() -> void:
 	if started == null:
 		GameLog.debug("Give-in spot %s already used since the checkpoint" % spot.name)
 		return
-	var eats_snacks := (
-		_house.slop_bowls().has(spot)
-		and _lying_objects.showing(spot.name) == Hallucinations.Shows.SNACKS
-	)
-	_body_sounds.set_eats_snacks(eats_snacks)
+	_body_sounds.set_eats_snacks(_lying_objects.eats_snacks_at(spot.name))
 	_piggy.start_give_in(spot.global_position, _tuning.give_in_seconds)
 	_on_body_event(started)
 	GameLog.info("Giving in at %s" % spot.name)

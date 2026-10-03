@@ -22,13 +22,13 @@ func _ready() -> void:
 		lump.height = 0.07
 		var angle := TAU * index / 5.0
 		var at := Vector3(cos(angle) * 0.09, 0.09, sin(angle) * 0.09)
-		_slop.add_child(_piece(lump, SLOP_COLOURS[index % SLOP_COLOURS.size()], at))
+		_slop.add_child(PlainShapes.piece(lump, SLOP_COLOURS[index % SLOP_COLOURS.size()], at))
 	for index in 3:
 		var snack := BoxMesh.new()
 		snack.size = Vector3(0.12, 0.05, 0.08)
 		var angle := TAU * index / 3.0
 		var at := Vector3(cos(angle) * 0.08, 0.11, sin(angle) * 0.08)
-		_snacks.add_child(_piece(snack, SNACK_COLOURS[index], at))
+		_snacks.add_child(PlainShapes.piece(snack, SNACK_COLOURS[index], at))
 	add_child(_slop)
 	add_child(_snacks)
 	_flies.stream = PlaceholderSounds.flies()
@@ -56,13 +56,3 @@ func show_as(shows: Hallucinations.Shows) -> void:
 
 func showing() -> Hallucinations.Shows:
 	return _showing
-
-
-static func _piece(mesh: PrimitiveMesh, colour: Color, at: Vector3) -> MeshInstance3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = colour
-	mesh.material = material
-	var piece := MeshInstance3D.new()
-	piece.mesh = mesh
-	piece.position = at
-	return piece
