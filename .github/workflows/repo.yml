@@ -1,15 +1,17 @@
 name: repo
 
-# Checks the repo-level tooling: the CI gate script and the Claude Code settings files.
+# Checks the repo-level tooling: the scripts and the Claude Code settings files.
 on:
   push:
     paths:
       - ".github/**"
+      - "scripts/**"
       - ".claude/settings.json"
       - "projects/*/.claude/settings.json"
   pull_request:
     paths:
       - ".github/**"
+      - "scripts/**"
       - ".claude/settings.json"
       - "projects/*/.claude/settings.json"
 
@@ -27,7 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # shellcheck and jq come preinstalled on the runner.
-      - run: shellcheck .github/scripts/*.sh
+      - run: shellcheck .github/scripts/*.sh scripts/*.sh scripts/tests/*.sh
+      - run: scripts/tests/next-tickets.test.sh
       # A session reads .claude/settings.json only from the folder it starts in, so each project
       # carries a copy of the root rules. A project may add rules but must keep the root ones.
       - name: Every project's settings keep the root guardrails
