@@ -1,5 +1,6 @@
 extends GutTest
-## How far a sound travels through the real house, and through how many doors and walls.
+## How far a sound travels through the real house, and through how many doors and walls;
+## and whether the torch can see from one point to another.
 
 const HOUSE_SCENE := preload("res://src/adapters/house.tscn")
 const BEDROOM_MIDDLE := Vector3(0.0, 0.0, 0.0)
@@ -41,3 +42,11 @@ func test_from_the_bedroom_to_the_kitchen_the_path_goes_round_through_the_doors(
 
 	assert_gt(path.distance, BEDROOM_CORNER.distance_to(KITCHEN_CORNER))
 	assert_gte(path.barriers, 2, "walls and doors between two rooms apart")
+
+
+func test_across_an_open_room_the_torch_has_a_clear_view() -> void:
+	assert_true(_distances.has_clear_view(BEDROOM_MIDDLE, BEDROOM_CORNER))
+
+
+func test_the_closed_bedroom_door_blocks_the_view_into_the_hallway() -> void:
+	assert_false(_distances.has_clear_view(HALLWAY_MIDDLE, BEDROOM_MIDDLE))

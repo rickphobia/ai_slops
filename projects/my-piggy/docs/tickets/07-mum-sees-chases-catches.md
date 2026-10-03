@@ -4,15 +4,15 @@
 
 **Blocked by:** 06 (Mum hunts by sound)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** family brain (sight, chase), Mum's actor (torch, line of sight), Night (caught → restore checkpoint), capture scene, smoke test
 
-- [ ] Mum sees the Piggy only inside her tuned torch cone and range with a clear line of sight; furniture and darkness outside the beam hide the Piggy
-- [ ] Seeing the Piggy moves the family brain to chasing; losing sight moves it to searching the last seen spot (tested through Night)
-- [ ] Mum within the caught distance while chasing makes the Piggy caught (tested through Night)
-- [ ] Being caught restores the checkpoint: Piggy position, humanity, urge, used give-in spots and Mum's position and alert level (tested through Night)
-- [ ] Capture scene plays (placeholder face is fine) and the restart completes in under 3 seconds
-- [ ] Smoke test boots the main scene headless, runs scripted input until caught, and checks the space restarts with no errors logged; it runs in CI
-- [ ] The debug key from ticket 03 for restoring checkpoints is removed or kept behind `?debug=1`
-- [ ] PR says how to try a chase and an escape
+- [x] Mum sees the Piggy only inside her tuned torch cone and range with a clear line of sight; furniture and darkness outside the beam hide the Piggy
+- [x] Seeing the Piggy moves the family brain to chasing; losing sight moves it to searching the last seen spot (tested through Night)
+- [x] Mum within the caught distance while chasing makes the Piggy caught (tested through Night)
+- [x] Being caught restores the checkpoint: Piggy position, humanity, urge, used give-in spots and Mum's position and alert level (tested through Night)
+- [x] Capture scene plays (placeholder face is fine) and the restart completes in under 3 seconds
+- [x] Smoke test boots the main scene headless, runs scripted input until caught, and checks the space restarts with no errors logged; it runs in CI
+- [x] The debug key from ticket 03 for restoring checkpoints is removed or kept behind `?debug=1`
+- [x] PR says how to try a chase and an escape

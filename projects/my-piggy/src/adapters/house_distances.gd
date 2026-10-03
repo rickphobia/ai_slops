@@ -2,10 +2,14 @@ class_name HouseDistances
 extends DistanceProvider
 ## How a sound gets through the house: the path distance over the walkable area, and the
 ## closed doors and walls on the straight line between the two points (what the sound
-## would have to pass through). The only part of hearing that uses Godot.
+## would have to pass through). The only part of hearing that uses Godot. Also whether
+## Mum's torch has a clear view of the Piggy: the only part of her sight that uses Godot.
 
 ## Sounds are traced at about head height, so the floor and low furniture don't count as walls.
 const EAR_HEIGHT := 1.0
+## Mum holds her torch at about chest height; she looks for the Piggy's low body.
+const TORCH_HEIGHT := 1.3
+const PIGGY_BODY_HEIGHT := 0.4
 ## A ray that hits a barrier carries on from just past where it hit.
 const PAST_HIT := 0.01
 ## A ray never counts more barriers than this (the house has far fewer between any two points).
@@ -32,6 +36,15 @@ func sound_path(from: Vector3, to: Vector3) -> SoundPath:
 	for index in range(1, path.size()):
 		distance += path[index - 1].distance_to(path[index])
 	return SoundPath.new(distance, _barriers_between(from, to))
+
+
+## A ray from the torch to the Piggy's body; walls, closed doors and furniture block it.
+func has_clear_view(from: Vector3, to: Vector3) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(
+		from + Vector3.UP * TORCH_HEIGHT, to + Vector3.UP * PIGGY_BODY_HEIGHT
+	)
+	query.exclude = ignored
+	return _world.direct_space_state.intersect_ray(query).is_empty()
 
 
 ## Rays ignore surfaces they start inside, so a ray carried on from just past a hit goes

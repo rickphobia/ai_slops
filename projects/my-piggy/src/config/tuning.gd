@@ -48,6 +48,10 @@ const LIMITS: Dictionary = {
 	"pig_vision_full_at_humanity": [0.0, 99.0],
 	"snouty_breathing_below_humanity": [0.0, 100.0],
 	"pig_breathing_below_humanity": [0.0, 100.0],
+	"mum_chase_speed": [0.1, 10.0],
+	"mum_torch_cone_degrees": [1.0, 170.0],
+	"mum_torch_range": [0.5, 50.0],
+	"mum_caught_distance": [0.2, 5.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
@@ -137,6 +141,14 @@ const LIMITS: Dictionary = {
 @export var snouty_breathing_below_humanity: float = NAN
 ## Below this humanity they sound like a pig's. Not above snouty_breathing_below_humanity.
 @export var pig_breathing_below_humanity: float = NAN
+## How fast Mum chases the Piggy once she has seen them, in metres per second.
+@export var mum_chase_speed: float = NAN
+## How wide Mum's torch beam is, edge to edge, in degrees. She only sees the Piggy inside it.
+@export var mum_torch_cone_degrees: float = NAN
+## How far Mum's torch reaches, in metres. She sees nothing beyond it in the dark.
+@export var mum_torch_range: float = NAN
+## How close Mum must get to the Piggy while chasing to catch them, in metres.
+@export var mum_caught_distance: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded

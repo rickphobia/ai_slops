@@ -46,3 +46,7 @@ mirror_old_body_seconds = 0.8
 pig_vision_full_at_humanity = 20.0
 snouty_breathing_below_humanity = 85.0
 pig_breathing_below_humanity = 50.0
+mum_chase_speed = 3.6
+mum_torch_cone_degrees = 35.0
+mum_torch_range = 10.0
+mum_caught_distance = 1.0

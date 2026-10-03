@@ -31,6 +31,7 @@ const HUM_TUNE: Array[Vector2] = [
 ]
 const HUM_PAUSE_SECONDS := 2.0
 const SYLLABLE_SECONDS := 0.28
+const SCREAM_SECONDS := 1.0
 
 
 ## Slow breathing: soft noise swelling in, then a longer breath out. `piggishness` (0–1)
@@ -176,6 +177,11 @@ static func _buzz(
 		var rough := saw + noise.randf_range(-roughness, roughness)
 		samples[index] = rough * loudness * sin(PI * progress)
 	return _to_stream(samples, false)
+
+
+## Mum's scream when she catches the Piggy: a long, rough shriek that climbs.
+static func scream() -> AudioStreamWAV:
+	return _buzz(SCREAM_SECONDS, 650.0, 1100.0, 0.6, 0.9)
 
 
 ## Mum humming "This Little Piggy", looped: a soft, closed-mouth voice with a slow vibrato,
