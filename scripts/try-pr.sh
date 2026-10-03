@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Builds a PR's web version on this machine and serves it on the local network, so you can try it
-# from a laptop or phone before merging. For PRs whose build is too big for a `▶ Try this version`
-# Artifact link (my-piggy's engine file is ~40 MB).
+# Builds a PR's web version on this machine and serves it, so you can try it before merging. For
+# PRs whose build is too big for a `▶ Try this version` Artifact link (my-piggy's engine is ~40 MB).
+#
+# Browsers only run a Godot web build from HTTPS or localhost. When this machine has Tailscale with
+# HTTPS certificates, the build is served at https://<machine>.<tailnet>.ts.net:<port>/ to your
+# Tailscale devices (needs `sudo tailscale set --operator=$USER` once); otherwise only at
+# http://localhost:<port>/.
 #
 # Usage: scripts/try-pr.sh <PR number> [--port N] [--keep]
 #   --port N   port to serve on (default 8000)
 #   --keep     keep the build folder after you stop the server (faster next time)
 #   --projects print the projects it can build, one per line, and exit
 #
-# The PR is checked out in .claude/worktrees/try-pr-<N>, so no other checkout changes branch.
+# The PR is checked out in .claude/worktrees/try-pr-<N>-<port>, so no other checkout changes branch.
 # Press Ctrl+C to stop; the folder is then removed unless --keep was given.
 set -euo pipefail
 
@@ -45,6 +49,19 @@ build_web() {
   esac
 }
 
+# Prints this machine's Tailscale HTTPS name (e.g. box.tailnet.ts.net), or nothing.
+tailscale_https_host() {
+  command -v tailscale >/dev/null || return 0
+  tailscale status --json 2>/dev/null | jq -r '(.CertDomains // [])[0] // empty' || true
+}
+
+# Commands run on exit, whatever the reason (see the traps in main).
+cleanup_steps=()
+cleanup() {
+  local step
+  for step in "${cleanup_steps[@]}"; do eval "$step" || true; done
+}
+
 main() {
   local pr="" port=8000 keep=0
   while (($# > 0)); do
@@ -68,18 +85,18 @@ main() {
   local project=${projects[0]}
 
   git fetch -q origin "pull/$pr/head" || die "could not fetch PR #$pr"
-  local sha worktree=".claude/worktrees/try-pr-$pr"
+  local sha worktree=".claude/worktrees/try-pr-$pr-$port"
   sha=$(git rev-parse FETCH_HEAD)
   if [[ -d $worktree ]]; then
     git -C "$worktree" checkout -q --detach "$sha"
   else
     git worktree add -q --detach "$worktree" "$sha"
   fi
+  trap cleanup EXIT
+  # Turn Ctrl+C, a closed terminal or kill into a normal exit, so the EXIT trap always runs.
+  trap 'exit 130' INT TERM HUP
   if ((!keep)); then
-    # shellcheck disable=SC2064 # expand now: the paths are fixed
-    trap "cd '$PWD' && git worktree remove --force '$worktree' && echo 'Removed $worktree.'" EXIT
-    # Turn Ctrl+C, a closed terminal or kill into a normal exit, so the EXIT trap always runs.
-    trap 'exit 130' INT TERM HUP
+    cleanup_steps+=("cd $(printf %q "$PWD") && git worktree remove --force $worktree && echo 'Removed $worktree.'")
   fi
 
   printf 'Building PR #%s (%s, %s)…\n' "$pr" "$project" "$(git rev-parse --short "$sha")"
@@ -87,11 +104,17 @@ main() {
   local site
   site=$(build_web "$project")
 
-  local ip
-  ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-  printf '\nPR #%s is at http://%s:%s/ (from this machine: http://localhost:%s/). Ctrl+C to stop.\n' \
-    "$pr" "${ip:-<this machine>}" "$port" "$port"
-  python3 -m http.server --bind 0.0.0.0 --directory "$site" "$port"
+  # The server listens on localhost only; Tailscale serves it over HTTPS on the same port number.
+  local host url
+  host=$(tailscale_https_host)
+  if [[ -n $host ]] && tailscale serve --bg --https="$port" "http://localhost:$port" >/dev/null; then
+    cleanup_steps+=("tailscale serve --https=$port off >/dev/null && echo 'Stopped HTTPS on port $port.'")
+    url="https://$host:$port/ (from your Tailscale devices; on this machine also http://localhost:$port/)"
+  else
+    url="http://localhost:$port/ (this machine only: browsers block Godot over plain http from other devices)"
+  fi
+  printf '\nPR #%s is at %s. Ctrl+C to stop.\n' "$pr" "$url"
+  python3 -m http.server --bind 127.0.0.1 --directory "$site" "$port"
 }
 
 main "$@"
