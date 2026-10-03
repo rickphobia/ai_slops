@@ -13,21 +13,21 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 - **Small, reversible steps.** Change one thing, verify it, commit. Never pile up a large untested change.
 - **Prove it works.** "It should work" is not done. Run it, run the tests, show the output.
 - **Reproducible setup.** A new machine must get from clone to running with the commands in the README. Pin versions. Provide a `Dockerfile` or devcontainer when the project has system dependencies.
-- **Automate the checks.** Each project gets a CI workflow (`.github/workflows/<project>.yml`, scoped to that project's folder with `paths:`) that runs lint, type checks and tests on every push.
+- **Automate the checks.** Each project has `.github/workflows/<project>.yml` (`name: <project>`, scoped with `paths:`) running lint, type checks and tests on every push. The `ci-gate` check waits for them, and `main` requires it.
 - **Observable by default.** Structured logs, clear error messages, a health check for anything that runs as a service.
-- **Safe with secrets and data.** Least privilege, no secrets in code or logs, nothing destructive (deleting data, force-pushing, dropping tables) without asking first.
+- **Safe with secrets and data.** Least privilege, no secrets in code or logs, nothing destructive (deleting data, force-pushing, dropping tables) without asking first. `.claude/settings.json` enforces the common cases.
 - **Push back.** If a request would make the project harder to maintain, say so and offer a better way. Don't silently do the quick hack, and don't silently over-engineer either — pick the simplest thing that is production quality.
 - **No fake progress.** Never delete, skip or weaken a test to make it pass. Never claim something works that you didn't run. Report failures plainly.
 
 ## Hosting and how we work here
 
-- **Hosting:** the owner runs their own nginx in Docker on a home server (Beelink, Ubuntu), site root `~/homelab/html`, public at `rickphobia.com`. Web projects go under `/ai-projects/<name>/`. GitHub can't reach the server, so it pulls: `projects/<name>/deploy/update-site.sh` builds `main` and swaps it in. A bug fix reaches the site by merging the PR, then running that script on the server (no re-clone; it keeps its own checkout in `~/homelab/dev`). See `projects/pawn-swarm/README.md` ("Deploy") as the model for other projects.
-- **Sessions and PRs:** one ticket per session, branch and PR, run on Opus 5.5 with the effort the ticket needs (see `docs/workflow.md`). The session watches its own PR until it is green; the owner reviews and merges. Never merge for them.
+- **Hosting:** the owner runs their own nginx in Docker on a home server (Beelink, Ubuntu), site root `~/homelab/html`, public at `rickphobia.com`. Web projects go under `/ai-projects/<name>/`. GitHub can't reach the server, so it pulls: `projects/<name>/deploy/update-site.sh` builds `main` and swaps it in (it keeps its own checkout in `~/homelab/dev`). A fix reaches the site by merging the PR, then running that script on the server. See `projects/pawn-swarm/README.md` ("Deploy") as the model.
+- **Sessions:** in the cloud (claude.ai/code) or locally on the Beelink in `~/homelab/code/ai_slops`. A local session can run the deploy script and `gh` itself; a second local session at the same time needs its own worktree (`claude -w <name>`). One ticket per session, branch and PR, on Opus 5.5 with the effort the ticket needs (see `docs/workflow.md`). The owner reviews and merges. Never merge for them.
 - **Keep dev cost low:** follow "Keeping token use down" in `docs/workflow.md`. In short: Opus 5.5 at low or medium effort (effort is the cost dial, not the model), short sessions, no PR watching for small changes, batch small fixes, `/review-diff` only for big changes, no agents or workflows unless asked, read only the files the task needs.
 
 ## Before you start
 
-- Follow the loop in `docs/workflow.md`: `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` (one ticket per session and PR) → review → merge. The skills live in `.claude/skills/`.
+- Follow the loop in `docs/workflow.md`: `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` (one ticket per session and PR) → review → merge → deploy. The skills live in `.claude/skills/`.
 - Check `docs/tooling.md` before adding a skill or MCP server; add it at project scope, not repo-wide.
 
 ## Scope
@@ -40,26 +40,7 @@ Act like a senior engineer who will be paged at 3am if this breaks. In practice:
 
 ## Project structure
 
-Every project uses the standard layout for its language, with these parts:
-
-```
-projects/<name>/
-├── README.md          # from templates/project/README.md
-├── .env.example       # every env var the project reads, with dummy values
-├── src/ (or the language's standard source folder)
-│   ├── config         # loads and validates settings in one place
-│   ├── <domain>/      # business logic, grouped by feature, not by file type
-│   ├── adapters/      # code that talks to outside things: AI APIs, DBs, HTTP, files
-│   └── entrypoint     # main / CLI / server startup — thin, just wires things together
-├── tests/             # mirrors the src/ layout
-├── GLOSSARY.md        # the project's own words and what they mean
-├── docs/
-│   ├── spec.md        # what we're building (from /to-spec)
-│   ├── specs/         # specs for later features
-│   ├── tickets/       # one file per ticket (from /to-tickets)
-│   └── decisions/     # one short file per important design decision (see below)
-└── dependency + tool config (pyproject.toml, package.json, etc.)
-```
+Every project has the parts listed in `docs/new-project.md`: a config module, business logic grouped by feature, `adapters/` for outside services, a thin entrypoint, `tests/` mirroring the source, `GLOSSARY.md` and `docs/` (spec, tickets, decisions). Read it before creating a project or adding a top-level folder.
 
 - Keep the business logic separate from outside services. The logic should not know which AI provider, database or web framework is used. Then you can test it without network calls and swap a provider by changing one adapter.
 - One job per module. If a file is past ~300 lines or its name needs "and" to describe it, split it.
@@ -67,12 +48,10 @@ projects/<name>/
 
 ## Code standards
 
-- **Types:** use type hints (Python) or TypeScript with `strict` on. Avoid `Any`.
-- **Formatting and linting:** set up the standard tools for the language (e.g. `ruff` for Python, `eslint` + `prettier` for TS) and keep them clean.
-- **Naming:** names say what a thing is or does. No `data2`, `tmp`, `doStuff`.
-- **Functions:** small and doing one thing. Pass dependencies in, don't reach for globals.
-- **Comments:** explain *why*, not *what*. Delete commented-out code.
-- **Dead code:** remove it. Git keeps the history.
+- **Types:** type hints (Python) or TypeScript with `strict` on. Avoid `Any`.
+- **Formatting and linting:** the standard tools for the language (e.g. `ruff`, `eslint` + `prettier`), kept clean.
+- **Names and functions:** names say what a thing is or does (no `data2`, `tmp`, `doStuff`). Functions are small, do one thing, and get their dependencies passed in rather than reaching for globals.
+- **Comments** explain *why*, not *what*. Delete dead and commented-out code; git keeps the history.
 
 ## Configuration and secrets
 
@@ -84,9 +63,9 @@ projects/<name>/
 
 - Never swallow errors (`except: pass`, empty `catch`). Handle them, or let them surface with context about what was being done.
 - Use custom error types for the project's own failure cases so callers can tell them apart.
-- Use a real logger, not `print`/`console.log`. Log levels mean something: `debug` for detail, `info` for normal events, `warning` for something odd, `error` for failures.
+- Use a real logger, not `print`/`console.log`, with meaningful levels (`debug` detail, `info` normal events, `warning` something odd, `error` failures).
 - Log enough to debug without re-running: which input, which step, which external call failed. Never log secrets or full user data.
-- For AI calls specifically: log the model, token usage, latency and any retry. Set timeouts and retry with backoff on network errors.
+- For AI calls: log the model, token usage, latency and any retry. Set timeouts and retry with backoff on network errors.
 
 ## Testing
 
@@ -109,16 +88,9 @@ projects/<name>/
 ## Git
 
 - Small commits that each do one thing.
+- Stage files by name, then check `git diff --cached --stat` before committing: no build output, downloaded tools, archives or other binaries you didn't mean to add.
 - Commit messages: a short summary line in the imperative ("Add retry to OpenAI adapter"), then a body explaining why if it isn't obvious.
 - Prefix the summary with the project name when the change is inside one project: `pdf-summarizer: Add retry to OpenAI adapter`.
-
-## When creating a new project
-
-1. Create `projects/<name>/` (lowercase, hyphens) with the structure above. This is ticket 01, the walking skeleton, done before any feature.
-2. Copy `templates/project/README.md` into it and fill it in.
-3. Set up formatting, linting, type checks and a test runner before writing features.
-4. Add `.env.example` and a config module.
-5. Add a row to the project index in the root `README.md`.
 
 ## When finishing work on a project
 

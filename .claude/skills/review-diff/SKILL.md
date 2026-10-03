@@ -33,7 +33,7 @@ Look for the originating spec, in this order:
 
 ### 3. Identify the standards sources
 
-The root `CLAUDE.md` (the main source: structure, code standards, config, logging, testing rules), plus the project's own `CLAUDE.md` and decision records in `projects/<name>/docs/decisions/` if they exist.
+The root `CLAUDE.md` (the main source: code standards, config, logging, testing rules) and `docs/new-project.md` (the project layout), plus the project's own `CLAUDE.md` and decision records in `projects/<name>/docs/decisions/` if they exist.
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 

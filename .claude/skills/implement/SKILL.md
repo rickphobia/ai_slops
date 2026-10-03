@@ -10,22 +10,26 @@ Implement the ticket or spec the user names, usually `projects/<name>/docs/ticke
 
 1. Read the ticket, the project's spec in `projects/<name>/docs/`, `projects/<name>/GLOSSARY.md`, and any `CLAUDE.md` in the project. The root `CLAUDE.md` rules apply throughout.
 2. Check every ticket in **Blocked by** has status `done`. If any doesn't, stop and tell the user.
-3. Work on the branch the session gave you. If there isn't one, create `<project-name>/<NN>-<slug>` from `main`.
+3. Work on the branch the session gave you (cloud sessions and `claude -w` worktrees come with one). If there isn't one, create `<project-name>/<NN>-<slug>` from `origin/main`. Don't switch branches in a checkout another local session may be using: on the Beelink, a parallel ticket runs in its own worktree (`claude -w <project>-<NN>`).
 
 ## Build
 
 - Use /tdd at the seams agreed in the spec.
 - Stay inside the areas the ticket's **Touches** lists. If the work needs to change another area, stop and tell the user: a parallel session may be working there.
 - Run type checks and single test files regularly, using the commands in the project README. Run the full lint, type check and test suite at the end. All must pass before you commit.
+- If the hand-written diff grows well past ~500 changed lines, stop and suggest splitting the ticket: nobody can review a 2,000-line PR properly.
 
 ## Finish
 
-1. If the change is big (roughly 400+ changed lines, or it changes core rules), use /review-diff against `main` and fix what it finds. Otherwise re-read your own diff against the ticket instead: /review-diff starts two extra sessions and costs a lot of tokens. Don't chase judgement-call nits.
-2. Tick the acceptance criteria in the ticket file and set its status to `done`.
+1. If the change is big (roughly 400+ changed lines, or it changes core rules), use /review-diff against `main` and fix what it finds. Otherwise re-read your own diff against the ticket instead: /review-diff starts two extra sessions and costs a lot of tokens. Don't chase judgement-call nits. Either way, note which review ran for the PR's `Review:` line.
+2. Tick the acceptance criteria in the ticket file and set its status to `done`. Status is only `ready` or `done`. Steps only the owner can do (a run on the server, a GitHub setting) stay on the ticket's **Owner steps** line and are repeated in the PR body; they don't hold the status back.
 3. Update the project README and `.env.example` if anything they describe changed.
-4. Commit with the project prefix: `<project-name>: <imperative summary>`.
+4. Stage files by name and check `git diff --cached --stat`: only files the ticket needs, no build output, downloaded tools, archives or binaries you didn't make on purpose. Commit with the project prefix: `<project-name>: <imperative summary>`.
 5. If the project has something to look at or play (a web page, a game), build it and publish the build as a private Artifact, with its asset files passed as supporting `files`. Put `▶ Try this version: <link>` as the PR body's second line, so the user can try it before merging. Republish to the same link after later pushes. Skip this for projects with nothing visual.
 6. Push and open a PR using /pr. Show the user the test output and the PR link.
-7. Watch the PR until it is merged or closed (in a cloud session: `subscribe_pr_activity`). Fix merge conflicts by merging `main` in (never force-push), fix failing CI, and answer review comments. The PR only waits on the user once it is green and mergeable. Never merge it yourself: the user merges.
+7. Get the PR green and mergeable: fix merge conflicts by merging `main` in (never force-push) and fix failing CI, including the `ci-gate` check. Never merge it yourself: the user merges.
+   - Cloud session: watch with `subscribe_pr_activity` until it is merged or closed, and answer review comments.
+   - Local session: `gh pr checks <number> --watch --fail-fast`, and `gh pr view <number> --json mergeable` for conflicts. Once green and mergeable, tell the user and stop; they resume the session for review comments.
+8. Deploy, if the project has `deploy/update-site.sh` and the user says the PR is merged: a local session on the Beelink runs it, then checks the live URL with `curl -I` as the project README says. A cloud session can't reach the server, so it tells the user to run it.
 
 Never weaken, skip or delete a test to make it pass. If you can't get it green, say what's failing.

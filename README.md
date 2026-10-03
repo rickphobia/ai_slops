@@ -11,7 +11,9 @@ ai_slops/
 ├── README.md            # this file: what the repo is and the project index
 ├── CLAUDE.md            # rules Claude Code follows when working here
 ├── .claude/skills/      # shared workflow skills: /grill-with-docs, /to-spec, /to-tickets, /implement ...
-├── docs/                # how we work (workflow.md) and which tools to add (tooling.md)
+├── .claude/settings.json  # guardrails (permission rules); each project keeps a copy
+├── .github/             # one CI workflow per project, plus ci-gate (the check main requires)
+├── docs/                # how we work (workflow.md), new projects (new-project.md), tools (tooling.md)
 ├── projects/
 │   └── <project-name>/  # one folder per project, fully self-contained
 │       ├── README.md    # what it is, how to run it, current status
@@ -46,19 +48,24 @@ The rules are shared; the code is not. Like a company handbook that every team f
 
 In a cloud session (claude.ai/code) the session always starts at the repo root. Name the project in your first message, e.g. "work on `projects/my-project`".
 
+Claude Code reads `.claude/settings.json` (the guardrails: no reading `.env`, ask before force-pushes and `rm -rf`) only from the folder you start in, so each project keeps a copy of the root one.
+
+**Two local sessions at once** (on the Beelink) must not share a checkout, or they switch branches under each other. Start the second one from the repo root in its own worktree:
+
+```bash
+cd ~/homelab/code/ai_slops
+claude -w pawn-swarm-16    # worktree in .claude/worktrees/pawn-swarm-16, on its own branch
+```
+
 ## Further reading
 
-- [`docs/workflow.md`](docs/workflow.md) — the spec → plan → build → verify → review loop we follow
+- [`docs/workflow.md`](docs/workflow.md) — the spec → plan → build → verify → review → deploy loop we follow
+- [`docs/new-project.md`](docs/new-project.md) — the layout every project uses and the steps to start one
 - [`docs/tooling.md`](docs/tooling.md) — recommended skills and MCP servers by topic (game dev, Blender, ML, ...)
 
 ## Starting a new project
 
-```bash
-mkdir projects/my-project
-cp templates/project/README.md projects/my-project/README.md
-```
-
-Then fill in the README and add a row to the index.
+Follow [`docs/new-project.md`](docs/new-project.md). It is ticket 01 of the project (the walking skeleton): folder, README from the template, a copy of `.claude/settings.json`, checks, CI workflow, and a row in the index below.
 
 ## Project index
 
