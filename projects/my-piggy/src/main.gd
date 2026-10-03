@@ -1,7 +1,8 @@
 extends Node
 ## Entry scene: loads and checks the tuning and the player's settings, starts the night,
 ## and wires the rules to the adapters: title screen, opening, house, Piggy, pause menu,
-## end card, the PS1 look and the ambient sound. Tells the Night which space the Piggy is
+## end card, the PS1 look, the ambient sound and Mum (her body, and the house distances her
+## hearing uses). Tells the Night which space the Piggy is
 ## in, what the player is doing and when they reach the back door, and passes what the
 ## body did on to the Piggy and its sounds.
 ## Owns the mouse (captured while playing, free otherwise). Kept thin: no game rules here.
@@ -19,6 +20,7 @@ var _flow: GameFlow
 var _settings: PlayerSettings
 var _house: House
 var _piggy: PiggyController
+var _mum: Mum
 var _body_sounds: BodySounds
 var _title: TitleScreen
 var _pause_menu: PauseMenu
@@ -69,7 +71,22 @@ func _ready() -> void:
 	add_child(_ambient)
 	_ambient.setup(_house.fridge_hum(), _piggy.ears(), _occlusion)
 
-	_night = Night.new(_piggy.pose(), tuning)
+	var distances := HouseDistances.new(
+		_house.get_world_3d(), _house.walkable().get_navigation_map()
+	)
+	var mum_start := _house.mum_start().global_position
+	_night = Night.new(_piggy.pose(), tuning, RandomNumberGenerator.new(), distances, mum_start)
+	_night.noise_heard.connect(_on_noise_heard)
+	_night.mum.alert_changed.connect(_on_mum_alert_changed)
+	_mum = Mum.new()
+	_mum.setup(tuning, _night.mum, _house.mum_route(), RandomNumberGenerator.new())
+	_mum.process_mode = Node.PROCESS_MODE_DISABLED
+	_mum.said.connect(func(line: String) -> void: GameLog.debug('Mum: "%s"' % line))
+	add_child(_mum)
+	_mum.global_position = mum_start
+	distances.ignored = [_piggy.get_rid(), _mum.get_rid()]
+	for sound in _mum.sounds():
+		_occlusion.register(sound)
 	_body_sounds = BodySounds.new()
 	_body_sounds.setup(tuning.give_in_seconds)
 	add_child(_body_sounds)
@@ -100,6 +117,9 @@ func _ready() -> void:
 		var overlay := DebugOverlay.new()
 		overlay.setup(_night)
 		_add_layer(overlay, MENU_LAYER)
+		var rings := NoiseRings.new()
+		rings.setup(_night)
+		add_child(rings)
 
 
 func _process(delta: float) -> void:
@@ -120,7 +140,9 @@ func _physics_process(delta: float) -> void:
 	if _flow == null or not _flow.has_control():
 		return
 	var suppress_held := Input.is_action_pressed("suppress")
-	var events := _night.advance(delta, _piggy.is_trotting(), suppress_held, _piggy.global_position)
+	var events := _night.advance(
+		delta, _piggy.is_trotting(), suppress_held, _piggy.global_position, _piggy.gait()
+	)
 	_update_log_context()
 	for event in events:
 		_on_body_event(event)
@@ -170,6 +192,7 @@ func _give_control() -> void:
 		player.stop()
 	# Main keeps running while paused; the Piggy must not, so it can't inherit from main.
 	_piggy.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_mum.process_mode = Node.PROCESS_MODE_PAUSABLE
 	GameLog.info("Eyes open: control given")
 
 
@@ -213,6 +236,7 @@ func _end_night() -> void:
 	_night.reach_back_door()
 	_flow.end()
 	_piggy.process_mode = Node.PROCESS_MODE_DISABLED
+	_mum.process_mode = Node.PROCESS_MODE_DISABLED
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_add_layer(EndCard.new(), MENU_LAYER)
 	GameLog.info("Reached the back door: night over")
@@ -233,7 +257,7 @@ func _try_give_in() -> void:
 	GameLog.info("Giving in at %s" % spot.name)
 
 
-## Shows and plays what the body did. Ticket 06 also turns these into noises for Mum.
+## Shows and plays what the body did. The Night has already turned it into a noise for Mum.
 func _on_body_event(event: BodyEvent) -> void:
 	_body_sounds.react(event)
 	match event.kind:
@@ -251,8 +275,26 @@ func _on_body_event(event: BodyEvent) -> void:
 			GameLog.info("Gave in: urge cleared")
 
 
-func _on_door_creaked(noise_radius: float, at: Vector3) -> void:
+## Only the Piggy's door pushes are noises Mum hunts; she doesn't come to look at her own.
+func _on_door_creaked(noise_radius: float, at: Vector3, pushed_by: Node3D) -> void:
 	GameLog.debug("Door creaked at %s: noise radius %.1f m" % [at, noise_radius])
+	if pushed_by == _piggy:
+		_night.door_creaked(noise_radius, at)
+
+
+func _on_noise_heard(heard: HeardNoise) -> void:
+	GameLog.info(
+		(
+			"Mum heard %s: loudness %.1f m, %.1f m away through %d doors/walls"
+			% [heard.noise.source, heard.noise.loudness, heard.distance, heard.barriers]
+		)
+	)
+
+
+func _on_mum_alert_changed(from: FamilyBrain.Alert, to: FamilyBrain.Alert) -> void:
+	GameLog.info(
+		"Mum's alert level: %s -> %s" % [FamilyBrain.alert_name(from), FamilyBrain.alert_name(to)]
+	)
 
 
 func _on_settings_changed() -> void:

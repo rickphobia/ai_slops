@@ -1,8 +1,9 @@
 class_name PlaceholderSounds
 extends RefCounted
-## Synth stand-ins for the opening's breathing and heartbeat, door and house creaks, wind
-## and the fridge hum, made in code so there are no sound files to license. Real recordings
-## can replace them later; record each one in CREDITS.md when it arrives.
+## Synth stand-ins for the opening's breathing and heartbeat, door and house creaks, wind,
+## the fridge hum and Mum's humming, lines and footsteps, made in code so there are no sound
+## files to license. Real recordings can replace them later; record each one in CREDITS.md
+## when it arrives.
 
 const MIX_RATE := 22050
 const BREATH_SECONDS := 4.0
@@ -14,6 +15,22 @@ const WIND_SECONDS := 9.0
 ## Mains hum. A whole number of cycles fits the loop, so it loops without a click.
 const HUM_PITCH_HZ := 50.0
 const HUM_SECONDS := 1.0
+## "This little piggy went to market": each note is (pitch in Hz, seconds).
+const HUM_TUNE: Array[Vector2] = [
+	Vector2(392.0, 0.35),
+	Vector2(329.6, 0.35),
+	Vector2(392.0, 0.35),
+	Vector2(329.6, 0.35),
+	Vector2(392.0, 0.35),
+	Vector2(440.0, 0.35),
+	Vector2(392.0, 0.7),
+	Vector2(349.2, 0.35),
+	Vector2(329.6, 0.35),
+	Vector2(293.7, 0.35),
+	Vector2(261.6, 1.0),
+]
+const HUM_PAUSE_SECONDS := 2.0
+const SYLLABLE_SECONDS := 0.28
 
 
 ## Slow breathing: soft noise swelling in, then a longer breath out.
@@ -116,6 +133,61 @@ static func _buzz(
 		var saw := 2.0 * fmod(phase, 1.0) - 1.0
 		var rough := saw + noise.randf_range(-roughness, roughness)
 		samples[index] = rough * loudness * sin(PI * progress)
+	return _to_stream(samples, false)
+
+
+## Mum humming "This Little Piggy", looped: a soft, closed-mouth voice with a slow vibrato,
+## then a pause before it starts again.
+static func humming() -> AudioStreamWAV:
+	var samples := PackedFloat32Array()
+	var phase := 0.0
+	for note: Vector2 in HUM_TUNE:
+		var count := int(note.y * MIX_RATE)
+		for index in count:
+			var seconds := float(index) / MIX_RATE
+			var hz := note.x * (1.0 + 0.012 * sin(TAU * 5.0 * seconds))
+			phase += hz / MIX_RATE
+			var voice := 0.6 * sin(TAU * phase) + 0.25 * sin(2.0 * TAU * phase)
+			var envelope := minf(seconds / 0.06, 1.0) * minf((note.y - seconds) / 0.08, 1.0)
+			samples.append(voice * 0.5 * maxf(envelope, 0.0))
+	for index in int(HUM_PAUSE_SECONDS * MIX_RATE):
+		samples.append(0.0)
+	return _to_stream(samples)
+
+
+## One of Mum's lines, as a murmur with one rise and fall per syllable until real recordings
+## exist. `syllables` sets its length; `pitch_hz` how high her voice is.
+static func spoken_line(syllables: int, pitch_hz: float) -> AudioStreamWAV:
+	var count := int(syllables * SYLLABLE_SECONDS * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var phase := 0.0
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		var in_syllable := fmod(seconds, SYLLABLE_SECONDS) / SYLLABLE_SECONDS
+		# Falls over the line like a sentence, with a lilt on each syllable.
+		var hz := pitch_hz * (1.1 - 0.2 * seconds / (syllables * SYLLABLE_SECONDS))
+		hz *= 1.0 + 0.06 * sin(PI * in_syllable)
+		phase += hz / MIX_RATE
+		var saw := 2.0 * fmod(phase, 1.0) - 1.0
+		var vowel := 0.5 * sin(TAU * phase) + 0.2 * saw
+		samples[index] = vowel * 0.7 * sin(PI * in_syllable)
+	return _to_stream(samples, false)
+
+
+## One footstep on a wooden floor: a short, low knock.
+static func footstep() -> AudioStreamWAV:
+	var noise := RandomNumberGenerator.new()
+	noise.seed = 11
+	var count := int(0.18 * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var smoothed := 0.0
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		smoothed += 0.15 * (noise.randf_range(-1.0, 1.0) - smoothed)
+		var knock := sin(TAU * 90.0 * seconds) * 0.6 + smoothed * 1.5
+		samples[index] = knock * exp(-seconds * 30.0)
 	return _to_stream(samples, false)
 
 

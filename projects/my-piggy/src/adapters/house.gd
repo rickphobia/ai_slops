@@ -6,8 +6,8 @@ extends Node3D
 ## Lit by a few dim lamps and moonlight through the back door, in fog.
 ## Says which space a point is in and whether it is at the back door; main tells the Night.
 
-## A door creaked: its noise radius in metres and where it came from.
-signal door_creaked(noise_radius: float, at: Vector3)
+## A door creaked: its noise radius in metres, where it came from and who pushed it.
+signal door_creaked(noise_radius: float, at: Vector3, pushed_by: Node3D)
 
 ## The point a Piggy is not in any space (in a wall, or outside the house).
 const NO_SPACE: StringName = &""
@@ -79,7 +79,20 @@ func positional_sounds() -> Array[AudioStreamPlayer3D]:
 	return sounds
 
 
-## The walkable area for pathfinding (Mum will walk on it).
+## Where Mum starts the night.
+func mum_start() -> Marker3D:
+	return $Markers/MumStart
+
+
+## The points of Mum's route, in walking order.
+func mum_route() -> Array[Vector3]:
+	var route: Array[Vector3] = []
+	for point: Marker3D in $Markers/MumRoute.get_children():
+		route.append(point.global_position)
+	return route
+
+
+## The walkable area for pathfinding (Mum walks on it).
 func walkable() -> NavigationRegion3D:
 	return _walkable
 

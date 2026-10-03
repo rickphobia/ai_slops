@@ -20,7 +20,7 @@ func test_the_command_line_flag_turns_it_on() -> void:
 	assert_true(DebugOverlay.is_requested("", PackedStringArray(["--debug"])))
 
 
-func test_it_shows_humanity_and_urge() -> void:
+func test_it_shows_humanity_urge_and_mums_alert_level() -> void:
 	var night := Night.new(PiggyPose.new(Vector3.ZERO, 0.0, 0.0), NightTestTuning.table())
 	night.advance(2.0, false, false, Vector3.ZERO)
 	var overlay: DebugOverlay = add_child_autofree(DebugOverlay.new())
@@ -30,3 +30,4 @@ func test_it_shows_humanity_and_urge() -> void:
 
 	assert_string_contains(overlay.text, "humanity 100")
 	assert_string_contains(overlay.text, "urge 20")
+	assert_string_contains(overlay.text, "mum unaware")

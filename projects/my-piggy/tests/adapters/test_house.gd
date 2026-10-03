@@ -24,7 +24,9 @@ func _house() -> House:
 	var house: House = add_child_autofree(HOUSE_SCENE.instantiate())
 	house.setup(_tuning())
 	_creaks = []
-	house.door_creaked.connect(func(radius: float, _at: Vector3) -> void: _creaks.append(radius))
+	house.door_creaked.connect(
+		func(radius: float, _at: Vector3, _by: Node3D) -> void: _creaks.append(radius)
+	)
 	return house
 
 
