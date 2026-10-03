@@ -1,12 +1,10 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://src/adapters/door.gd" id="1_door"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_door"]
-albedo_color = Color(0.42, 0.36, 0.3, 1)
+[ext_resource type="Material" path="res://src/adapters/look/wood.tres" id="2_wood"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_panel"]
-material = SubResource("StandardMaterial3D_door")
+material = ExtResource("2_wood")
 size = Vector3(0.96, 1.96, 0.05)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_panel"]

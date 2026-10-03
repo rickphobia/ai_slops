@@ -22,6 +22,11 @@ func setup(tuning: Tuning) -> void:
 	_tuning = tuning
 
 
+## Where the player sees and hears from.
+func ears() -> Node3D:
+	return $Camera3D
+
+
 func set_sensitivity_scale(scale: float) -> void:
 	_sensitivity_scale = scale
 

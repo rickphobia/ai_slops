@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://src/adapters/look/ps1_surface.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://src/adapters/look/grime.tres" id="2_grime"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/albedo = Color(0.55, 0.53, 0.5, 1)
+shader_parameter/grime = ExtResource("2_grime")
