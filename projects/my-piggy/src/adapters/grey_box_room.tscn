@@ -1,0 +1,70 @@
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grey"]
+albedo_color = Color(0.55, 0.55, 0.58, 1)
+
+[sub_resource type="Environment" id="Environment_room"]
+background_mode = 1
+background_color = Color(0.02, 0.02, 0.03, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.45, 0.42, 0.5, 1)
+
+[node name="GreyBoxRoom" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_room")
+
+[node name="Lamp" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+omni_range = 8.0
+
+[node name="SpawnPoint" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 2.0)
+
+[node name="Floor" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+use_collision = true
+size = Vector3(6, 0.2, 8)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="Ceiling" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
+use_collision = true
+size = Vector3(6, 0.2, 8)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="WallNorth" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -4.1)
+use_collision = true
+size = Vector3(6, 2.6, 0.2)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="WallSouth" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 4.1)
+use_collision = true
+size = Vector3(6, 2.6, 0.2)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="WallWest" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.1, 1.3, 0)
+use_collision = true
+size = Vector3(0.2, 2.6, 8)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="WallEast" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.1, 1.3, 0)
+use_collision = true
+size = Vector3(0.2, 2.6, 8)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="Bed" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 0.25, -2.8)
+use_collision = true
+size = Vector3(1.6, 0.5, 2.2)
+material = SubResource("StandardMaterial3D_grey")
+
+[node name="Wardrobe" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3, 1.0, -3.7)
+use_collision = true
+size = Vector3(1.2, 2.0, 0.6)
+material = SubResource("StandardMaterial3D_grey")
