@@ -10,7 +10,7 @@ I want to make an original horror game that is scary because of atmosphere, not 
 
 **My Piggy** is a first-person horror game. You wake up in your childhood bedroom with your own human head on a pig's body. Your family is hunting you through the house in one long night. Mum hums "This Little Piggy" as she searches and calls you "my piggy".
 
-Your body acts on its own. Its **urge** builds until it has an **outburst** (a snort, a squeal, a lunge) that **family members** can hear. You can **suppress** an outburst by holding a key, which keeps you human but slows you down and doesn't make the urge go away. Or you can **give in** — eat the **slop**, root in the bin — which quiets the body but costs **humanity**. Humanity is never shown. You notice it by what the game shows you: at high humanity the slop looks like rotten slop; as it drops, the slop starts to look like your favourite snacks, and **reflections** stop showing your old face.
+Your body acts on its own. Its **urge** builds until it has an **outburst** (a snort, a squeal, a lunge) that **family members** can hear. You can **suppress** an outburst by holding a key, which keeps you human but slows you down and doesn't make the urge go away. Or you can **give in** — eat the **slop**, root in the bin — which quiets the body but costs **humanity**. Humanity is never shown. You notice it by what the game shows you: at high humanity the slop looks like rotten slop; as it drops, the slop starts to look like your favourite snacks, and **reflections** stop showing your old face. The house itself **rots** around you: it starts as a cosy family home at night and sours, room by room, into a grotesque flesh-house, while the slop looks more and more like comfort.
 
 So the more you give in, the safer you are right now and the less you are yourself.
 
@@ -61,61 +61,66 @@ This spec covers the **first playable**: one night in three **spaces** (bedroom,
 ### Humanity and hallucinations
 
 32. As a player, I want humanity to be hidden, so that I learn about it through the world and not a meter.
-33. As a player, I want pig vision to get blurrier and more washed out as humanity drops, so that I can feel myself slipping.
+33. As a player, I want pig vision to get blurrier as humanity drops, so that I can feel myself slipping.
 34. As a player, I want slop to look and sound like rotten slop at high humanity, so that giving in feels disgusting.
 35. As a player, I want slop to look like my favourite snacks once humanity drops, so that giving in starts to feel like comfort, which is worse.
 36. As a player, I want the change between slop and snacks to happen when I'm not looking at it, so that I'm never sure it changed.
 37. As a player, I want the hallway mirror to briefly show my old human body at high humanity before it flickers to the truth, so that the reveal hits hard.
 38. As a player, I want the mirror to show only the pig body at low humanity, so that the loss is visible.
 39. As a player, I want my own breathing and heartbeat to sound more like a pig's as humanity drops, so that the change reaches my ears too.
+40. As a player, I want the house to start as a cosy family home at night (warm lamps, saturated colours, kids' drawings and family photos, a ticking clock, a TV murmuring through a wall), so that it feels like home before it turns on me.
+41. As a player, I want the house to rot as humanity drops, from cosy to soured (sour colours, stains, grime, flies) to grotesque (wet meat walls, sickly green-brown lamps, family photos with pig faces, dripping, wet breathing in the walls), so that I can see and hear what I'm becoming.
+42. As a player, I want a space's rot to change only while I'm not looking at it, so that rooms change behind my back and I'm never sure when.
+43. As a player, I want the slop to look more like snacks while the house rots, so that the thing destroying me is the only comfort left.
+44. As a player, I want the rot to change only colours, textures, props and sounds, never how dark the hiding places are, so that giving in doesn't quietly make stealth easier or harder.
 
 ### Mum
 
-40. As a player, I want to hear Mum before I see her (humming "This Little Piggy", footsteps, calling "my piggy"), so that sound tells me where she is.
-41. As a player, I want Mum to walk a route through the spaces when she hasn't heard me, so that the house feels lived in and dangerous.
-42. As a player, I want Mum to come to where she heard a noise, so that my noise has consequences.
-43. As a player, I want louder noises to be heard from further away, and walls and closed doors to muffle them, so that position and doors matter.
-44. As a player, I want Mum to search around a noise for a while before giving up, so that hiding near the spot is tense.
-45. As a player, I want Mum to carry a torch, and only see me if I'm in its beam with nothing in the way, so that darkness and furniture protect me.
-46. As a player, I want Mum to chase me when she sees me, so that being seen is terrifying.
-47. As a player, I want to be able to escape a chase by breaking line of sight and staying silent, so that a chase isn't automatically a loss.
-48. As a player, I want Mum's humming to stop and her voice to change when she is searching or chasing, so that I can hear her alert level without any UI.
-49. As a player, I want Mum to talk to me while she searches ("Come to Mummy", "It's alright, my piggy"), so that she is scary because she sounds loving.
+45. As a player, I want to hear Mum before I see her (humming "This Little Piggy", footsteps, calling "my piggy"), so that sound tells me where she is.
+46. As a player, I want Mum to walk a route through the spaces when she hasn't heard me, so that the house feels lived in and dangerous.
+47. As a player, I want Mum to come to where she heard a noise, so that my noise has consequences.
+48. As a player, I want louder noises to be heard from further away, and walls and closed doors to muffle them, so that position and doors matter.
+49. As a player, I want Mum to search around a noise for a while before giving up, so that hiding near the spot is tense.
+50. As a player, I want Mum to carry a torch, and only see me if I'm in its beam with nothing in the way, so that darkness and furniture protect me.
+51. As a player, I want Mum to chase me when she sees me, so that being seen is terrifying.
+52. As a player, I want to be able to escape a chase by breaking line of sight and staying silent, so that a chase isn't automatically a loss.
+53. As a player, I want Mum's humming to stop and her voice to change when she is searching or chasing, so that I can hear her alert level without any UI.
+54. As a player, I want Mum to talk to me while she searches ("Come to Mummy", "It's alright, my piggy"), so that she is scary because she sounds loving.
 
 ### Getting caught
 
-50. As a player, I want being caught to play a short capture scene (Mum's torch in my face, her face, her scream, cut to black), so that it is horrible but quick.
-51. As a player, I want to restart from the start of the space I'm in, so that I don't replay the whole night.
-52. As a player, I want everything reset to how it was when I entered that space (my humanity, urge, Mum's position, give-in spots), so that a restart is fair and can't be used to cheat.
-53. As a player, I want restarts to be fast (under 3 seconds), so that fear doesn't turn into boredom.
+55. As a player, I want being caught to play a short capture scene (Mum's torch in my face, her face, her scream, cut to black), so that it is horrible but quick.
+56. As a player, I want to restart from the start of the space I'm in, so that I don't replay the whole night.
+57. As a player, I want everything reset to how it was when I entered that space (my humanity, urge, Mum's position, give-in spots), so that a restart is fair and can't be used to cheat.
+58. As a player, I want restarts to be fast (under 3 seconds), so that fear doesn't turn into boredom.
 
 ### The spaces
 
-54. As a player, I want the bedroom to be a safe-ish place to learn the body (a give-in spot, a door, no Mum inside at first), so that I learn the controls before the danger.
-55. As a player, I want the hallway to be long, with the mirror and Mum's route passing through it, so that it is the first real test.
-56. As a player, I want the kitchen to have a slop bowl, the bin, hiding spots under the table, and the back door, so that it is the climax of the slice.
-57. As a player, I want the back door to end the first playable, so that the slice has a goal.
-58. As a player, I want the end card to change slightly with my humanity (one line of text and what the last reflection in the door glass shows), so that I feel my choices mattered.
-59. As a player, I want the end card to say this is a first playable and invite feedback, so that friends know what they played.
+59. As a player, I want the bedroom to be a safe-ish place to learn the body (a give-in spot, a door, no Mum inside at first), so that I learn the controls before the danger.
+60. As a player, I want the hallway to be long, with the mirror and Mum's route passing through it, so that it is the first real test.
+61. As a player, I want the kitchen to have a slop bowl, the bin, hiding spots under the table, and the back door, so that it is the climax of the slice.
+62. As a player, I want the back door to end the first playable, so that the slice has a goal.
+63. As a player, I want the end card to change slightly with my humanity (one line of text and what the last reflection in the door glass shows), so that I feel my choices mattered.
+64. As a player, I want the end card to say this is a first playable and invite feedback, so that friends know what they played.
 
 ### Look and sound
 
-60. As a player, I want a PS1-style look (low-poly models, wobbling textures, dithering, fog), so that the cheap art looks deliberate and creepy.
-61. As a player, I want the house to be dark, lit by a few lamps, the moon, and Mum's torch, so that light is both safety and danger.
-62. As a player, I want 3D sound (left/right, near/far, muffled through walls), so that I can play by ear.
-63. As a player, I want a quiet ambient bed (the house creaking, a fridge hum, wind), so that silence still feels alive.
-64. As a player, I want no music during play except Mum's humming, so that the atmosphere comes from the house.
+65. As a player, I want a PS1-style look (low-poly models, wobbling textures, dithering, fog), so that the cheap art looks deliberate and creepy.
+66. As a player, I want the house to be night-dark, lit by a few lamps, the moon, and Mum's torch, with the same dark hiding places at every stage of the rot, so that light is both safety and danger.
+67. As a player, I want 3D sound (left/right, near/far, muffled through walls), so that I can play by ear.
+68. As a player, I want a quiet ambient bed (the house creaking, a fridge hum, wind, plus the rot's homely or wet sounds), so that silence still feels alive.
+69. As a player, I want no music during play except Mum's humming, so that the atmosphere comes from the house.
 
 ### Owner and developer
 
-65. As the owner, I want the game deployed by the same pull-and-build script approach as `pawn-swarm`, so that updating the site is one command on the server.
-66. As the owner, I want a debug overlay (humanity, urge, Mum's alert level, noise rings) that I can turn on with `?debug=1` in the URL, so that I can test and tune without guessing.
-67. As the owner, I want all tuning numbers in one tuning table, checked at startup, so that I can tune the game without editing the logic and a typo fails loudly.
-68. As the owner, I want logs with levels (debug, info, warning, error) in the browser console, saying which space, what step and what failed, so that I can debug a friend's report.
-69. As a developer, I want the game rules testable without opening the Godot editor or running a scene, so that tests are fast and run in CI.
-70. As a developer, I want CI to lint, type-check, test and build the web export on every push that touches the project, so that a broken build never reaches `main`.
-71. As a developer, I want the exact Godot version, the test addon version and the lint tool version pinned, so that a new machine gets the same results.
-72. As a developer, I want a README that gets me from clone to running, testing and exporting, so that I can work without asking anyone.
+70. As the owner, I want the game deployed by the same pull-and-build script approach as `pawn-swarm`, so that updating the site is one command on the server.
+71. As the owner, I want a debug overlay (humanity, urge, rot stage, Mum's alert level, noise rings) that I can turn on with `?debug=1` in the URL, so that I can test and tune without guessing.
+72. As the owner, I want all tuning numbers in one tuning table, checked at startup, so that I can tune the game without editing the logic and a typo fails loudly.
+73. As the owner, I want logs with levels (debug, info, warning, error) in the browser console, saying which space, what step and what failed, so that I can debug a friend's report.
+74. As a developer, I want the game rules testable without opening the Godot editor or running a scene, so that tests are fast and run in CI.
+75. As a developer, I want CI to lint, type-check, test and build the web export on every push that touches the project, so that a broken build never reaches `main`.
+76. As a developer, I want the exact Godot version, the test addon version and the lint tool version pinned, so that a new machine gets the same results.
+77. As a developer, I want a README that gets me from clone to running, testing and exporting, so that I can work without asking anyone.
 
 ## Implementation Decisions
 
@@ -136,7 +141,7 @@ Rules modules (pure, unit-tested):
 - **Body.** Holds urge and humanity. Each step takes the time passed plus what the player is doing (moving speed, suppressing, giving in) and returns events: urge rising, outburst warning, outburst (with loudness), suppression held, gave in, humanity changed.
 - **Noise.** Turns body events and movement into **noises** with a position and a loudness. Decides who hears a noise using a distance it is given by the adapter (path distance through the house, with a muffling cost per closed door and wall). The rules don't compute geometry themselves.
 - **Family brain.** One instance per family member. Takes perceptions (heard a noise at X, sees the Piggy, lost sight, reached destination) and returns intents (walk route, go to X, search around X, chase, catch). It owns the **alert level**: unaware → investigating → searching → chasing, and back down over time.
-- **Hallucinations.** Given humanity and whether the player is looking, decides what each lying object shows: slop or snacks, old face or pig body in the mirror, how strong pig vision is, and which breathing sound set plays. Changes only when the object is out of view.
+- **Hallucinations.** Given humanity and whether the player is looking, decides what each lying object shows: slop or snacks, old face or pig body in the mirror, each space's **rot** stage, how strong pig vision is, and which breathing sound set plays. Changes only when the object or space is out of view.
 - **Night.** Ties the above together for one night: current space, checkpoints taken on entering a space, being caught, restoring a checkpoint, reaching the back door, and the end-card variant. **This is the main test seam** (see Testing Decisions).
 
 Godot adapters (thin, smoke-tested):
@@ -144,8 +149,8 @@ Godot adapters (thin, smoke-tested):
 - **Piggy controller.** First-person movement, mouse look, low camera, gait sway, door pushing, give-in interaction. Reads input through Godot's input map (no hard-coded keys in logic).
 - **Family member actor.** Moves Mum with Godot's navigation, plays her lines and humming, casts her torch and checks line of sight, reports perceptions to her family brain.
 - **House distance provider.** Answers "how far is this noise from this listener, and through how many doors and walls", using the navigation mesh. The Noise module depends only on this question, not on Godot.
-- **Look.** PS1 shader (vertex wobble, low-res textures, dithering, fog) and the pig vision post-effect, driven by values from Hallucinations.
-- **Sound.** 3D players, a muffled bus for sounds behind walls, ambient bed, body sounds, Mum's voice. Driven by events from Body, Family brain and Hallucinations.
+- **Look.** PS1 shader (vertex wobble, low-res textures, dithering, fog) the pig vision post-effect, and each space's rot set (materials, lamp colours, props), driven by values from Hallucinations.
+- **Sound.** 3D players, a muffled bus for sounds behind walls, ambient bed with a sound set per rot stage, body sounds, Mum's voice. Driven by events from Body, Family brain and Hallucinations.
 - **Capture scene and end card.** Short scripted scenes triggered by Night.
 - **Debug overlay.** Shown only with `?debug=1` (web) or a command-line flag (desktop).
 - **Logger.** A small project logger with levels on top of Godot's printing. Every line carries the space name and the step. No player data exists to leak.
@@ -153,7 +158,7 @@ Godot adapters (thin, smoke-tested):
 
 ### Rules (starting values, all in the tuning table)
 
-- **Humanity:** starts at 100, never goes back up in the first playable. Giving in costs 12. Hallucination thresholds: slop shows as snacks below 70; the mirror stops showing the old face below 55; pig vision is at full strength by 20.
+- **Humanity:** starts at 100, never goes back up in the first playable. Giving in costs 12. Hallucination thresholds: slop shows as snacks below 70; the mirror stops showing the old face below 55; pig vision is at full strength by 20. Rot: cosy at 70 and above, soured from 69 to 40, grotesque below 40. Rot follows current humanity, so being caught restores the checkpoint's stage.
 - **Urge:** 0–100, rises 4 per second at rest, 6 while trotting. Warning signs start at 70; outburst at 100. After an outburst the urge drops to 30.
 - **Resisting makes it worse:** each suppressed outburst raises the urge rise rate by 10% for the rest of the space.
 - **Suppress:** while held at or above 100 urge, the outburst waits; movement drops to 25% speed. Each second held adds 15% to the next outburst's loudness. If held past 6 seconds, the outburst happens anyway at that raised loudness.
@@ -165,7 +170,7 @@ Godot adapters (thin, smoke-tested):
 ### Content and assets
 
 - Free assets with licences checked and listed in a credits file (Kenney, Quaternius, Poly Pizza for models; Freesound for sounds). Each asset's licence is recorded when it is added.
-- Custom-made: the Piggy's body seen in the mirror and when looking down, Mum's face for the capture scene, the slop and snack versions of the bowl, the body sounds and Mum's lines and humming. Placeholders (grey boxes, synth sounds) are fine until the custom versions exist. Tickets must not block on art.
+- Custom-made: the Piggy's body seen in the mirror and when looking down, Mum's face for the capture scene, the slop and snack versions of the bowl, the three rot sets (cosy, soured, grotesque) for each space, the body sounds and Mum's lines and humming. Placeholders (grey boxes, synth sounds) are fine until the custom versions exist. Tickets must not block on art.
 - "This Little Piggy" is a traditional nursery rhyme in the public domain; the recording is our own.
 
 ### Deploy
@@ -202,7 +207,7 @@ Godot adapters (thin, smoke-tested):
 - Speech and its decay, talking to family members.
 - Family members visibly changing at low humanity.
 - The full endings, including the cannibal ending.
-- Fake threats, fake smell trails, the house changing, Mum's voice from empty rooms (the other hallucinations). The first playable has slop/snacks, the mirror, pig vision and breathing only.
+- Fake threats, fake smell trails, the rot turning real, Mum's voice from empty rooms (the other hallucinations). The first playable has slop/snacks, the mirror, pig vision, breathing and the rot (as a hallucination) only.
 - "Hard body" mode with separate leg keys.
 - Saving and loading a night, settings beyond sensitivity and volume, key rebinding.
 - Gamepad, mobile, Safari, Steam build and achievements.
@@ -216,7 +221,8 @@ Godot adapters (thin, smoke-tested):
 - **Story:** Dad worked at a lab and brought something home. The Piggy changed first. The rest of the family is changing more slowly and hunts the Piggy to hide what's coming for them. Told only through things found in the house, mostly in the basement. No cutscenes.
 - **Family:** hunts from the start. At low humanity the Piggy glimpses that they are changing too (grosser models of the same people).
 - **Hallucinations, ramping with humanity:**
-  - At high humanity: Mum's voice from empty rooms, the house changing (meat walls, family photos showing a pig face).
+  - At high humanity: Mum's voice from empty rooms.
+  - **The rot turns real.** It is what Dad brought home, spreading through the house. Below a humanity threshold the Piggy finds out they weren't imagining it: from then on it can spread in plain view and Mum treats it as real. It never makes floors noisy or slow.
   - At low humanity: fake threats and fake smell trails.
   - Throughout: food lies. Slop looks like snacks, and at the bottom, people look like steak.
 - **Speech:** a few words through doors at high humanity, fading to squeals.

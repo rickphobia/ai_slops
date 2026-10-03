@@ -1,6 +1,6 @@
 # 08: Hallucinations
 
-**What to build:** **Humanity** becomes something the player can feel. **Pig vision** gets blurrier and more washed out as humanity drops, and the Piggy's breathing and heartbeat sound more like a pig's. **Slop** looks and sounds like rotten slop at high humanity. Below the threshold it shows as the player's favourite snacks, swapping only while nobody is looking at it. The hallway mirror shows the Piggy's old human body for a moment before flickering to the truth. At low humanity it shows only the pig. The end card's line of text and the reflection in the back-door glass change with humanity.
+**What to build:** **Humanity** becomes something the player can feel. **Pig vision** gets blurrier as humanity drops (no washing-out: colour belongs to the rot, ticket 09), and the Piggy's breathing and heartbeat sound more like a pig's. **Slop** looks and sounds like rotten slop at high humanity. Below the threshold it shows as the player's favourite snacks, swapping only while nobody is looking at it. The hallway mirror shows the Piggy's old human body for a moment before flickering to the truth. At low humanity it shows only the pig. The end card's line of text and the reflection in the back-door glass change with humanity.
 
 **Blocked by:** 04 (The body), 05 (Look and atmosphere)
 
