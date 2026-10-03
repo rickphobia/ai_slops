@@ -48,6 +48,8 @@ static func table() -> Tuning:
 	tuning.pig_vision_full_at_humanity = 20.0
 	tuning.snouty_breathing_below_humanity = 85.0
 	tuning.pig_breathing_below_humanity = 40.0
+	tuning.rot_soured_below_humanity = 70.0
+	tuning.rot_grotesque_below_humanity = 40.0
 	tuning.mum_chase_speed = 4.0
 	tuning.mum_torch_cone_degrees = 60.0
 	tuning.mum_torch_range = 10.0

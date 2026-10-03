@@ -118,3 +118,59 @@ func test_the_ending_is_human_while_the_mirror_still_shows_the_old_body() -> voi
 	var hallucinations := _hallucinations()
 	assert_eq(hallucinations.ending(55.0), Hallucinations.Ending.HUMAN)
 	assert_eq(hallucinations.ending(54.9), Hallucinations.Ending.PIG)
+
+
+func _rot(humanity: float = 100.0) -> Hallucinations:
+	var hallucinations := Hallucinations.new(NightTestTuning.table())
+	hallucinations.add_space(&"kitchen", humanity)
+	hallucinations.add_space(&"hallway", humanity)
+	return hallucinations
+
+
+func _look_at_spaces(hallucinations: Hallucinations, humanity: float, spaces: Array) -> void:
+	var in_view: Array[StringName] = []
+	in_view.assign(spaces)
+	hallucinations.look_at_spaces(humanity, in_view)
+
+
+func test_the_rot_is_cosy_from_70_soured_down_to_40_and_grotesque_below() -> void:
+	var hallucinations := _rot()
+	assert_eq(hallucinations.rot_for(100.0), Hallucinations.Rot.COSY)
+	assert_eq(hallucinations.rot_for(70.0), Hallucinations.Rot.COSY)
+	assert_eq(hallucinations.rot_for(69.9), Hallucinations.Rot.SOURED)
+	assert_eq(hallucinations.rot_for(40.0), Hallucinations.Rot.SOURED)
+	assert_eq(hallucinations.rot_for(39.9), Hallucinations.Rot.GROTESQUE)
+
+
+func test_a_space_starts_at_the_rot_stage_of_its_humanity() -> void:
+	assert_eq(_rot(50.0).rot(&"kitchen"), Hallucinations.Rot.SOURED)
+
+
+func test_a_space_out_of_view_rots_as_humanity_drops() -> void:
+	var hallucinations := _rot()
+
+	_look_at_spaces(hallucinations, 69.9, [])
+	assert_eq(hallucinations.rot(&"kitchen"), Hallucinations.Rot.SOURED)
+
+	_look_at_spaces(hallucinations, 39.9, [])
+	assert_eq(hallucinations.rot(&"kitchen"), Hallucinations.Rot.GROTESQUE)
+
+
+func test_a_space_never_rots_while_in_view_and_catches_up_once_out_of_it() -> void:
+	var hallucinations := _rot()
+
+	_look_at_spaces(hallucinations, 10.0, [&"kitchen"])
+	assert_eq(hallucinations.rot(&"kitchen"), Hallucinations.Rot.COSY)
+	assert_eq(hallucinations.rot(&"hallway"), Hallucinations.Rot.GROTESQUE)
+
+	_look_at_spaces(hallucinations, 10.0, [&"hallway"])
+	assert_eq(hallucinations.rot(&"kitchen"), Hallucinations.Rot.GROTESQUE)
+
+
+func test_putting_the_rot_back_changes_every_space_even_in_view() -> void:
+	var hallucinations := _rot(10.0)
+
+	hallucinations.put_rot_back(100.0)
+
+	assert_eq(hallucinations.rot(&"kitchen"), Hallucinations.Rot.COSY)
+	assert_eq(hallucinations.rot(&"hallway"), Hallucinations.Rot.COSY)

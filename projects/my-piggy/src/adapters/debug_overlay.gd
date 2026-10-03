@@ -1,7 +1,7 @@
 class_name DebugOverlay
 extends Label
-## The owner's tuning aid: shows the hidden numbers (humanity, urge, Mum's alert level) in
-## a corner; NoiseRings draws the noises in the house. Off unless
+## The owner's tuning aid: shows the hidden numbers (humanity, urge, each space's rot stage,
+## Mum's alert level) in a corner; NoiseRings draws the noises in the house. Off unless
 ## the page URL has ?debug=1 (web) or the game is started with `-- --debug` (desktop).
 
 const QUERY_FLAG := "debug=1"
@@ -41,7 +41,17 @@ func _process(_delta: float) -> void:
 		doing = "  suppressing (x%.2f)" % body.loudness_multiplier()
 	elif body.is_warning():
 		doing = "  warning"
+	var rots: Array[String] = []
+	for space in _night.hallucinations.spaces():
+		var stage: String = Hallucinations.Rot.find_key(_night.hallucinations.rot(space))
+		rots.append("%s %s" % [space, stage.to_lower()])
 	text = (
-		"humanity %.0f\nurge %.0f%s\nmum %s"
-		% [body.humanity, body.urge, doing, FamilyBrain.alert_name(_night.mum.alert)]
+		"humanity %.0f\nurge %.0f%s\nrot %s\nmum %s"
+		% [
+			body.humanity,
+			body.urge,
+			doing,
+			", ".join(rots),
+			FamilyBrain.alert_name(_night.mum.alert),
+		]
 	)

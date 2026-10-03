@@ -6,17 +6,22 @@ extends RefCounted
 ## The one exception is the mirror's flicker: the old body it shows at high humanity gives
 ## way to the pig after mirror_old_body_seconds of looking. That flicker is the truth
 ## arriving, not a new lie.
+## Each space of the house rots the same way: its rot stage only changes while the Piggy
+## can't see into it, except when a checkpoint is restored (put_rot_back).
 
 enum Kind { SLOP_BOWL, MIRROR, DOOR_GLASS }
 enum Shows { SLOP, SNACKS, OLD_BODY, PIG_BODY }
 enum Breathing { HUMAN, SNOUTY, PIG }
 enum Ending { HUMAN, PIG }
+enum Rot { COSY, SOURED, GROTESQUE }
 
 var _tuning: Tuning
 ## Per object name: its Kind, what it shows, and how long it has been in view.
 var _kinds: Dictionary[StringName, Kind] = {}
 var _shows: Dictionary[StringName, Shows] = {}
 var _seconds_in_view: Dictionary[StringName, float] = {}
+## Per space name: its rot stage.
+var _rot: Dictionary[StringName, Rot] = {}
 
 
 func _init(tuning: Tuning) -> void:
@@ -42,6 +47,43 @@ func advance(delta: float, humanity: float, in_view: Array[StringName]) -> void:
 		var flickers := _kinds[object] == Kind.MIRROR and _shows[object] == Shows.OLD_BODY
 		if flickers and _seconds_in_view[object] >= _tuning.mirror_old_body_seconds:
 			_shows[object] = Shows.PIG_BODY
+
+
+## Adds a space of the house, rotted as far as this humanity says.
+func add_space(space: StringName, humanity: float) -> void:
+	_rot[space] = rot_for(humanity)
+
+
+## `in_view` names the spaces the Piggy can see into right now; every other space takes
+## the rot stage of this humanity.
+func look_at_spaces(humanity: float, in_view: Array[StringName]) -> void:
+	for space: StringName in _rot:
+		if not in_view.has(space):
+			_rot[space] = rot_for(humanity)
+
+
+## Every space takes the rot stage of this humanity, seen or not. For a restored checkpoint:
+## the capture scene has just hidden the house, so nothing changes in plain view.
+func put_rot_back(humanity: float) -> void:
+	for space: StringName in _rot:
+		_rot[space] = rot_for(humanity)
+
+
+func rot(space: StringName) -> Rot:
+	return _rot[space]
+
+
+## The spaces added so far, in the order they were added.
+func spaces() -> Array[StringName]:
+	return _rot.keys()
+
+
+func rot_for(humanity: float) -> Rot:
+	if humanity < _tuning.rot_grotesque_below_humanity:
+		return Rot.GROTESQUE
+	if humanity < _tuning.rot_soured_below_humanity:
+		return Rot.SOURED
+	return Rot.COSY
 
 
 func shows(object: StringName) -> Shows:

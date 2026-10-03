@@ -2,7 +2,9 @@ class_name AmbientBed
 extends Node3D
 ## The quiet bed of sound under the whole night, with no music: wind outside, the fridge
 ## humming in the kitchen, and the house creaking now and then somewhere near the player.
-## The hum and the creaks are 3D, so they go through the muffled channel when behind a wall.
+## Each space also plays its rot's sound set from its middle: homely, souring or wet.
+## The hum, the creaks and the rot sounds are 3D, so they go through the muffled channel
+## when behind a wall.
 
 # How the bed sounds, not how the game plays.
 const WIND_DB := -20.0
@@ -16,6 +18,8 @@ const CREAK_GAP_SECONDS := Vector2(7.0, 20.0)
 ## How far from the player a creak comes from, in metres; up in the ceiling joists.
 const CREAK_DISTANCE := Vector2(2.5, 7.0)
 const CREAK_HEIGHT := 2.5
+const ROT_DB := -16.0
+const ROT_RANGE := 8.0
 ## Pitched down and varied so the house doesn't sound like a door.
 const CREAK_PITCH := Vector2(0.45, 0.75)
 
@@ -25,12 +29,20 @@ var _until_creak: float = 0.0
 var _wind: AudioStreamPlayer
 var _hum: AudioStreamPlayer3D
 var _creak: AudioStreamPlayer3D
+var _occlusion: SoundOcclusion
+var _rot_players: Dictionary[StringName, AudioStreamPlayer3D] = {}
+var _rot_sounds: Dictionary[Hallucinations.Rot, AudioStreamWAV] = {
+	Hallucinations.Rot.COSY: PlaceholderRotSounds.homely(),
+	Hallucinations.Rot.SOURED: PlaceholderRotSounds.souring(),
+	Hallucinations.Rot.GROTESQUE: PlaceholderRotSounds.wet(),
+}
 
 
 ## Fills in the fridge's hum player, places creaks around the listener, and hands the 3D
 ## sounds to the muffled channel. Call once, before start().
 func setup(fridge_hum: AudioStreamPlayer3D, listener: Node3D, occlusion: SoundOcclusion) -> void:
 	_listener = listener
+	_occlusion = occlusion
 	_hum = fridge_hum
 	_hum.stream = PlaceholderSounds.fridge_hum()
 	_hum.volume_db = HUM_DB
@@ -55,6 +67,26 @@ func setup(fridge_hum: AudioStreamPlayer3D, listener: Node3D, occlusion: SoundOc
 func start() -> void:
 	_wind.play()
 	_hum.play()
+	for player: AudioStreamPlayer3D in _rot_players.values():
+		player.play()
+
+
+## Plays a space's rot sound set from `at`, its middle; changes when the space's rot does.
+## Connect RotSets.rot_changed here.
+func set_rot(space: StringName, stage: Hallucinations.Rot, at: Vector3) -> void:
+	if not _rot_players.has(space):
+		var player := AudioStreamPlayer3D.new()
+		player.volume_db = ROT_DB
+		player.max_distance = ROT_RANGE
+		add_child(player)
+		player.global_position = at
+		_occlusion.register(player)
+		_rot_players[space] = player
+	var player := _rot_players[space]
+	var was_playing := player.playing or _wind.playing
+	player.stream = _rot_sounds[stage]
+	if was_playing:
+		player.play()
 
 
 func _process(delta: float) -> void:

@@ -162,3 +162,13 @@ func test_every_door_creak_and_the_fridge_go_to_the_muffled_channel() -> void:
 	# Two doors' creaks and the fridge.
 	assert_eq(house.positional_sounds().size(), 3)
 	assert_has(house.positional_sounds(), house.fridge_hum())
+
+
+func test_each_space_has_a_shell_a_lamp_and_a_box_that_contains_its_points() -> void:
+	var house := _house()
+	assert_eq(house.spaces(), [&"bedroom", &"hallway", &"kitchen"] as Array[StringName])
+	for space in house.spaces():
+		assert_not_null(house.space_shell(space), "%s shell" % space)
+		assert_not_null(house.space_lamp(space), "%s lamp" % space)
+		var middle := house.space_box(space).get_center()
+		assert_eq(house.space_at(middle), space)
