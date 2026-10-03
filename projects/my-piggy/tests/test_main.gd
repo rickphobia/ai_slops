@@ -39,6 +39,15 @@ func test_the_game_opens_on_the_title_screen_with_the_piggy_still() -> void:
 	assert_eq(piggy.process_mode, Node.PROCESS_MODE_DISABLED)
 
 
+func test_the_title_screen_says_which_build_this_is() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(2)
+	var title: TitleScreen = _find_one(main, "TitleScreen")
+
+	var version: Label = title.get_node("Version")
+	assert_eq(version.text, BuildVersion.read())
+
+
 func test_clicking_the_title_screen_starts_the_opening() -> void:
 	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
 	await wait_process_frames(2)
