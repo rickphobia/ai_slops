@@ -4,7 +4,7 @@
 
 **Blocked by:** 10, 11 (last ticket in the queue)
 
-**Status:** in review (waiting on the owner's run on the Beelink)
+**Status:** done
 
 **Touches:** deploy/ (new), README
 
@@ -25,7 +25,7 @@
 - [x] `deploy/update-site.sh` (`set -euo pipefail`; paths come from env vars with the defaults above, listed in `.env.example`)
 - [x] `deploy/rollback.sh` swaps the previous build back
 - [x] Optional systemd timer (`deploy/pawn-swarm-update.timer` + `.service`) that runs the update every 15 minutes, skipping the build when `main` hasn't changed
-- [ ] No nginx config change needed if `/ai-projects/` already serves files from `~/homelab/html/ai-projects/`. Check that first and write down what you found in the README.
+- [x] No nginx config change needed if `/ai-projects/` already serves files from `~/homelab/html/ai-projects/`. Check that first and write down what you found in the README.
 - [x] README "Deploy" section: first-time setup, update, rollback, how to check it worked (`curl -I https://rickphobia.com/ai-projects/pawn-swarm/`)
-- [ ] Ran it on the Beelink once by hand and the game loads at the URL (owner confirms, since the session can't reach the server)
+- [x] Ran it on the Beelink once by hand and the game loads at the URL (owner confirms, since the session can't reach the server)
 - [x] Shellcheck clean, and the CI workflow runs shellcheck on `deploy/`

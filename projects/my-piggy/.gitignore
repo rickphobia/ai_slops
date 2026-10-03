@@ -7,3 +7,6 @@ build/
 
 # Secrets
 .env
+
+# Downloaded tool packages; install tools from requirements.txt or the system instead
+*.whl

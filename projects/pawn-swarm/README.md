@@ -56,7 +56,7 @@ mkdir -p ~/homelab/dev && git clone https://github.com/rickphobia/ai_slops.git ~
 ~/homelab/dev/ai_slops/projects/pawn-swarm/deploy/update-site.sh
 ```
 
-**nginx check.** No nginx change is needed if `/ai-projects/` is already served from `~/homelab/html/ai-projects/`. This was not checked from the development session (it can't reach the server), so check it once: after the first run, `curl -I https://rickphobia.com/ai-projects/pawn-swarm/` should say `200`. If it says `404`, nginx is mapping that path somewhere else; fix its `root`/`location` for `/ai-projects/` and reload nginx. Record what you found here.
+**nginx check.** No nginx change is needed if `/ai-projects/` is already served from `~/homelab/html/ai-projects/`. After the first run, `curl -I https://rickphobia.com/ai-projects/pawn-swarm/` should say `200`. If it says `404`, nginx is mapping that path somewhere else; fix its `root`/`location` for `/ai-projects/` and reload nginx. Checked 2026-10-03: the page returns `200` and its JS and CSS bundles load, with no nginx change. Cloudflare sits in front of nginx (responses carry `server: cloudflare`).
 
 ### Update
 
