@@ -65,5 +65,6 @@ Then fill in the README and add a row to the index.
 | Project | What it does | Stack | Status |
 |---------|--------------|-------|--------|
 | [pawn-swarm](projects/pawn-swarm) | Chess-board auto-battler where pawns are army and money | TypeScript, Vite, Canvas | working |
+| [my-piggy](projects/my-piggy) | First-person horror game: a human head on a pig's body, hunted by family in one night | Godot 4 (GDScript), web export | in progress |
 
 Status values: `idea`, `in progress`, `working`, `abandoned`.

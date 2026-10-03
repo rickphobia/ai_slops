@@ -1,0 +1,9 @@
+# Godot's import cache and the web build
+.godot/
+build/
+
+# Python venv for gdtoolkit
+.venv/
+
+# Secrets
+.env
