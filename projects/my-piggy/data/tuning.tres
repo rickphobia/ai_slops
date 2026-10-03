@@ -6,3 +6,4 @@
 script = ExtResource("1_tuning")
 walk_speed = 2.0
 mouse_sensitivity = 0.0025
+opening_seconds = 5.0

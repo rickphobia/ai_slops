@@ -1,13 +1,17 @@
 class_name PiggyController
 extends CharacterBody3D
-## First-person Piggy: WASD to walk, mouse to look, click to capture the mouse.
+## First-person Piggy: WASD to walk, mouse to look while the mouse is captured.
 ## Reads input through the input map (see project.godot), numbers from the Tuning.
+## Main owns the mouse (capturing it, pausing) and turns this node off when the player
+## has no control.
 
 ## Looking straight up or down would flip the camera over, so pitch stops short of 90°.
 const PITCH_LIMIT: float = 1.4
 
 var _tuning: Tuning
 var _pitch: float = 0.0
+## The player's sensitivity setting, a multiplier on the tuning's mouse_sensitivity.
+var _sensitivity_scale: float = 1.0
 
 @onready var _camera: Camera3D = $Camera3D
 
@@ -17,17 +21,14 @@ func setup(tuning: Tuning) -> void:
 	_tuning = tuning
 
 
+func set_sensitivity_scale(scale: float) -> void:
+	_sensitivity_scale = scale
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	var click := event as InputEventMouseButton
-	if click != null and click.pressed:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		return
-	if event.is_action_pressed("ui_cancel"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		return
 	var motion := event as InputEventMouseMotion
 	if motion != null and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_look(motion.relative)
+		look(motion.relative)
 
 
 func _physics_process(delta: float) -> void:
@@ -41,7 +42,9 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
-func _look(relative: Vector2) -> void:
-	rotate_y(-relative.x * _tuning.mouse_sensitivity)
-	_pitch = clampf(_pitch - relative.y * _tuning.mouse_sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
+## Turns the view by a mouse movement in pixels. Called for each mouse motion while captured.
+func look(relative: Vector2) -> void:
+	var sensitivity := _tuning.mouse_sensitivity * _sensitivity_scale
+	rotate_y(-relative.x * sensitivity)
+	_pitch = clampf(_pitch - relative.y * sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
 	_camera.rotation.x = _pitch

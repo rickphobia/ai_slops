@@ -8,12 +8,15 @@ extends Resource
 const LIMITS: Dictionary = {
 	"walk_speed": [0.1, 10.0],
 	"mouse_sensitivity": [0.0001, 0.05],
+	"opening_seconds": [0.5, 20.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
 @export var walk_speed: float = NAN
 ## How far the view turns per pixel of mouse movement, in radians.
 @export var mouse_sensitivity: float = NAN
+## How long the opening lasts: black, breathing and a heartbeat before the eyes open, in seconds.
+@export var opening_seconds: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded

@@ -48,6 +48,10 @@ A mirror or dark window where the Piggy can see their own body.
 
 ## The night
 
+**Opening**:
+The few seconds of black, breathing and a heartbeat after the title screen, before the Piggy's eyes open and the player gets control.
+_Avoid_: intro, cutscene
+
 **Night**:
 One playthrough, from waking up in the bedroom to an ending.
 _Avoid_: run, level, session
