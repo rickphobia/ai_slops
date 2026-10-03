@@ -13,7 +13,7 @@ ai_slops/
 ├── .claude/skills/      # shared workflow skills: /grill-with-docs, /to-spec, /to-tickets, /implement ...
 ├── .claude/settings.json  # guardrails (permission rules); each project keeps a copy
 ├── .github/             # one CI workflow per project, plus ci-gate (the check main requires)
-├── scripts/             # next-tickets.sh: starts a background session per ticket that can start now
+├── scripts/             # next-tickets.sh: start ticket sessions; try-pr.sh: play a PR before merging
 ├── docs/                # how we work (workflow.md), new projects (new-project.md), tools (tooling.md)
 ├── projects/
 │   └── <project-name>/  # one folder per project, fully self-contained
