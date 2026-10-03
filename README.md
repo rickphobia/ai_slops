@@ -13,6 +13,7 @@ ai_slops/
 ├── .claude/skills/      # shared workflow skills: /grill-with-docs, /to-spec, /to-tickets, /implement ...
 ├── .claude/settings.json  # guardrails (permission rules); each project keeps a copy
 ├── .github/             # one CI workflow per project, plus ci-gate (the check main requires)
+├── scripts/             # next-tickets.sh: starts a background session per ticket that can start now
 ├── docs/                # how we work (workflow.md), new projects (new-project.md), tools (tooling.md)
 ├── projects/
 │   └── <project-name>/  # one folder per project, fully self-contained
@@ -56,6 +57,8 @@ Claude Code reads `.claude/settings.json` (the guardrails: no reading `.env`, as
 cd ~/homelab/code/ai_slops
 claude -w pawn-swarm-16    # worktree in .claude/worktrees/pawn-swarm-16, on its own branch
 ```
+
+**Or let a script start the tickets.** `scripts/next-tickets.sh <project>` finds every ticket that can start now (blockers done, nobody on it, no shared **Touches** area) and starts each as a background session in its own worktree. Answer them in `claude agents`. Details in [`docs/workflow.md`](docs/workflow.md#starting-tickets-with-scriptsnext-ticketssh).
 
 ## Further reading
 
