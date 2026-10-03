@@ -42,4 +42,8 @@ static func table() -> Tuning:
 	tuning.mum_search_seconds = 20.0
 	tuning.mum_search_radius = 3.0
 	tuning.mum_line_seconds = 5.0
+	tuning.mum_chase_speed = 4.0
+	tuning.mum_torch_cone_degrees = 60.0
+	tuning.mum_torch_range = 10.0
+	tuning.mum_caught_distance = 1.0
 	return tuning
