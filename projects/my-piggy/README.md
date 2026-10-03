@@ -87,7 +87,18 @@ curl -I https://rickphobia.com/ai-projects/my-piggy/            # expect 200
 curl -I https://rickphobia.com/ai-projects/my-piggy/index.wasm  # expect Content-Type: application/wasm
 ```
 
-A `404` means nginx maps `/ai-projects/` somewhere other than `~/homelab/html/ai-projects/`; fix its `root`/`location` and reload nginx. A wrong `.wasm` type means nginx's `mime.types` is missing `application/wasm wasm;`; add it and reload. Record what you found here: _not checked yet_.
+A `404` means nginx maps `/ai-projects/` somewhere other than `~/homelab/html/ai-projects/`; fix its `root`/`location` and reload nginx. A wrong `.wasm` type means nginx's `mime.types` is missing `application/wasm wasm;`; add it and reload. Record what you found here: checked 2026-10-03, the page returns `200` and `index.wasm` is served as `application/wasm`. Cloudflare sits in front of nginx (responses carry `server: cloudflare`).
+
+### Cloudflare caching (optional)
+
+By default Cloudflare does not cache `.wasm` files (`cf-cache-status: DYNAMIC`), so every visit downloads the 40 MB engine from the Beelink over the home upload. To have Cloudflare keep a copy instead, add a cache rule in the Cloudflare dashboard (rickphobia.com → Caching → Cache Rules → Create rule):
+
+- **When:** URI Path starts with `/ai-projects/my-piggy/` **and** File extension is in `wasm`, `js`
+- **Then:** Eligible for cache, Edge TTL 1 month
+
+Only the engine files (`index.wasm`, `index.js` and the audio worklets) are cached. They change only when the Godot version in `scripts/godot-pin.env` changes. `index.pck` (the game itself) and `index.html` change on every deploy, so they stay uncached and a new deploy shows up at once. After a Godot version bump, purge the cache for `/ai-projects/my-piggy/` (Caching → Configuration → Custom Purge), or players get an old engine with a new game, which fails to start.
+
+Check it: run `curl -I https://rickphobia.com/ai-projects/my-piggy/index.wasm` twice. The second should say `cf-cache-status: HIT`.
 
 ### Update
 
