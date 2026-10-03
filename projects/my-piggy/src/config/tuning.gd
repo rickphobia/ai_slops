@@ -9,6 +9,9 @@ const LIMITS: Dictionary = {
 	"walk_speed": [0.1, 10.0],
 	"mouse_sensitivity": [0.0001, 0.05],
 	"opening_seconds": [0.5, 20.0],
+	"door_creak_quietest_radius": [0.0, 30.0],
+	"door_creak_loudest_radius": [0.1, 30.0],
+	"door_creak_loudest_speed": [0.1, 10.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
@@ -17,6 +20,12 @@ const LIMITS: Dictionary = {
 @export var mouse_sensitivity: float = NAN
 ## How long the opening lasts: black, breathing and a heartbeat before the eyes open, in seconds.
 @export var opening_seconds: float = NAN
+## How far a door creak is heard when the door is barely pushed, in metres.
+@export var door_creak_quietest_radius: float = NAN
+## How far a door creak is heard when the door is pushed at door_creak_loudest_speed or faster.
+@export var door_creak_loudest_radius: float = NAN
+## Push speed (metres per second) at which a door creaks its loudest.
+@export var door_creak_loudest_speed: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded
@@ -41,4 +50,14 @@ func problems() -> Array[String]:
 			found.append(
 				"%s is %s, but it must be between %s and %s" % [field, value, lowest, highest]
 			)
+	if door_creak_loudest_radius < door_creak_quietest_radius:
+		(
+			found
+			. append(
+				(
+					"door_creak_loudest_radius is %s, but it must not be below door_creak_quietest_radius (%s)"
+					% [door_creak_loudest_radius, door_creak_quietest_radius]
+				)
+			)
+		)
 	return found

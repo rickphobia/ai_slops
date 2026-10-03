@@ -9,6 +9,9 @@ func _good_table() -> Tuning:
 	tuning.walk_speed = 2.0
 	tuning.mouse_sensitivity = 0.003
 	tuning.opening_seconds = 4.0
+	tuning.door_creak_quietest_radius = 2.0
+	tuning.door_creak_loudest_radius = 8.0
+	tuning.door_creak_loudest_speed = 3.0
 	return tuning
 
 
@@ -61,3 +64,13 @@ func test_the_shipped_table_loads_and_has_no_problems() -> void:
 
 	assert_not_null(tuning)
 	assert_eq(tuning.problems(), [] as Array[String])
+
+
+func test_a_door_creak_whose_loudest_is_below_its_quietest_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.door_creak_loudest_radius = 1.5
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "door_creak_loudest_radius")

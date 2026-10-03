@@ -1,13 +1,14 @@
 class_name PlaceholderSounds
 extends RefCounted
-## Synth stand-ins for the opening's breathing and heartbeat, made in code so there are no
-## sound files to license. Each is one seamless loop. Ticket 05 replaces them with real ones.
+## Synth stand-ins for the opening's breathing and heartbeat and for door creaks, made in
+## code so there are no sound files to license. Ticket 05 replaces them with real ones.
 
 const MIX_RATE := 22050
 const BREATH_SECONDS := 4.0
 const INHALE_SECONDS := 1.6
 const HEARTBEAT_SECONDS := 0.85  # about 70 beats a minute
 const HEART_PITCH_HZ := 48.0
+const CREAK_SECONDS := 0.7
 
 
 ## Slow breathing: soft noise swelling in, then a longer breath out.
@@ -37,6 +38,21 @@ static func heartbeat() -> AudioStreamWAV:
 	return _to_stream(samples)
 
 
+## One door creak, played once: a rough, wavering low saw, like a dry hinge.
+static func creak() -> AudioStreamWAV:
+	var count := int(CREAK_SECONDS * MIX_RATE)
+	var samples := PackedFloat32Array()
+	samples.resize(count)
+	var phase := 0.0
+	var smoothed := 0.0
+	for index in count:
+		var seconds := float(index) / MIX_RATE
+		phase += (140.0 + 60.0 * sin(TAU * 2.3 * seconds)) / MIX_RATE
+		smoothed += 0.3 * ((2.0 * fmod(phase, 1.0) - 1.0) - smoothed)
+		samples[index] = smoothed * 0.8 * sin(PI * seconds / CREAK_SECONDS)
+	return _to_stream(samples, false)
+
+
 static func _breath_envelope(seconds: float) -> float:
 	if seconds < INHALE_SECONDS:
 		return sin(PI * seconds / INHALE_SECONDS) * 0.6
@@ -51,7 +67,7 @@ static func _thump(seconds: float, start: float, loudness: float) -> float:
 	return sin(TAU * HEART_PITCH_HZ * since) * exp(-since * 18.0) * loudness
 
 
-static func _to_stream(samples: PackedFloat32Array) -> AudioStreamWAV:
+static func _to_stream(samples: PackedFloat32Array, loops: bool = true) -> AudioStreamWAV:
 	var bytes := PackedByteArray()
 	bytes.resize(samples.size() * 2)
 	for index in samples.size():
@@ -61,6 +77,7 @@ static func _to_stream(samples: PackedFloat32Array) -> AudioStreamWAV:
 	stream.mix_rate = MIX_RATE
 	stream.stereo = false
 	stream.data = bytes
-	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	stream.loop_end = samples.size()
+	if loops:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_end = samples.size()
 	return stream

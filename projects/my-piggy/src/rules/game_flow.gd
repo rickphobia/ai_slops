@@ -1,10 +1,10 @@
 class_name GameFlow
 extends RefCounted
 ## Where the player is outside the night itself: on the title screen, in the opening
-## (a few seconds of black before the eyes open), playing, or paused. Decides when the
+## (a few seconds of black before the eyes open), playing, paused, or ended. Decides when the
 ## player has control. Pure rules: no scene tree, input or audio.
 
-enum Stage { TITLE, OPENING, PLAYING, PAUSED }
+enum Stage { TITLE, OPENING, PLAYING, PAUSED, ENDED }
 
 var stage: Stage = Stage.TITLE
 
@@ -41,6 +41,11 @@ func pause() -> void:
 func resume() -> void:
 	if stage == Stage.PAUSED:
 		stage = Stage.PLAYING
+
+
+## The night is over (the Piggy reached the back door). Control never comes back.
+func end() -> void:
+	stage = Stage.ENDED
 
 
 func has_control() -> bool:

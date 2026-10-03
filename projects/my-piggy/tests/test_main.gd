@@ -1,6 +1,7 @@
 extends GutTest
 ## Smoke test of the entry scene's wiring: title screen first, the click starts the opening,
-## and the Piggy has no control until the eyes open.
+## and the Piggy has no control until the eyes open. Then the house is wired to the Night:
+## spaces take checkpoints, the debug key restores one, the back door ends the night.
 
 const MAIN_SCENE := preload("res://src/main.tscn")
 
@@ -17,6 +18,10 @@ func after_each() -> void:
 	GameLog.reset()
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _logged(ending: String) -> bool:
+	return _lines.any(func(line: String) -> bool: return line.ends_with(ending))
 
 
 func _find_one(root: Node, type_name: String) -> Node:
@@ -42,4 +47,35 @@ func test_clicking_the_title_screen_starts_the_opening() -> void:
 	await wait_process_frames(2)
 
 	assert_null(_find_one(main, "TitleScreen"), "title screen is gone")
-	assert_true(_lines.any(func(line: String) -> bool: return line.ends_with("Opening started")))
+	assert_true(_logged("Opening started"))
+
+
+func test_spaces_take_checkpoints_the_debug_key_restores_and_the_back_door_ends_the_night() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(2)
+	var title: TitleScreen = _find_one(main, "TitleScreen")
+	title.start_clicked.emit()
+	await wait_until(func() -> bool: return _logged("control given"), 30.0)
+	var piggy: PiggyController = _find_one(main, "PiggyController")
+
+	piggy.place(PiggyPose.new(Vector3(0.0, 0.05, -8.0), 1.0, 0.0))
+	await wait_physics_frames(3)
+	assert_true(_logged("Entered hallway: checkpoint taken"))
+
+	piggy.place(PiggyPose.new(Vector3(0.0, 0.05, -13.0), 0.0, 0.0))
+	await wait_physics_frames(3)
+	var restore := InputEventAction.new()
+	restore.action = "debug_restore_checkpoint"
+	restore.pressed = true
+	Input.parse_input_event(restore)
+	await wait_physics_frames(2)
+	assert_true(_logged("Checkpoint restored: back to the start of hallway"))
+	assert_almost_eq(piggy.global_position.z, -8.0, 0.05)
+	assert_almost_eq(piggy.rotation.y, 1.0, 0.001)
+
+	var house: House = _find_one(main, "House")
+	piggy.place(PiggyPose.new(house.back_door_exit(), 0.0, 0.0))
+	await wait_physics_frames(3)
+	assert_true(_logged("Reached the back door: night over"))
+	assert_not_null(_find_one(main, "EndCard"))
+	assert_eq(piggy.process_mode, Node.PROCESS_MODE_DISABLED)

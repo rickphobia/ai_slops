@@ -1,6 +1,7 @@
 extends Node
 ## Entry scene: loads and checks the tuning and the player's settings, starts the night,
-## and wires the rules to the adapters: title screen, opening, Piggy, pause menu.
+## and wires the rules to the adapters: title screen, opening, house, Piggy, pause menu,
+## end card. Tells the Night which space the Piggy is in and when they reach the back door.
 ## Owns the mouse (captured while playing, free otherwise). Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
@@ -13,6 +14,7 @@ const MENU_LAYER := 20
 var _night: Night
 var _flow: GameFlow
 var _settings: PlayerSettings
+var _house: House
 var _piggy: PiggyController
 var _title: TitleScreen
 var _pause_menu: PauseMenu
@@ -37,18 +39,21 @@ func _ready() -> void:
 
 	_settings = PlayerSettings.load_file(PlayerSettings.DEFAULT_PATH)
 	_flow = GameFlow.new(tuning.opening_seconds)
-	_night = Night.new()
-	_update_log_context()
-	GameLog.info("Night started")
+	_house = $House
+	_house.setup(tuning)
+	_house.door_creaked.connect(_on_door_creaked)
 
 	_piggy = PIGGY_SCENE.instantiate()
 	_piggy.setup(tuning)
 	_piggy.process_mode = Node.PROCESS_MODE_DISABLED
-	var room: Node3D = $GreyBoxRoom
-	var spawn: Marker3D = room.get_node("SpawnPoint")
+	var spawn := _house.piggy_spawn()
 	add_child(_piggy)
-	_piggy.global_position = spawn.global_position
+	_piggy.place(PiggyPose.new(spawn.global_position, spawn.global_rotation.y, 0.0))
 	_apply_settings()
+
+	_night = Night.new(_piggy.pose())
+	_update_log_context()
+	GameLog.info("Night started: checkpoint taken")
 
 	_dark = ColorRect.new()
 	_dark.color = Color.BLACK
@@ -91,6 +96,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	_night.advance()
 	_update_log_context()
+	_follow_piggy()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -101,6 +107,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_pause()
 		elif _flow.stage == GameFlow.Stage.PAUSED:
 			_resume()
+		return
+	# Until being caught exists (ticket 07), this is the only way to try a restore in game.
+	if event.is_action_pressed("debug_restore_checkpoint") and _flow.has_control():
+		_restore_checkpoint()
 		return
 	# After Escape some browsers refuse to capture the mouse again for a moment, so a
 	# resume can leave it free. Clicking the game takes it back.
@@ -142,6 +152,37 @@ func _resume() -> void:
 	_pause_menu.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	GameLog.info("Resumed")
+
+
+## Tells the Night where the Piggy is: a new space takes a checkpoint, the back door ends it.
+func _follow_piggy() -> void:
+	var at := _piggy.global_position
+	if _house.is_at_back_door(at):
+		_end_night()
+		return
+	var space := _house.space_at(at)
+	if space != House.NO_SPACE and _night.enter_space(space, _piggy.pose()):
+		_update_log_context()
+		GameLog.info("Entered %s: checkpoint taken" % space)
+
+
+func _restore_checkpoint() -> void:
+	_piggy.place(_night.restore_checkpoint())
+	_update_log_context()
+	GameLog.info("Checkpoint restored: back to the start of %s" % _night.space)
+
+
+func _end_night() -> void:
+	_night.reach_back_door()
+	_flow.end()
+	_piggy.process_mode = Node.PROCESS_MODE_DISABLED
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_add_layer(EndCard.new(), MENU_LAYER)
+	GameLog.info("Reached the back door: night over")
+
+
+func _on_door_creaked(noise_radius: float, at: Vector3) -> void:
+	GameLog.debug("Door creaked at %s: noise radius %.1f m" % [at, noise_radius])
 
 
 func _on_settings_changed() -> void:
