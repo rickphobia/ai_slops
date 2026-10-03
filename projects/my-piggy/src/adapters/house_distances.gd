@@ -28,14 +28,21 @@ func _init(world: World3D, navigation_map: RID) -> void:
 
 
 func sound_path(from: Vector3, to: Vector3) -> SoundPath:
+	var distance := walking_distance(from, to)
+	if distance == INF:
+		return SoundPath.new(INF, 0)
+	return SoundPath.new(distance, _barriers_between(from, to))
+
+
+func walking_distance(from: Vector3, to: Vector3) -> float:
 	var path := NavigationServer3D.map_get_path(_map, from, to, true)
 	# Before the walkable area reaches the map (the first frames) there is no path at all.
 	if path.is_empty():
-		return SoundPath.new(INF, 0)
+		return INF
 	var distance := from.distance_to(path[0]) + path[path.size() - 1].distance_to(to)
 	for index in range(1, path.size()):
 		distance += path[index - 1].distance_to(path[index])
-	return SoundPath.new(distance, _barriers_between(from, to))
+	return distance
 
 
 ## A ray from the torch to the Piggy's body; walls, closed doors and furniture block it.

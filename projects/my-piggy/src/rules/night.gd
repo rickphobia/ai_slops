@@ -6,7 +6,8 @@ extends RefCounted
 ## the Night decides the rest. Every noise the Piggy makes goes to Mum, who hears it if
 ## it reaches her through the house (asked of the DistanceProvider). Mum sees the Piggy in
 ## her torch beam and chases; reaching them while chasing catches them, which stops the
-## night until the checkpoint is restored.
+## night until the checkpoint is restored. Restoring puts Mum back on her route, unaware,
+## out of sight and at least mum_restart_distance away on foot.
 
 ## The Piggy made a noise, heard or not (the debug overlay draws it).
 signal noise_made(noise: PiggyNoise)
@@ -32,25 +33,31 @@ var hallucinations: Hallucinations
 var _checkpoint: Checkpoint
 var _tuning: Tuning
 var _distances: DistanceProvider
+var _mum_route: Array[Vector3]
 var _footstep_seconds_left: float = 0.0
 
 
 ## The Piggy wakes in the bedroom at this pose, which is also the first checkpoint.
 ## The rng decides which outbursts come; tests pass a seeded one. `distances` answers how a
-## noise reaches Mum; without one she hears nothing. Mum starts at `mum_start`.
+## noise reaches Mum; without one she hears nothing. Mum starts at `mum_start` and walks
+## `mum_route` (points in walking order); without a route she only has her start.
 func _init(
 	wake_pose: PiggyPose,
 	tuning: Tuning,
 	rng: RandomNumberGenerator = RandomNumberGenerator.new(),
 	distances: DistanceProvider = DistanceProvider.new(),
 	mum_start: Vector3 = Vector3.ZERO,
+	mum_route: Array[Vector3] = [],
 ) -> void:
 	_tuning = tuning
 	_distances = distances
+	_mum_route = mum_route.duplicate()
+	if _mum_route.is_empty():
+		_mum_route.append(mum_start)
 	body = Body.new(tuning, rng)
 	mum = FamilyBrain.new(tuning.mum_search_seconds, mum_start)
 	hallucinations = Hallucinations.new(tuning)
-	_checkpoint = Checkpoint.new(FIRST_SPACE, wake_pose, body.state(), mum.state())
+	_checkpoint = Checkpoint.new(FIRST_SPACE, wake_pose, body.state())
 
 
 ## Moves the night on by one step of `delta` seconds, with the Piggy at `at` moving at
@@ -94,18 +101,21 @@ func enter_space(entered: StringName, pose: PiggyPose) -> bool:
 		return false
 	space = entered
 	body.reset_rise_rate()
-	_checkpoint = Checkpoint.new(entered, pose, body.state(), mum.state())
+	_checkpoint = Checkpoint.new(entered, pose, body.state())
 	return true
 
 
 ## Puts the night back to the last checkpoint. Returns where and how the Piggy must be
 ## put back; the caller moves them there.
-## Mum is put back too; her actor must be moved to `mum.position`.
+## Mum goes back on her route, unaware, where she can't see the Piggy and is at least
+## mum_restart_distance away on foot; her actor must be moved to `mum.position`.
 func restore_checkpoint() -> PiggyPose:
 	space = _checkpoint.space
 	is_caught = false
 	body.restore(_checkpoint.body)
-	mum.restore(_checkpoint.mum)
+	mum.back_on_route(
+		RouteSpot.out_of_sight(_mum_route, _checkpoint.piggy_pose.position, _tuning, _distances)
+	)
 	return _checkpoint.piggy_pose
 
 

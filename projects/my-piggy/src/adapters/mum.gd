@@ -41,7 +41,6 @@ const ARRIVED_WITHIN := 0.5
 var _tuning: Tuning
 var _brain: FamilyBrain
 var _route: Array[Vector3] = []
-var _route_index: int = 0
 var _rng: RandomNumberGenerator
 var _heading_alert: FamilyBrain.Alert = FamilyBrain.Alert.UNAWARE
 var _heading_target: Vector3 = Vector3.INF
@@ -155,7 +154,7 @@ func _follow_brain() -> void:
 	_heading_target = _brain.target
 	match _brain.alert:
 		FamilyBrain.Alert.UNAWARE:
-			_head_for(_route[_route_index])
+			_head_for(_route[_brain.route_point])
 		FamilyBrain.Alert.INVESTIGATING, FamilyBrain.Alert.CHASING:
 			_head_for(_brain.target)
 		FamilyBrain.Alert.SEARCHING:
@@ -166,8 +165,8 @@ func _follow_brain() -> void:
 func _arrive() -> void:
 	match _brain.alert:
 		FamilyBrain.Alert.UNAWARE:
-			_route_index = (_route_index + 1) % _route.size()
-			_head_for(_route[_route_index])
+			_brain.route_point = (_brain.route_point + 1) % _route.size()
+			_head_for(_route[_brain.route_point])
 		FamilyBrain.Alert.INVESTIGATING:
 			_brain.arrived()
 		FamilyBrain.Alert.SEARCHING:

@@ -113,7 +113,6 @@ func test_walking_into_mums_torch_gets_the_piggy_caught_and_restarts_the_space()
 	piggy.place(PiggyPose.new(Vector3(0.0, 0.05, -8.0), 1.0, 0.0))
 	await wait_physics_frames(3)
 	assert_true(_logged("Entered hallway: checkpoint taken"))
-	var mum_at_checkpoint := mum.global_position
 
 	# Let her walk on, then step right into her beam.
 	await wait_seconds(0.5)
@@ -129,7 +128,15 @@ func test_walking_into_mums_torch_gets_the_piggy_caught_and_restarts_the_space()
 	assert_null(_find_one(main, "CaptureScene"))
 	assert_almost_eq(piggy.global_position.z, -8.0, 0.05)
 	assert_eq(piggy.process_mode, Node.PROCESS_MODE_PAUSABLE, "the Piggy can move again")
-	assert_lt(mum.global_position.distance_to(mum_at_checkpoint), 0.5, "Mum is back too")
+	assert_true(mum.is_humming(), "Mum is back on her route, unaware")
+	var house: House = _find_one(main, "House")
+	var distances := HouseDistances.new(house.get_world_3d(), house.walkable().get_navigation_map())
+	var tuning := Tuning.load_file("res://data/tuning.tres")
+	assert_gte(
+		distances.walking_distance(mum.global_position, piggy.global_position),
+		tuning.mum_restart_distance,
+		"and far enough away on foot"
+	)
 	var errors := _lines.filter(func(line: String) -> bool: return line.begins_with("[error]"))
 	assert_eq(errors, [], "no errors logged")
 

@@ -91,7 +91,7 @@ This spec covers the **first playable**: one night in three **spaces** (bedroom,
 
 55. As a player, I want being caught to play a short capture scene (Mum's torch in my face, her face, her scream, cut to black), so that it is horrible but quick.
 56. As a player, I want to restart from the start of the space I'm in, so that I don't replay the whole night.
-57. As a player, I want everything reset to how it was when I entered that space (my humanity, urge, Mum's position, give-in spots), so that a restart is fair and can't be used to cheat.
+57. As a player, I want everything reset to how it was when I entered that space (my humanity, urge, give-in spots), and Mum back on her route, unaware, out of sight and well away from me, so that a restart is fair, can't be used to cheat, and never ends in being caught again straight away (even when she chased me into the space).
 58. As a player, I want restarts to be fast (under 3 seconds), so that fear doesn't turn into boredom.
 
 ### The spaces
@@ -166,6 +166,7 @@ Godot adapters (thin, smoke-tested):
 - **Noise radii (heard distance before muffling):** creep 0 m, walk 3 m, trot 9 m, door push 2–8 m by speed, snort outburst 12 m, squeal outburst 22 m. Each closed door or wall between the noise and Mum cuts the radius by 40%.
 - **Mum:** walks at 1.4 m/s on her route, 2.0 m/s when investigating, 3.6 m/s when chasing (the Piggy trots at 3.2 m/s, so you can't simply outrun her). Torch cone 35°, 10 m range. She searches for 20 seconds before going back to her route; after losing sight in a chase she searches the last seen spot.
 - **Caught:** Mum within 1 m of the Piggy while chasing.
+- **After being caught:** the checkpoint does not keep Mum. She comes back unaware, walking her route, at least 8 m from the Piggy on foot and not seeing them, with nothing remembered of where they were; she hunts again only if the Piggy makes a noise she hears or steps into her torch beam. None of her route points is within 3 m of where a space's checkpoint is taken.
 
 ### Content and assets
 

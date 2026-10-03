@@ -8,6 +8,8 @@ const PIGGY_AT := Vector3.ZERO
 ## Mum 6 m away, facing the Piggy unless a test turns her.
 const MUM_START := Vector3(0.0, 0.0, -6.0)
 const TOWARD_PIGGY := Vector3(0.0, 0.0, 1.0)
+## From her start, away from the Piggy and round.
+const MUM_ROUTE: Array[Vector3] = [MUM_START, Vector3(0.0, 0.0, -12.0), Vector3(6.0, 0.0, -12.0)]
 
 var _distances: FakeDistances
 var _caught_count: int = 0
@@ -18,8 +20,16 @@ func _night() -> Night:
 	rng.seed = 7
 	_distances = FakeDistances.new()
 	_caught_count = 0
-	var night := Night.new(
-		PiggyPose.new(PIGGY_AT, 0.0, 0.0), NightTestTuning.table(), rng, _distances, MUM_START
+	var night := (
+		Night
+		. new(
+			PiggyPose.new(PIGGY_AT, 0.0, 0.0),
+			NightTestTuning.table(),
+			rng,
+			_distances,
+			MUM_START,
+			MUM_ROUTE,
+		)
 	)
 	night.mum.facing = TOWARD_PIGGY
 	night.caught.connect(func() -> void: _caught_count += 1)
@@ -179,3 +189,38 @@ func test_being_caught_restores_the_checkpoint() -> void:
 	assert_eq(night.mum.position, MUM_START)
 	assert_eq(night.mum.facing, -TOWARD_PIGGY)
 	assert_eq(night.mum.alert, FamilyBrain.Alert.UNAWARE)
+	assert_eq(night.mum.route_point, 1, "walking on to her next route point")
+
+
+func test_caught_after_a_checkpoint_taken_mid_chase_she_does_not_catch_again() -> void:
+	var night := _night()
+	_still(night, STEP)
+	assert_eq(night.mum.alert, FamilyBrain.Alert.CHASING)
+	# Chased into the hallway with her 1.5 m behind: the checkpoint is taken mid-chase.
+	var hallway_door := PiggyPose.new(PIGGY_AT, 0.0, 0.0)
+	night.mum.position = Vector3(0.0, 0.0, -1.5)
+	night.enter_space(&"hallway", hallway_door)
+	night.mum.position = Vector3(0.0, 0.0, -0.9)
+	_still(night, STEP)
+	assert_true(night.is_caught)
+
+	var pose := night.restore_checkpoint()
+	assert_eq(night.mum.alert, FamilyBrain.Alert.UNAWARE, "the chase is not restored")
+	assert_gte(night.mum.position.distance_to(pose.position), 8.0, "mum_restart_distance away")
+	_still_while_mum_chases(night, 5.0, pose.position)
+
+	assert_false(night.is_caught, "standing still after the restart, not caught again")
+	assert_eq(_caught_count, 1)
+	assert_eq(night.mum.alert, FamilyBrain.Alert.UNAWARE)
+
+
+## Steps the night with the Piggy still at `at`, moving Mum toward her target at chase
+## speed while she chases, as her actor would.
+func _still_while_mum_chases(night: Night, seconds: float, at: Vector3) -> void:
+	var chase_speed := NightTestTuning.table().mum_chase_speed
+	for index in roundi(seconds / STEP):
+		if night.mum.alert == FamilyBrain.Alert.CHASING:
+			night.mum.position = night.mum.position.move_toward(
+				night.mum.target, chase_speed * STEP
+			)
+		night.advance(STEP, false, false, at)

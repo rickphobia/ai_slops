@@ -26,6 +26,8 @@ var target: Vector3 = Vector3.ZERO
 var position: Vector3 = Vector3.ZERO
 ## Which way they face, flat on the floor. The actor keeps it up to date; sight uses it.
 var facing: Vector3 = Vector3.FORWARD
+## The route point they walk to next while unaware. The actor moves it on as they arrive.
+var route_point: int = 0
 
 var _search_seconds: float
 var _search_seconds_left: float = 0.0
@@ -71,18 +73,15 @@ func advance(delta: float) -> void:
 		_change_to(Alert.UNAWARE)
 
 
-## What a checkpoint keeps of this family member.
-func state() -> FamilyMemberState:
-	return FamilyMemberState.new(alert, target, position, facing, _search_seconds_left)
-
-
-## Puts them back as they were. Reports the alert level change, if there is one.
-func restore(saved: FamilyMemberState) -> void:
-	target = saved.target
-	position = saved.position
-	facing = saved.facing
-	_search_seconds_left = saved.search_seconds_left
-	_change_to(saved.alert)
+## Puts them back on their route at this spot, unaware, with nothing remembered of the
+## Piggy (after a checkpoint is restored). Reports the alert level change, if there is one.
+func back_on_route(spot: RouteSpot) -> void:
+	position = spot.position
+	facing = spot.facing
+	route_point = spot.next_point
+	target = spot.position
+	_search_seconds_left = 0.0
+	_change_to(Alert.UNAWARE)
 
 
 ## An alert level's name in lower case, for logs and the debug overlay.

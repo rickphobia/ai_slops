@@ -65,7 +65,7 @@ One area of the house that is also a restart point: bedroom, hallway, kitchen (f
 _Avoid_: room (in code), level, zone
 
 **Checkpoint**:
-The saved state taken when the Piggy enters a space. Being caught puts everything back to it.
+The saved state taken when the Piggy enters a space. Being caught puts everything back to it, except Mum: she comes back unaware on her route, out of sight and at least `mum_restart_distance` away.
 
 **Caught**:
 A family member reaching the Piggy. Plays the capture scene, then restarts the space.

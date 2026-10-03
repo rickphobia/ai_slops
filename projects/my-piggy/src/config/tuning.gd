@@ -52,6 +52,7 @@ const LIMITS: Dictionary = {
 	"mum_torch_cone_degrees": [1.0, 170.0],
 	"mum_torch_range": [0.5, 50.0],
 	"mum_caught_distance": [0.2, 5.0],
+	"mum_restart_distance": [0.0, 30.0],
 }
 
 ## How fast the Piggy walks, in metres per second.
@@ -149,6 +150,9 @@ const LIMITS: Dictionary = {
 @export var mum_torch_range: float = NAN
 ## How close Mum must get to the Piggy while chasing to catch them, in metres.
 @export var mum_caught_distance: float = NAN
+## After being caught, the least distance on foot Mum starts again from the Piggy, in
+## metres. She is back on her route, unaware and out of sight.
+@export var mum_restart_distance: float = NAN
 
 
 ## Loads a tuning table from a .tres file. Returns null if the file can't be loaded

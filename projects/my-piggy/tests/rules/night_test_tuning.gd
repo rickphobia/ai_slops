@@ -52,4 +52,5 @@ static func table() -> Tuning:
 	tuning.mum_torch_cone_degrees = 60.0
 	tuning.mum_torch_range = 10.0
 	tuning.mum_caught_distance = 1.0
+	tuning.mum_restart_distance = 8.0
 	return tuning
