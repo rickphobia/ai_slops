@@ -30,7 +30,7 @@ Break the work into **tracer bullet** tickets.
 
 - Each slice cuts a narrow but COMPLETE path through every layer (schema, API, UI, tests): vertical, NOT a horizontal slice of one layer
 - A completed slice is demoable or verifiable on its own
-- Each slice is sized to fit in a single fresh context window
+- Each slice is sized to fit in a single fresh context window, and small enough to review: aim for a PR of about 500 changed lines of hand-written code or less (lock files, generated files, vendored code and binary assets don't count). Split a slice that would be bigger.
 - Any prefactoring should be done first
 - **For a new project, ticket 01 is always the walking skeleton:** the project installs, runs, has one passing test, and lint, type checks and CI are green. Every other ticket is blocked by it.
 
@@ -83,9 +83,11 @@ Commit the ticket files on their own (`<name>: Add tickets for <feature>`) so ev
 - [ ] Acceptance criterion 1
 - [ ] Acceptance criterion 2
 
+**Owner steps:** only if there are any, e.g. "run `deploy/update-site.sh` on the Beelink". Leave the line out otherwise.
+
 </ticket-template>
 
-Status is `ready` or `done`. The ticket's own PR sets it to `done` and ticks the criteria, so the status merges together with the code.
+Status is `ready` or `done`, nothing else. The ticket's own PR sets it to `done` and ticks the criteria, so the status merges together with the code. Write acceptance criteria the ticket's session can check itself; a step only the owner can do (a run on the server, a GitHub setting) goes under an **Owner steps** line in the ticket instead, and doesn't hold the status back.
 
 
 Avoid specific file paths or code snippets: they go stale fast. Exception: if a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo, just the important bits.

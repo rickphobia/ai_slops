@@ -16,3 +16,7 @@ __pycache__/
 venv/
 dist/
 build/
+
+# Claude Code: worktrees from `claude -w` and personal permission approvals
+.claude/worktrees/
+.claude/settings.local.json

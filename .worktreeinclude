@@ -1,0 +1,2 @@
+# Copied into each worktree that `claude -w` creates, so a fresh checkout can build.
+**/.env
