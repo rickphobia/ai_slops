@@ -49,6 +49,21 @@ func give_in_spot_near(point: Vector3, reach: float) -> Marker3D:
 	return nearest
 
 
+## The give-in spots that are slop bowls (the bin is not one): they can look like snacks.
+func slop_bowls() -> Array[Marker3D]:
+	return [$Markers/GiveInSpots/BedroomBowl, $Markers/GiveInSpots/KitchenSlopBowl]
+
+
+## The hallway mirror, facing into the hallway (+Z).
+func hallway_mirror() -> Marker3D:
+	return $Markers/HallwayMirror
+
+
+## The glass in the back door, facing into the kitchen (+Z).
+func back_door_glass() -> Marker3D:
+	return $Markers/BackDoorGlass
+
+
 ## The middle of the spot in front of the back door that ends the night.
 func back_door_exit() -> Vector3:
 	return _back_door_exit.global_position

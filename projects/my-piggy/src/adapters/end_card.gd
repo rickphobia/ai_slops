@@ -1,15 +1,30 @@
 class_name EndCard
 extends Control
-## Shown when the Piggy reaches the back door: the night is over. Plain on purpose for
-## now; ticket 08 makes its line change with humanity.
+## Shown when the Piggy reaches the back door: the night is over. Its first lines change
+## with the ending Hallucinations picked by humanity: what the Piggy saw of itself in the
+## back-door glass on the way out.
 
 const HEADING_SIZE := 40
 const TEXT_COLOUR := Color(0.85, 0.8, 0.78)
 const NOTE_COLOUR := Color(0.6, 0.55, 0.55)
+const HEADINGS: Dictionary[Hallucinations.Ending, String] = {
+	Hallucinations.Ending.HUMAN: "You got out.",
+	Hallucinations.Ending.PIG: "Something got out.",
+}
+const GLASS_LINES: Dictionary[Hallucinations.Ending, String] = {
+	Hallucinations.Ending.HUMAN: "In the glass, just for a moment, you looked like yourself.",
+	Hallucinations.Ending.PIG: "The glass showed you what you are now. You didn't mind.",
+}
 const FEEDBACK := (
 	"Thank you for playing. Please tell whoever sent you the link\n"
 	+ "what scared you, what didn't, and where you got stuck."
 )
+
+var ending: Hallucinations.Ending = Hallucinations.Ending.HUMAN
+
+
+func _init(night_ending: Hallucinations.Ending = Hallucinations.Ending.HUMAN) -> void:
+	ending = night_ending
 
 
 func _ready() -> void:
@@ -29,7 +44,8 @@ func _ready() -> void:
 	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(centre)
 	centre.add_child(lines)
-	lines.add_child(_line("You got out.", HEADING_SIZE, TEXT_COLOUR))
+	lines.add_child(_line(HEADINGS[ending], HEADING_SIZE, TEXT_COLOUR))
+	lines.add_child(_line(GLASS_LINES[ending], 22, TEXT_COLOUR))
 	lines.add_child(
 		_line("This is a first playable of My Piggy: one night, three rooms.", 20, TEXT_COLOUR)
 	)
