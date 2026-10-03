@@ -33,7 +33,7 @@ Bug: `/diagnosing-bugs`. It builds a failing check first, then fixes.
 
 Each step in a session re-reads everything the session has seen so far, so long sessions get expensive fast.
 
-- **Sonnet by default; Opus only to write the spec and tickets.** Opus costs several times more per token. Use it for grilling, `/to-spec` and `/to-tickets`, then switch to Sonnet. Never leave a long planning chat on Opus.
+- **Opus 5.5 for everything; pick the effort, not the model.** Opus costs twice Sonnet per token but needs fewer tokens per task, so per finished task it is as cheap or cheaper at the same quality (Artificial Analysis, 2026-10: Opus low 42 points for $0.55 vs Sonnet medium 41 for $0.59; Opus medium 51 for $1.34 vs Sonnet high 47 for $1.08). Use **medium** for grilling, `/to-spec`, `/to-tickets` and hard tickets (walking skeletons, tricky logic), **low** for small tickets. If a low ticket needs more than one fix round, move it to medium. Avoid high and above unless a ticket keeps failing: cost climbs fast for little gain. Re-check when new models ship.
 - **Keep sessions short.** Start a fresh session when the topic changes or the old one has run all day. Ticket files hold the status (`ready` / `done`), so nothing is lost.
 - **Watch a PR only when it matters.** Every GitHub event adds a few thousand tokens that are re-read for the rest of the session. For a small change, skip the watching and check CI yourself. The planning session never watches PRs; a second watcher doubles the cost.
 - **Batch small changes.** Collect small fixes (a rename, a doc line) into one session instead of one session each.
