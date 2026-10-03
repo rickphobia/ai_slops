@@ -15,7 +15,7 @@ Experienced engineers all land on the same loop: **spec → plan → build in sm
 | 5 | Split into tickets | `/to-tickets` | `docs/tickets/01-…md`, `02-…md`, each with **Blocked by** and **Touches**, plus which can run in parallel. You approve the breakdown |
 | 6 | Build the skeleton | `scripts/next-tickets.sh <name>` (or a new session: `/implement projects/<name>/docs/tickets/01-…md`) | Project runs, one test passes, CI green. One PR |
 | 7 | Build in parallel | `scripts/next-tickets.sh <name>`: one background session per ticket that can start now | One PR per ticket |
-| 8 | Review and merge | Try the PR: its `▶ Try this version` link, or on the Beelink `scripts/try-pr.sh <PR number>` (builds it and serves it on the home network; for builds too big for a link), skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
+| 8 | Review and merge | Try the PR: its `▶ Try this version` link, or on the Beelink `pr-list` (every green PR is built and served automatically at `http://192.168.1.30:<9000 + PR number>/`; see "Previews on the Beelink"), skim the diff, check its `Review:` line, then merge. GitHub only allows it once `ci-gate` is green | Tickets marked `done` on `main` |
 | 9 | Deploy | On the Beelink: `projects/<name>/deploy/update-site.sh`, or ask a local session to run it | Live at `rickphobia.com/ai-projects/<name>/` |
 | 10 | Repeat 7–9 | Run `scripts/next-tickets.sh <name>` again after each merge | — |
 
@@ -46,6 +46,18 @@ It reads the tickets from `origin/main` and starts a ticket when its status is `
 **Answering them.** Run `claude agents` (agent view). A session that needs you is under **Needs input** with the question or permission prompt on its row: press `Space` to reply in place, or `Enter` to open the full session. While agent view is open, Claude Code sends a terminal notification when a session needs input, finishes or fails; in any other session the footer shows `← N agents` waiting. Sessions stop and wait for the guardrail prompts (force-push, `rm -rf` …) and for questions `/implement` asks.
 
 **Cost.** A background session costs the same as opening a new session by hand: same model, same prompt caching, same start-up read of `CLAUDE.md` and the ticket. Running three at once spends the same tokens sooner; it doesn't add any. Two things do add cost: a session left waiting for more than an hour loses its cache, so answer within the hour; and auto mode's safety check on risky actions uses a little extra.
+
+## Previews on the Beelink
+
+my-piggy's build is too big for a `▶ Try this version` link, so the Beelink serves every PR itself. `scripts/previews.sh install` (once) starts a systemd user timer that, every 5 minutes, builds each open PR whose `ci-gate` is green and serves it at `http://192.168.1.30:<9000 + PR number>/` (PR 41 → port 9041). A new push is rebuilt once it is green; a merged or closed PR's preview stops. It runs only scripts, no Claude, so it costs no tokens.
+
+```bash
+scripts/previews.sh list     # open PRs, ci-gate result, preview link (shell function: pr-list)
+scripts/previews.sh stop 41  # stop PR 41's preview until its next push (shell function: stop-pr 41)
+scripts/try-pr.sh 41         # build and serve one PR by hand on port 8000, Ctrl+C to stop
+```
+
+A failed build shows in `list` with its log command (`journalctl --user -u try-pr-41`). `scripts/previews.sh uninstall` turns it all off. The timer runs while your user is logged in on the Beelink; to keep it running with nobody logged in, run `sudo loginctl enable-linger $USER` once.
 
 ## What protects `main`
 

@@ -6,6 +6,7 @@
 # Usage: scripts/try-pr.sh <PR number> [--port N] [--keep]
 #   --port N   port to serve on (default 8000)
 #   --keep     keep the build folder after you stop the server (faster next time)
+#   --projects print the projects it can build, one per line, and exit
 #
 # The PR is checked out in .claude/worktrees/try-pr-<N>, so no other checkout changes branch.
 # Press Ctrl+C to stop; the folder is then removed unless --keep was given.
@@ -17,9 +18,12 @@ die() {
 }
 
 usage() {
-  sed -n '6,9p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '6,10p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
+
+# The projects build_web knows. scripts/previews.sh reads this list through --projects.
+web_projects=(my-piggy pawn-swarm)
 
 # Builds the project in the current folder and prints the folder to serve. Each web project's
 # build steps come from its README.
@@ -37,7 +41,7 @@ build_web() {
       npm run build >&2
       echo dist
       ;;
-    *) die "don't know how to build '$1'; add it to build_web in $0" ;;
+    *) die "don't know how to build '$1'; add it to build_web and web_projects in $0" ;;
   esac
 }
 
@@ -47,6 +51,7 @@ main() {
     case $1 in
       --port) port=${2:?--port needs a number}; shift ;;
       --keep) keep=1 ;;
+      --projects) printf '%s\n' "${web_projects[@]}"; exit 0 ;;
       -h | --help) usage 0 ;;
       -*) die "unknown option $1 (see --help)" ;;
       *) [[ -z $pr && $1 =~ ^[0-9]+$ ]] || die "not a PR number: $1"; pr=$1 ;;
