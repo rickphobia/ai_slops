@@ -4,15 +4,17 @@
 
 **Blocked by:** 01 (Walking skeleton)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** app-settings, app-files, core-settings
 
 **Effort:** low
 
-- [ ] Without the permission, a screen explains why it is needed and opens the system setting; returning with it granted continues
-- [ ] Folder picker; the chosen path is saved in the app's private settings and validated on startup (missing or unreadable folder sends you back to the picker with a message saying which folder and why)
-- [ ] Settings loading and validation live in one place in `core`, unit-tested
-- [ ] Home screen lists every PDF under the Study folder with its folder path, sorted; Ink files and other non-PDF files are not shown
-- [ ] A "Change folder" entry in Settings
-- [ ] On-tablet check written in the PR: grant, pick a copy of the Study folder in the Preview app, see the PDFs
+**Owner steps:** run the on-tablet check from the PR in the Preview app.
+
+- [x] Without the permission, a screen explains why it is needed and opens the system setting; returning with it granted continues
+- [x] Folder picker; the chosen path is saved in the app's private settings and validated on startup (missing or unreadable folder sends you back to the picker with a message saying which folder and why)
+- [x] Settings loading and validation live in one place in `core`, unit-tested
+- [x] Home screen lists every PDF under the Study folder with its folder path, sorted; Ink files and other non-PDF files are not shown
+- [x] A "Change folder" entry in Settings
+- [x] On-tablet check written in the PR: grant, pick a copy of the Study folder in the Preview app, see the PDFs

@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: walking skeleton and release pipeline (tickets 01-02). The app opens to a "RickNotes" screen with its version; no features yet. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: the Study folder (ticket 03).
+`in progress`: tickets 01-03. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder". PDFs don't open yet. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: reading a Document (ticket 04).
 
 ## Requirements
 
@@ -114,7 +114,7 @@ It asks for a password; with PKCS12 the key password is the same as the store pa
 
 ## Configuration
 
-App settings (the Study folder, from ticket 03) live in the app's private storage and are loaded and validated in one place, `core/.../settings/SettingsLoader.kt`. They are not environment variables.
+App settings (the Study folder) live in the app's private storage and are loaded, validated and saved in one place, `core/.../settings/SettingsLoader.kt`. They are not environment variables. The Study folder is checked on every start: if it is missing, not a folder or unreadable, the app goes back to the folder picker and says which folder and why. Only folders on the tablet's own storage can be picked, not an SD card or USB drive.
 
 Build-time values come from environment variables listed in `.env.example`:
 
@@ -159,7 +159,7 @@ The app requires API 36 (Android 16, the tablet's version) and targets API 37. A
 Two Gradle modules:
 
 - **`core`**: plain Kotlin on the JVM with no Android code. It will hold all the rules (Ink files, the Document session, the touch interpreter, settings). Today it has the settings model and loader. A build check (`:core:checkNoAndroidDependencies`, part of `check` and `lintAll`) fails if an Android library or an `android`/`androidx` import gets into it, so it always runs its tests on a plain JVM.
-- **`app`**: the Android app. `MainActivity` only wires things together: it loads settings through `SettingsLoader` with the SharedPreferences adapter, then shows the Compose home screen.
+- **`app`**: the Android app. `MainActivity` only wires things together: it checks "All files access" on every resume (decision [0002](docs/decisions/0002-all-files-access.md)) and hands the SharedPreferences adapter to `RickNotesApp`, which picks the screen: the permission explanation, the folder picker, the PDF list, or Settings. The system folder picker returns a tree document ID (`primary:Study`), which `files/TreeDocumentPaths` turns into a normal path.
 
 ## Folder layout
 
@@ -169,8 +169,13 @@ core/src/main/kotlin/com/rickphobia/ricknotes/core/
 core/src/test/kotlin/  JUnit tests, mirroring core's packages
 app/src/main/kotlin/com/rickphobia/ricknotes/
   MainActivity.kt      entrypoint: wiring only
-  adapters/settings/   SharedPreferences-backed SettingsSource
-  home/                home screen (Compose)
+  RickNotesApp.kt      which screen shows
+  adapters/settings/   SharedPreferences-backed settings storage
+  files/               PDF listing, picker result to path
+  studyfolder/         "All files access" and folder picker screens
+  home/                home screen: the PDF list (Compose)
+  settings/            Settings screen ("Change folder")
+app/src/test/kotlin/   JUnit tests for app code that runs on the JVM
 app/src/preview/res/   the Preview app's label
 config/detekt.yml      detekt rules on top of the defaults
 gradle/                version catalog, wrapper, pinned daemon JDK
@@ -181,6 +186,8 @@ docs/                  spec, tickets, decisions
 ## Debugging
 
 - The app logs to Logcat with the tag `RickNotes` (`adb logcat -s RickNotes`). The rolling log file and "Share log" button arrive in ticket 07.
+- **Stuck on the "All files access" screen:** turn the setting on for this app (RickNotes and RickNotes Preview are listed separately), then press Back.
+- **"The Study folder ... does not exist" on start:** the folder was renamed, moved or deleted; pick it again.
 - **`SDK location not found`:** run `scripts/setup-android-sdk.sh`, or set `ANDROID_HOME`.
 - **`Release signing is not configured: set ...`:** a release or Preview build needs the named variables; see [Signing key](#signing-key). In CI, a missing `RICKNOTES_KEYSTORE_BASE64` secret fails the signing step with its own message.
 - **No Preview link on a PR:** the `preview` job in the PR's `ricknotes` run publishes it; check that run's log. A PR that doesn't touch `projects/ricknotes/` doesn't run it.
