@@ -1,0 +1,5 @@
+# Ink is stored in files beside the PDF, never in it
+
+Strokes and placed snips are saved in a `<name>.pdf.ink.json` file next to each PDF and snip images in `<name>.pdf.assets/`. The app never writes into a PDF. Each stroke's details (page, colour, tool, time, ID) are readable JSON; its points are packed by our own code as difference-encoded integers stored as text, about ten times smaller than JSON numbers, so a fully written tutorial stays well under a megabyte. Jetpack Ink's own encoding was rejected: it is Android-only native code, so the pure Kotlin module couldn't read Ink files in JVM tests, and its format could change with a library upgrade. A PDF writer bug can't corrupt a lecture, the ink can be removed or restored on its own, and the sync app sees small JSON changes instead of whole PDFs being rewritten.
+
+**Trade-offs:** the points can't be read by eye, and other PDF readers don't show the ink; "Export with ink" makes a separate PDF for that. Moving or renaming a PDF outside the app leaves its ink files behind unless they are moved with it.
