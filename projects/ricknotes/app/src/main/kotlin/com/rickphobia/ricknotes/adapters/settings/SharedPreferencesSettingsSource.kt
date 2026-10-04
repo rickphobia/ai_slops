@@ -2,13 +2,23 @@ package com.rickphobia.ricknotes.adapters.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.rickphobia.ricknotes.core.settings.SettingsSource
+import com.rickphobia.ricknotes.core.settings.SettingsStore
 
-/** Reads settings from the app's private storage. Each app variant has its own file. */
+/** Reads and writes settings in the app's private storage. Each app variant has its own file. */
 class SharedPreferencesSettingsSource(
     private val preferences: SharedPreferences,
-) : SettingsSource {
+) : SettingsSource,
+    SettingsStore {
     override fun read(key: String): String? = preferences.getString(key, null)
+
+    override fun write(
+        key: String,
+        value: String,
+    ) {
+        preferences.edit { putString(key, value) }
+    }
 
     companion object {
         private const val FILE_NAME = "settings"

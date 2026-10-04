@@ -10,8 +10,20 @@ fun interface SettingsSource {
     fun read(key: String): String?
 }
 
-/** A stored setting that can't be used. [key] names the setting so the app can say which one. */
+/** Where settings are saved to. Only [SettingsLoader] writes, after validating the value. */
+fun interface SettingsStore {
+    fun write(
+        key: String,
+        value: String,
+    )
+}
+
+/**
+ * A setting that can't be used. [key] names the setting, [value] is what was stored or picked,
+ * and [reason] says why in words the app can show ("does not exist").
+ */
 class InvalidSettingException(
     val key: String,
-    reason: String,
-) : IllegalArgumentException("Setting '$key' $reason")
+    val value: String,
+    val reason: String,
+) : IllegalArgumentException("Setting '$key' = '$value' $reason")

@@ -2,4 +2,16 @@
 <resources>
   <string name="app_name">RickNotes</string>
   <string name="version">Version %1$s</string>
+  <string name="all_files_access_title">RickNotes needs "All files access"</string>
+  <string name="all_files_access_body">RickNotes opens the PDFs in your Study folder directly and saves your ink in files beside them, the same folder your sync app mirrors to Google Drive. Android only allows that with "All files access". RickNotes never changes your PDFs and only reads and writes inside the Study folder you pick. Turn it on for RickNotes, then come back.</string>
+  <string name="all_files_access_button">Open the setting</string>
+  <string name="pick_folder_title">Pick your Study folder</string>
+  <string name="pick_folder_body">Choose the folder that holds your courses, chapters and PDFs. RickNotes shows what is inside it and remembers your choice. You can change it later in Settings.</string>
+  <string name="pick_folder_button">Pick folder</string>
+  <string name="settings">Settings</string>
+  <string name="back">Back</string>
+  <string name="study_folder">Study folder</string>
+  <string name="change_folder">Change folder</string>
+  <string name="listing_pdfs">Looking for PDFs…</string>
+  <string name="no_pdfs">No PDFs in this folder yet.</string>
 </resources>
