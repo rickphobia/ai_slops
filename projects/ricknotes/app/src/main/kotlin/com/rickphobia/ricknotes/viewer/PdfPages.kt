@@ -2,6 +2,7 @@ package com.rickphobia.ricknotes.viewer
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
@@ -99,14 +100,39 @@ class PdfPages(
         cache.get(key)?.let { return it }
         return withContext(thread) {
             if (closed) throw CancellationException("${file.name} is closed")
-            cache.get(key) ?: draw(pageIndex, size.heightPx(widthPx), widthPx).also { cache.put(key, it) }
+            cache.get(key) ?: draw(pageIndex, widthPx, size.heightPx(widthPx), transform = null).also {
+                cache.put(key, it)
+            }
         }
     }
 
+    /**
+     * Draws only [region] of page [pageIndex] as it looks with the page [pageWidthPx] wide, for a
+     * zoomed-in page whose whole image would be too big. Not cached: it changes with every scroll.
+     */
+    suspend fun renderPart(
+        pageIndex: Int,
+        size: PageSize,
+        pageWidthPx: Int,
+        region: PixelRect,
+    ): Bitmap =
+        withContext(thread) {
+            if (closed) throw CancellationException("${file.name} is closed")
+            val scale = pageWidthPx / size.widthPt.toFloat()
+            val transform =
+                Matrix().apply {
+                    setScale(scale, scale)
+                    postTranslate(-region.left.toFloat(), -region.top.toFloat())
+                }
+            draw(pageIndex, region.width, region.height, transform)
+        }
+
+    /** Draws a page into a [widthPx] by [heightPx] image; [transform] maps PDF points to it (null fits the page). */
     private fun draw(
         pageIndex: Int,
-        heightPx: Int,
         widthPx: Int,
+        heightPx: Int,
+        transform: Matrix?,
     ): Bitmap {
         val opened = checkNotNull(renderer) { "${file.name} is not open" }
         val started = SystemClock.elapsedRealtime()
@@ -115,7 +141,7 @@ class PdfPages(
                 // PDF pages have no background of their own, so draw on white paper.
                 createBitmap(widthPx, heightPx).also {
                     it.eraseColor(Color.WHITE)
-                    page.render(it, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.render(it, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 }
             }
         } catch (e: IllegalStateException) {
@@ -125,7 +151,8 @@ class PdfPages(
         }.also {
             Log.d(
                 MainActivity.LOG_TAG,
-                "rendered ${file.name} page ${pageIndex + 1} at ${widthPx}px in " +
+                "rendered ${file.name} page ${pageIndex + 1}${if (transform == null) "" else " (part)"} " +
+                    "at ${widthPx}x${heightPx}px in " +
                     "${SystemClock.elapsedRealtime() - started} ms",
             )
         }

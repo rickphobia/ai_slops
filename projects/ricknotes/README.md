@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: tickets 01-04 and 06. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: zoom, jump to page and resume (ticket 05).
+`in progress`: tickets 01-06 (milestone 1, waiting on its check on the tablet). On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Two fingers pinch-zoom (1x to 5x) and pan, and pages turn sharp again a moment after the view stops moving. The page indicator ("12 / 100") jumps to a page when tapped, and each Document reopens at the page and zoom it was left at. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: the shareable log (ticket 07) and first ink (ticket 08).
 
 ## Requirements
 
@@ -114,7 +114,7 @@ It asks for a password; with PKCS12 the key password is the same as the store pa
 
 ## Configuration
 
-App settings (the Study folder) live in the app's private storage and are loaded, validated and saved in one place, `core/.../settings/SettingsLoader.kt`. They are not environment variables. The Study folder is checked on every start: if it is missing, not a folder or unreadable, the app goes back to the folder picker and says which folder and why. Only folders on the tablet's own storage can be picked, not an SD card or USB drive.
+App settings (the Study folder) live in the app's private storage and are loaded, validated and saved in one place, `core/.../settings/SettingsLoader.kt`. They are not environment variables. Each Document's last page and zoom are kept separately in the private file `reading_positions`, keyed by the PDF's path (`adapters/settings/SharedPreferencesReadingPositions.kt`); a saved position is fitted to the PDF when it reopens (a page past the end goes to the last page, a zoom outside 1x to 5x is brought inside), and an unreadable one is ignored with a warning in Logcat. The Study folder is checked on every start: if it is missing, not a folder or unreadable, the app goes back to the folder picker and says which folder and why. Only folders on the tablet's own storage can be picked, not an SD card or USB drive.
 
 Build-time values come from environment variables listed in `.env.example`:
 
@@ -161,7 +161,9 @@ Two Gradle modules:
 - **`core`**: plain Kotlin on the JVM with no Android code. It will hold all the rules (Ink files, the Document session, the touch interpreter, settings). Today it has the settings model and loader. A build check (`:core:checkNoAndroidDependencies`, part of `check` and `lintAll`) fails if an Android library or an `android`/`androidx` import gets into it, so it always runs its tests on a plain JVM.
 - **`app`**: the Android app. `MainActivity` only wires things together: it checks "All files access" on every resume (decision [0002](docs/decisions/0002-all-files-access.md)) and hands the SharedPreferences adapter to `RickNotesApp`, which picks the screen: the permission explanation, the folder picker, the PDF list, Settings, or an open Document. The system folder picker returns a tree document ID (`primary:Study`), which `files/TreeDocumentPaths` turns into a normal path.
 
-A Document is drawn by `viewer/PdfPages`, the `PdfRenderer` adapter. `PdfRenderer` isn't safe to share between threads, so each open Document gets its own render thread and every renderer call runs there. The PDF is opened with `MODE_READ_ONLY` and nothing writes to it. Drawn pages are kept in an `LruCache` limited to a quarter of the app's heap limit; a page that scrolls away before its turn on the render thread is never drawn. `viewer/DocumentScreen` lays the pages out in a `LazyColumn`, each box sized to its page's shape before the page arrives, so the list never jumps. A PDF that can't be opened raises `DocumentOpenException` (`Missing`, `PasswordProtected` or `Damaged`), and the screen shows its message, which names the file and the reason.
+A Document is drawn by `viewer/PdfPages`, the `PdfRenderer` adapter. `PdfRenderer` isn't safe to share between threads, so each open Document gets its own render thread and every renderer call runs there. The PDF is opened with `MODE_READ_ONLY` and nothing writes to it. Drawn pages are kept in an `LruCache` limited to a quarter of the app's heap limit; a page that scrolls away before its turn on the render thread is never drawn. `viewer/PageList` lays the pages out in a `LazyColumn`, each box sized to its page's shape before the page arrives, so the list never jumps.
+
+Zoom (`viewer/ZoomView`, 1x is the page filling the screen's width, up to 5x) makes the list wider than the screen and slides it sideways; one finger scrolls up and down (and sideways when zoomed), two fingers pinch about the point between them and pan (`viewer/PinchGestures` reads them before the list does). Whole pages are only ever drawn at the screen's width, because a whole page at 5x would be hundreds of MB; while zooming they are stretched. Once the view has been still for 250 ms, each zoomed page on screen gets a second, sharp image of just the part that shows, plus an eighth of the screen to spare (`viewer/PageDetail` decides, `PdfPages.renderPart` draws it with a transform). It is drawn over the stretched page, kept while scrolls stay inside it, and redrawn when they leave it or the zoom changes. The page across the middle of the screen is the current page, shown by `viewer/PageJump`'s indicator, and saved with the zoom half a second after either changes and again when the Document closes. A PDF that can't be opened raises `DocumentOpenException` (`Missing`, `PasswordProtected` or `Damaged`), and the screen shows its message, which names the file and the reason.
 
 ## Folder layout
 
@@ -172,13 +174,13 @@ core/src/test/kotlin/  JUnit tests, mirroring core's packages
 app/src/main/kotlin/com/rickphobia/ricknotes/
   MainActivity.kt      entrypoint: wiring only
   RickNotesApp.kt      which screen shows
-  adapters/settings/   SharedPreferences-backed settings storage
+  adapters/settings/   SharedPreferences-backed settings and reading-position storage
   files/               PDF listing, picker result to path
   studyfolder/         "All files access" and folder picker screens
   home/                home screen: the PDF list (Compose)
   settings/            Settings screen ("Change folder")
   diagnostics/         hidden pen test screen: raw stylus events, newest first
-  viewer/              open Document: PdfRenderer adapter, page list, open errors
+  viewer/              open Document: PdfRenderer adapter, zoomable page list, page jump, reading position, open errors
 app/src/test/kotlin/   JUnit tests for app code that runs on the JVM
 app/src/preview/res/   the Preview app's label
 config/detekt.yml      detekt rules on top of the defaults
@@ -207,7 +209,9 @@ ZUXOS keeps the side button for itself: by default, hold creates a note and pres
 - The app logs to Logcat with the tag `RickNotes` (`adb logcat -s RickNotes`). The rolling log file and "Share log" button arrive in ticket 07.
 - **Stuck on the "All files access" screen:** turn the setting on for this app (RickNotes and RickNotes Preview are listed separately), then press Back.
 - **"The Study folder ... does not exist" on start:** the folder was renamed, moved or deleted; pick it again.
-- **A PDF shows "Can't open ...":** the message says why. "password-protected": remove the password in another app (RickNotes doesn't ask for one). "damaged or not a PDF": Android's PDF reader couldn't parse it; check it opens elsewhere. Logcat has the underlying error. Page open and render times are logged at debug level (`adb logcat RickNotes:D '*:S'`).
+- **A PDF shows "Can't open ...":** the message says why. "password-protected": remove the password in another app (RickNotes doesn't ask for one). "damaged or not a PDF": Android's PDF reader couldn't parse it; check it opens elsewhere. Logcat has the underlying error. Page open and render times are logged at debug level (`adb logcat RickNotes:D '*:S'`), with "(part)" for the sharp part of a zoomed page.
+- **A zoomed page stays blurry:** the sharp part is drawn only once the view has been still for 250 ms; Logcat should then show a "(part)" render for each page on screen. A "Can't draw page" error there means `PdfRenderer` failed on it, and the stretched page stays.
+- **A Document reopens at the wrong place:** Logcat logs "reopening <file> at page N, zoom Z" on open. Positions are keyed by the PDF's path, so a renamed or moved PDF starts at page 1.
 - **`SDK location not found`:** run `scripts/setup-android-sdk.sh`, or set `ANDROID_HOME`.
 - **`Release signing is not configured: set ...`:** a release or Preview build needs the named variables; see [Signing key](#signing-key). In CI, a missing `RICKNOTES_KEYSTORE_BASE64` secret fails the signing step with its own message.
 - **No Preview link on a PR:** the `preview` job in the PR's `ricknotes` run publishes it; check that run's log. A PR that doesn't touch `projects/ricknotes/` doesn't run it.

@@ -24,6 +24,7 @@ import com.rickphobia.ricknotes.settings.SettingsScreen
 import com.rickphobia.ricknotes.studyfolder.AllFilesAccessScreen
 import com.rickphobia.ricknotes.studyfolder.PickFolderScreen
 import com.rickphobia.ricknotes.viewer.DocumentScreen
+import com.rickphobia.ricknotes.viewer.ReadingPositions
 
 /** Which screen is showing. Without a usable Study folder the app only offers the picker. */
 private sealed interface Screen {
@@ -49,6 +50,12 @@ private sealed interface Screen {
     ) : Screen
 }
 
+/** Where the app keeps what it remembers: its settings, and where each Document was left. */
+class AppStorage<S>(
+    val settings: S,
+    val readingPositions: ReadingPositions,
+) where S : SettingsSource, S : SettingsStore
+
 private fun problemText(error: InvalidSettingException) = "The Study folder ${error.value} ${error.reason}."
 
 private fun startScreen(source: SettingsSource): Screen =
@@ -63,11 +70,11 @@ private fun startScreen(source: SettingsSource): Screen =
 fun <S> RickNotesApp(
     versionName: String,
     hasAllFilesAccess: Boolean,
-    settings: S,
+    storage: AppStorage<S>,
     openAllFilesAccessSetting: () -> Unit,
     pickedFolderPath: (Uri) -> String?,
 ) where S : SettingsSource, S : SettingsStore {
-    var screen by remember(hasAllFilesAccess) { mutableStateOf(startScreen(settings)) }
+    var screen by remember(hasAllFilesAccess) { mutableStateOf(startScreen(storage.settings)) }
 
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -79,7 +86,7 @@ fun <S> RickNotesApp(
                     Screen.PickFolder("Pick a folder on the tablet's own storage, not an SD card or USB drive.")
                 } else {
                     try {
-                        SettingsLoader.saveStudyFolder(settings, path)
+                        SettingsLoader.saveStudyFolder(storage.settings, path)
                         Log.i(MainActivity.LOG_TAG, "study folder chosen")
                         Screen.Home(path)
                     } catch (e: InvalidSettingException) {
@@ -124,7 +131,7 @@ fun <S> RickNotesApp(
                 }
 
                 is Screen.Document -> {
-                    DocumentScreen(pdf = current.pdf, onBack = { screen = Screen.Home(current.studyFolder) })
+                    DocumentScreen(current.pdf, storage.readingPositions) { screen = Screen.Home(current.studyFolder) }
                 }
             }
         }

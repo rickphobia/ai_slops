@@ -4,14 +4,16 @@
 
 **Blocked by:** 04 (Read a Document)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** app-viewer, app-settings
 
 **Effort:** medium
 
-- [ ] Pinch zoom between a sensible minimum and maximum, centred on the fingers
-- [ ] Visible pages re-render at the new resolution once a zoom settles; blurry pages are never left behind
-- [ ] Page indicator, and a jump-to-page action
-- [ ] Last page and zoom saved per Document and restored when it reopens
-- [ ] **Milestone 1 gate**, written in the PR for the owner: a 100-page lecture scrolls and zooms smoothly with no stutter in the Preview app
+- [x] Pinch zoom between a sensible minimum and maximum, centred on the fingers
+- [x] Visible pages re-render at the new resolution once a zoom settles; blurry pages are never left behind
+- [x] Page indicator, and a jump-to-page action
+- [x] Last page and zoom saved per Document and restored when it reopens
+- [x] **Milestone 1 gate**, written in the PR for the owner: a 100-page lecture scrolls and zooms smoothly with no stutter in the Preview app
+
+**Owner steps:** run the milestone 1 gate on the tablet with the Preview app from the PR.
