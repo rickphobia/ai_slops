@@ -17,6 +17,7 @@ import com.rickphobia.ricknotes.core.settings.InvalidSettingException
 import com.rickphobia.ricknotes.core.settings.SettingsLoader
 import com.rickphobia.ricknotes.core.settings.SettingsSource
 import com.rickphobia.ricknotes.core.settings.SettingsStore
+import com.rickphobia.ricknotes.diagnostics.PenTestScreen
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.home.HomeScreen
 import com.rickphobia.ricknotes.settings.SettingsScreen
@@ -35,6 +36,10 @@ private sealed interface Screen {
     ) : Screen
 
     data class Settings(
+        val studyFolder: String,
+    ) : Screen
+
+    data class PenTest(
         val studyFolder: String,
     ) : Screen
 
@@ -109,8 +114,13 @@ fun <S> RickNotesApp(
                     SettingsScreen(
                         studyFolder = current.studyFolder,
                         onChangeFolder = pickFolder,
+                        onOpenPenTest = { screen = Screen.PenTest(current.studyFolder) },
                         onBack = { screen = Screen.Home(current.studyFolder) },
                     )
+                }
+
+                is Screen.PenTest -> {
+                    PenTestScreen(onBack = { screen = Screen.Settings(current.studyFolder) })
                 }
 
                 is Screen.Document -> {
