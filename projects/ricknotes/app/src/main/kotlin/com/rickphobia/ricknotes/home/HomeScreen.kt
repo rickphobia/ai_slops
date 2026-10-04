@@ -1,6 +1,7 @@
 package com.rickphobia.ricknotes.home
 
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ fun HomeScreen(
     versionName: String,
     studyFolder: String,
     onOpenSettings: () -> Unit,
+    onOpenPdf: (PdfEntry) -> Unit,
 ) {
     // A large Study folder takes a moment to walk, so it is listed off the main thread.
     val pdfs by produceState<List<PdfEntry>?>(initialValue = null, studyFolder) {
@@ -64,7 +66,9 @@ fun HomeScreen(
             else -> {
                 LazyColumn(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.Top) {
                     items(listed, key = PdfEntry::path) { pdf ->
-                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().clickable { onOpenPdf(pdf) }.padding(vertical = 8.dp),
+                        ) {
                             Text(text = pdf.name, style = MaterialTheme.typography.bodyLarge)
                             if (pdf.folder.isNotEmpty()) {
                                 Text(text = pdf.folder, style = MaterialTheme.typography.bodySmall)

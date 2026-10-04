@@ -14,4 +14,7 @@
   <string name="change_folder">Change folder</string>
   <string name="listing_pdfs">Looking for PDFs…</string>
   <string name="no_pdfs">No PDFs in this folder yet.</string>
+  <string name="opening_document">Opening…</string>
+  <string name="page_number">Page %1$d</string>
+  <string name="page_failed">Couldn\'t draw page %1$d.</string>
 </resources>

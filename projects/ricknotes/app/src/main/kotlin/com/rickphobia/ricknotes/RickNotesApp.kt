@@ -17,10 +17,12 @@ import com.rickphobia.ricknotes.core.settings.InvalidSettingException
 import com.rickphobia.ricknotes.core.settings.SettingsLoader
 import com.rickphobia.ricknotes.core.settings.SettingsSource
 import com.rickphobia.ricknotes.core.settings.SettingsStore
+import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.home.HomeScreen
 import com.rickphobia.ricknotes.settings.SettingsScreen
 import com.rickphobia.ricknotes.studyfolder.AllFilesAccessScreen
 import com.rickphobia.ricknotes.studyfolder.PickFolderScreen
+import com.rickphobia.ricknotes.viewer.DocumentScreen
 
 /** Which screen is showing. Without a usable Study folder the app only offers the picker. */
 private sealed interface Screen {
@@ -34,6 +36,11 @@ private sealed interface Screen {
 
     data class Settings(
         val studyFolder: String,
+    ) : Screen
+
+    data class Document(
+        val studyFolder: String,
+        val pdf: PdfEntry,
     ) : Screen
 }
 
@@ -94,6 +101,7 @@ fun <S> RickNotesApp(
                         versionName = versionName,
                         studyFolder = current.studyFolder,
                         onOpenSettings = { screen = Screen.Settings(current.studyFolder) },
+                        onOpenPdf = { pdf -> screen = Screen.Document(current.studyFolder, pdf) },
                     )
                 }
 
@@ -103,6 +111,10 @@ fun <S> RickNotesApp(
                         onChangeFolder = pickFolder,
                         onBack = { screen = Screen.Home(current.studyFolder) },
                     )
+                }
+
+                is Screen.Document -> {
+                    DocumentScreen(pdf = current.pdf, onBack = { screen = Screen.Home(current.studyFolder) })
                 }
             }
         }
