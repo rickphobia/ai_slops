@@ -17,7 +17,7 @@
 - [x] `app` module with a thin Activity showing "RickNotes" and the version name
 - [x] ktlint, detekt and Android lint configured and clean; one command runs them all
 - [x] One JUnit test in `core` passes; one Gradle command runs all unit tests and is named in the README
-- [ ] `.github/workflows/ricknotes.yml` (`name: ricknotes`, scoped to `projects/ricknotes/**`) runs lint and unit tests and builds the APK; CI is green and `ci-gate` passes
+- [x] `.github/workflows/ricknotes.yml` (`name: ricknotes`, scoped to `projects/ricknotes/**`) runs lint and unit tests and builds the APK; CI is green and `ci-gate` passes
 - [x] README filled in from `templates/project/README.md`: setup, build, test, install, and how to run on the tablet
 - [x] `.env.example` present with a comment explaining it holds build-time values only
 - [x] `.claude/settings.json` (added with the planning docs) still matches the root guardrails
