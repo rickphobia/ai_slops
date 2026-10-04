@@ -1,0 +1,5 @@
+# APKs reach the tablet through GitHub Releases, signed with one key
+
+CI builds the APK. Merging to `main` publishes a GitHub Release (`ricknotes-v<N>`) that Obtainium on the tablet installs as "RickNotes". Every green PR publishes a prerelease (`ricknotes-pr-<N>`) that installs as a separate app, "RickNotes Preview" (`com.rickphobia.ricknotes.preview`), pointed at a copy of the Study folder, so an unmerged build can never touch the real notes or replace the working app. The tablet lives at the dorm, away from the Beelink, so a build has to be installable from GitHub with nothing else running. All APKs are signed with one release key, stored outside the repo and as a GitHub secret, because Android only installs an update signed with the same key and the alternative, uninstalling, wipes the API keys and settings.
+
+**Trade-offs:** the repo is public, so the APKs are public downloads (they contain no secrets). Losing the signing key means one uninstall and re-entering settings, so the key needs a backup.
