@@ -33,7 +33,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
-      apk: ${{ steps.signed.outputs.apk }}
+      # Not the APK's name: GitHub drops an output that contains a secret's value, and the key
+      # alias ("ricknotes") is a secret. The publish jobs find the APK in the artifact instead.
+      signed: ${{ steps.signed.outcome }}
     steps:
       - uses: actions/checkout@v4
       # Runs the Gradle launcher; the build's own JDK comes from gradle/gradle-daemon-jvm.properties.
@@ -75,13 +77,13 @@ jobs:
           trap 'rm -f "$RICKNOTES_KEYSTORE_FILE"' EXIT
           base64 --decode <<<"$RICKNOTES_KEYSTORE_BASE64" >"$RICKNOTES_KEYSTORE_FILE"
           ./gradlew "assemble${build_type^}"
-          cp "app/build/outputs/apk/$build_type/app-$build_type.apk" "$RUNNER_TEMP/$apk"
-          echo "apk=$apk" >>"$GITHUB_OUTPUT"
+          mkdir "$RUNNER_TEMP/apk"
+          cp "app/build/outputs/apk/$build_type/app-$build_type.apk" "$RUNNER_TEMP/apk/$apk"
       - if: steps.signed.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ricknotes-apk
-          path: ${{ runner.temp }}/${{ steps.signed.outputs.apk }}
+          path: ${{ runner.temp }}/apk/
           retention-days: 7
       - if: failure()
         uses: actions/upload-artifact@v4
@@ -104,25 +106,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ricknotes-apk
+          path: ${{ runner.temp }}/apk
       - env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          APK: ${{ needs.check.outputs.apk }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           tag="ricknotes-v$RICKNOTES_BUILD_NUMBER"
+          apk=("$RUNNER_TEMP"/apk/*.apk)
           # A re-run of the same workflow run reuses its number, so replace the APK instead.
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$APK" --clobber
+            gh release upload "$tag" "${apk[0]}" --clobber
           else
-            gh release create "$tag" "$APK" --title "$tag" --target "$GITHUB_SHA" --latest \
+            gh release create "$tag" "${apk[0]}" --title "$tag" --target "$GITHUB_SHA" --latest \
               --notes "RickNotes build $RICKNOTES_BUILD_NUMBER, from $GITHUB_SHA: ${COMMIT_MESSAGE%%$'\n'*}"
           fi
 
   # One prerelease per pull request, replaced on every green run, installed as RickNotes Preview.
   preview:
     needs: check
-    if: github.event_name == 'pull_request' && needs.check.outputs.apk != ''
+    if: github.event_name == 'pull_request' && needs.check.outputs.signed == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -139,18 +142,18 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          APK: ${{ runner.temp }}/apk/${{ needs.check.outputs.apk }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           tag="ricknotes-pr-$PR_NUMBER"
+          apk=("$RUNNER_TEMP"/apk/*.apk)
           # Deleting and recreating moves the tag to this commit; --cleanup-tag removes the old tag.
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release delete "$tag" --cleanup-tag --yes
           fi
-          gh release create "$tag" "$APK" --prerelease --title "$tag" --target "$HEAD_SHA" \
+          gh release create "$tag" "${apk[0]}" --prerelease --title "$tag" --target "$HEAD_SHA" \
             --notes "RickNotes Preview build $RICKNOTES_BUILD_NUMBER for #$PR_NUMBER, from $HEAD_SHA. Not for Obtainium: open the APK on the tablet to install it beside RickNotes."
-          url="https://github.com/$GH_REPO/releases/download/$tag/$(basename "$APK")"
+          url="https://github.com/$GH_REPO/releases/download/$tag/$(basename "${apk[0]}")"
           gh pr view "$PR_NUMBER" --json body --jq .body \
             | scripts/pr-try-link.sh "RickNotes Preview build $RICKNOTES_BUILD_NUMBER (APK)" "$url" \
             | gh pr edit "$PR_NUMBER" --body-file -
