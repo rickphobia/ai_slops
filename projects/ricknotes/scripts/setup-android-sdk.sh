@@ -36,16 +36,16 @@ catalog_version() {
 
 install_cmdline_tools() {
   local target="$sdk_dir/cmdline-tools/$cmdline_tools_version"
-  if [[ -x $target/bin/sdkmanager ]]; then
+  if [[ -x $target/bin/android ]]; then
     log "command-line tools $cmdline_tools_version already in $target"
     return
   fi
   command -v java >/dev/null || fail "java not found; install a JDK or JRE 17+ (e.g. apt install openjdk-21-jre-headless)"
   command -v unzip >/dev/null || fail "unzip not found (apt install unzip)"
 
-  local download
+  # Global, not local: the EXIT trap runs after this function's variables are gone.
   download="$(mktemp -d)"
-  trap 'rm -r -- "$download"' RETURN
+  trap 'rm -r -- "$download"' EXIT
   log "downloading command-line tools $cmdline_tools_version"
   curl -fsSL -o "$download/tools.zip" "https://dl.google.com/android/repository/$cmdline_tools_zip"
   echo "$cmdline_tools_sha1  $download/tools.zip" | sha1sum -c --quiet - ||
