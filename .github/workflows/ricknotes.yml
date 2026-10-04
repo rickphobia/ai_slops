@@ -16,7 +16,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ricknotes-${{ github.ref }}
+  # One group per PR: when a PR is merged, its "closed" run has github.ref set to main, and
+  # sharing main's group got its prerelease cleanup cancelled by the release run.
+  group: ricknotes-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: true
 
 defaults:
