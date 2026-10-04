@@ -76,5 +76,6 @@ Follow [`docs/new-project.md`](docs/new-project.md). It is ticket 01 of the proj
 |---------|--------------|-------|--------|
 | [pawn-swarm](projects/pawn-swarm) | Chess-board auto-battler where pawns are army and money | TypeScript, Vite, Canvas | working |
 | [my-piggy](projects/my-piggy) | First-person horror game: a human head on a pig's body, hunted by family in one night | Godot 4 (GDScript), web export | in progress |
+| [ricknotes](projects/ricknotes) | Android tablet app for writing on study PDFs with a pen, with ink saved beside each PDF | Kotlin, Jetpack Compose, Android | in progress |
 
 Status values: `idea`, `in progress`, `working`, `abandoned`.
