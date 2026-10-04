@@ -17,6 +17,6 @@
 - [x] On a pull request whose checks pass, CI publishes or replaces a prerelease `ricknotes-pr-<N>` with the signed Preview APK and adds a "▶ Try this version" link to the PR body; the prerelease is deleted when the PR closes
 - [x] Obtainium's option for filtering releases by name checked against its current docs; README explains how to add RickNotes to Obtainium so it only follows `ricknotes-v*`
 - [x] README explains generating the key, backing it up, and adding the GitHub secrets
-- [ ] CI is green
+- [x] CI is green
 
 **Owner steps:** generate the signing key on the Beelink and back it up; add the GitHub secrets; install Obtainium on the tablet and add RickNotes; allow it to install apps.
