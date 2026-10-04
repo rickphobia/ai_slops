@@ -6,6 +6,8 @@ on:
       - "projects/ricknotes/**"
       - ".github/workflows/ricknotes.yml"
   pull_request:
+    # "closed" deletes the PR's Preview prerelease.
+    types: [opened, synchronize, reopened, closed]
     paths:
       - "projects/ricknotes/**"
       - ".github/workflows/ricknotes.yml"
@@ -21,10 +23,19 @@ defaults:
   run:
     working-directory: projects/ricknotes
 
+env:
+  # versionCode, versionName and the release number (see app/build.gradle.kts).
+  RICKNOTES_BUILD_NUMBER: ${{ github.run_number }}
+
 jobs:
   check:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      # Not the APK's name: GitHub drops an output that contains a secret's value, and the key
+      # alias ("ricknotes") is a secret. The publish jobs find the APK in the artifact instead.
+      signed: ${{ steps.signed.outcome }}
     steps:
       - uses: actions/checkout@v4
       # Runs the Gradle launcher; the build's own JDK comes from gradle/gradle-daemon-jvm.properties.
@@ -35,13 +46,136 @@ jobs:
       # Caches Gradle's downloads and checks the committed wrapper jar is genuine.
       - uses: gradle/actions/setup-gradle@v6
       # shellcheck comes preinstalled on the runner.
-      - run: shellcheck scripts/*.sh
+      - run: shellcheck scripts/*.sh scripts/tests/*.sh
+      - run: scripts/tests/pr-try-link.test.sh
       # Install the pinned SDK with the same script a developer uses, instead of the runner's own SDK.
       - run: echo "ANDROID_HOME=$RUNNER_TEMP/android-sdk" >> "$GITHUB_ENV"
       - run: scripts/setup-android-sdk.sh
       - run: ./gradlew lintAll test assembleDebug
+      # main builds RickNotes, a pull request builds RickNotes Preview. Other pushes (a PR branch
+      # also gets one) and pull requests from forks, which get no secrets, stop here.
+      - id: signed
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          RICKNOTES_KEYSTORE_BASE64: ${{ secrets.RICKNOTES_KEYSTORE_BASE64 }}
+          RICKNOTES_KEYSTORE_PASSWORD: ${{ secrets.RICKNOTES_KEYSTORE_PASSWORD }}
+          RICKNOTES_KEY_ALIAS: ${{ secrets.RICKNOTES_KEY_ALIAS }}
+          RICKNOTES_KEY_PASSWORD: ${{ secrets.RICKNOTES_KEY_PASSWORD }}
+        run: |
+          if [[ $GITHUB_EVENT_NAME == push ]]; then
+            build_type=release apk=ricknotes-$RICKNOTES_BUILD_NUMBER.apk
+          else
+            build_type=preview apk=ricknotes-preview-$RICKNOTES_BUILD_NUMBER.apk
+          fi
+          if [[ -z $RICKNOTES_KEYSTORE_BASE64 ]]; then
+            echo "::error::The RICKNOTES_KEYSTORE_BASE64 secret is not set; see the README's \"Signing key\" section."
+            exit 1
+          fi
+          export RICKNOTES_KEYSTORE_FILE="$RUNNER_TEMP/ricknotes.jks"
+          trap 'rm -f "$RICKNOTES_KEYSTORE_FILE"' EXIT
+          base64 --decode <<<"$RICKNOTES_KEYSTORE_BASE64" >"$RICKNOTES_KEYSTORE_FILE"
+          ./gradlew "assemble${build_type^}"
+          mkdir "$RUNNER_TEMP/apk"
+          cp "app/build/outputs/apk/$build_type/app-$build_type.apk" "$RUNNER_TEMP/apk/$apk"
+      - if: steps.signed.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ricknotes-apk
+          path: ${{ runner.temp }}/apk/
+          retention-days: 7
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ricknotes-reports
           path: projects/ricknotes/*/build/reports/
+
+  # The tablet's Obtainium follows these releases (ricknotes-v<N>) and installs them as RickNotes.
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ricknotes-apk
+          path: ${{ runner.temp }}/apk
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          tag="ricknotes-v$RICKNOTES_BUILD_NUMBER"
+          apk=("$RUNNER_TEMP"/apk/*.apk)
+          # A re-run of the same workflow run reuses its number, so replace the APK instead.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${apk[0]}" --clobber
+          else
+            gh release create "$tag" "${apk[0]}" --title "$tag" --target "$GITHUB_SHA" --latest \
+              --notes "RickNotes build $RICKNOTES_BUILD_NUMBER, from $GITHUB_SHA: ${COMMIT_MESSAGE%%$'\n'*}"
+          fi
+
+  # One prerelease per pull request, replaced on every green run, installed as RickNotes Preview.
+  preview:
+    needs: check
+    if: github.event_name == 'pull_request' && needs.check.outputs.signed == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: projects/ricknotes/scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: ricknotes-apk
+          path: ${{ runner.temp }}/apk
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          tag="ricknotes-pr-$PR_NUMBER"
+          apk=("$RUNNER_TEMP"/apk/*.apk)
+          # Deleting and recreating moves the tag to this commit; --cleanup-tag removes the old tag.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release delete "$tag" --cleanup-tag --yes
+          fi
+          gh release create "$tag" "${apk[0]}" --prerelease --title "$tag" --target "$HEAD_SHA" \
+            --notes "RickNotes Preview build $RICKNOTES_BUILD_NUMBER for #$PR_NUMBER, from $HEAD_SHA. Not for Obtainium: open the APK on the tablet to install it beside RickNotes."
+          url="https://github.com/$GH_REPO/releases/download/$tag/$(basename "${apk[0]}")"
+          gh pr view "$PR_NUMBER" --json body --jq .body \
+            | scripts/pr-try-link.sh "RickNotes Preview build $RICKNOTES_BUILD_NUMBER (APK)" "$url" \
+            | gh pr edit "$PR_NUMBER" --body-file -
+
+  remove-preview:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          tag="ricknotes-pr-$PR_NUMBER"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release delete "$tag" --cleanup-tag --yes
+          else
+            echo "No $tag release to delete."
+          fi

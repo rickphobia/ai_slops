@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: walking skeleton (ticket 01). The app opens to a "RickNotes" screen with its version; no features yet. Next: release pipeline (ticket 02) and the Study folder (ticket 03).
+`in progress`: walking skeleton and release pipeline (tickets 01-02). The app opens to a "RickNotes" screen with its version; no features yet. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: the Study folder (ticket 03).
 
 ## Requirements
 
@@ -22,15 +22,27 @@ scripts/setup-android-sdk.sh   # installs the pinned Android SDK into ~/Android/
 
 Set `ANDROID_HOME` first to put the SDK somewhere else. The script is safe to run again. Since command-line tools 23.0 the SDK installer is the `android` CLI (it replaced `sdkmanager`); on first use it unpacks itself into `~/.android/cli`. The script runs it with `--no-metrics`.
 
-Nothing in `.env.example` is needed yet: it lists build-time values, and ticket 02 adds the first ones (release signing).
+A debug build needs nothing from `.env.example`. A release or Preview build needs the signing variables (see [Signing key](#signing-key)).
 
 ## Build
 
 ```bash
 ./gradlew assembleDebug        # APK in app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease      # signed RickNotes:         app/build/outputs/apk/release/app-release.apk
+./gradlew assemblePreview      # signed RickNotes Preview: app/build/outputs/apk/preview/app-preview.apk
 ```
 
 The first build downloads Gradle, the JDK and the libraries, and takes a few minutes.
+
+There are two apps from one codebase, and they install side by side, each with its own settings (so its own Study folder):
+
+| Build type | App | Package | Built by CI from |
+|------------|-----|---------|------------------|
+| `release` | RickNotes | `com.rickphobia.ricknotes` | `main` |
+| `preview` | RickNotes Preview | `com.rickphobia.ricknotes.preview` | pull requests |
+| `debug` | RickNotes | `com.rickphobia.ricknotes` | (CI only checks it builds) |
+
+`versionCode` and `versionName` are `RICKNOTES_BUILD_NUMBER` (CI's run number; 1 when unset), so the home screen shows the same number as the release, and the Preview app's version ends in `-preview`.
 
 ## Test
 
@@ -40,16 +52,65 @@ The first build downloads Gradle, the JDK and the libraries, and takes a few min
 ./gradlew ktlintFormat         # fix formatting that ktlint reports
 ```
 
-CI (`.github/workflows/ricknotes.yml`) runs `./gradlew lintAll test assembleDebug` on every push that changes this folder. Lint reports are in `<module>/build/reports/`; CI uploads them when a run fails.
+```bash
+scripts/tests/pr-try-link.test.sh   # the script CI uses to put the Preview link in a PR body
+```
+
+CI (`.github/workflows/ricknotes.yml`) runs shellcheck, the script tests and `./gradlew lintAll test assembleDebug` on every push that changes this folder. Lint reports are in `<module>/build/reports/`; CI uploads them when a run fails. When the checks pass, it also publishes (decision [0004](docs/decisions/0004-apks-from-github-releases.md)):
+
+- **On `main`:** a signed RickNotes APK as the GitHub Release `ricknotes-v<N>` (`N` is the run number), marked latest.
+- **On a pull request:** a signed Preview APK as the prerelease `ricknotes-pr-<PR>`, replaced on every green run, and a "▶ Try this version" link to the APK on the PR body's second line. Closing or merging the PR deletes the prerelease and its tag. PRs from forks get no secrets, so they get no Preview.
 
 ## Install on the tablet
 
-Until ticket 02 publishes signed APKs to GitHub Releases (installed through Obtainium), install a debug build by hand:
+### RickNotes, through Obtainium
+
+[Obtainium](https://github.com/ImranR98/Obtainium) installs RickNotes from GitHub Releases and updates it. Checked against Obtainium 1.6.17 (its GitHub source in `lib/app_sources/github.dart`). The repo holds other projects too, so RickNotes must be told to follow only `ricknotes-v*` releases:
+
+1. Install Obtainium from its GitHub releases page. Allow it to install apps when Android asks ("Install unknown apps").
+2. In Obtainium, **Add app**, App source URL `https://github.com/rickphobia/ai_slops`.
+3. In the GitHub options, set **Filter release titles by regular expression** to `^ricknotes-v[0-9]+$`. Leave **Include prereleases** off and **Fallback to older releases** on (both are the defaults): the newest release in the repo may be a Preview or another project's, and the fallback makes Obtainium look further back for a matching one.
+4. **Add**, then **Install**. Obtainium checks for updates in the background and notifies you.
+
+Obtainium reads the version from the tag `ricknotes-v<N>` and the installed app's version is `N`, so its standard version detection matches them.
+
+### RickNotes Preview, from a pull request
+
+Open the "▶ Try this version" link in the PR on the tablet; it downloads the APK. Open it and allow the browser to install apps. It installs as "RickNotes Preview" beside RickNotes; point it at a copy of the Study folder. A newer Preview installs over an older one; a build with a lower number (an older PR's rerun) won't, so uninstall the Preview first.
+
+### A local build, by hand
 
 - **Over USB or adb:** turn on Developer options and USB debugging on the tablet, then `~/Android/Sdk/platform-tools/adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 - **Without adb:** copy `app-debug.apk` to the tablet (Drive, USB) and open it in Files; allow "Install unknown apps" for Files when asked.
 
-Open "RickNotes" from the launcher: it shows the app name and its version. A debug build is signed with this machine's debug key, so a debug build from another machine won't install over it; uninstall first.
+A debug build is signed with this machine's debug key, so it won't install over the RickNotes from Obtainium (or over a debug build from another machine); uninstall first, which wipes the app's settings.
+
+## Signing key
+
+Android installs an update only if it is signed with the same key as the installed app, so every RickNotes and Preview APK is signed with one release key. Losing it means uninstalling RickNotes (losing its settings) to install a build signed with a new one.
+
+Generate it once, on the Beelink, outside the repo (`keytool` comes with the JDK; `sudo apt install openjdk-21-jdk-headless` if it's missing):
+
+```bash
+mkdir -p ~/keys && chmod 700 ~/keys
+keytool -genkeypair -keystore ~/keys/ricknotes-release.jks -storetype PKCS12 \
+  -alias ricknotes -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=RickNotes"
+```
+
+It asks for a password; with PKCS12 the key password is the same as the store password.
+
+**Back it up:** copy `ricknotes-release.jks` and its password to somewhere off the Beelink (a password manager holds both). Without the backup, a dead disk means a new key.
+
+**Add the GitHub secrets** (repo Settings → Secrets and variables → Actions → New repository secret):
+
+| Secret | Value |
+|--------|-------|
+| `RICKNOTES_KEYSTORE_BASE64` | output of `base64 -w0 ~/keys/ricknotes-release.jks` |
+| `RICKNOTES_KEYSTORE_PASSWORD` | the password |
+| `RICKNOTES_KEY_ALIAS` | `ricknotes` |
+| `RICKNOTES_KEY_PASSWORD` | the password again |
+
+**Build a signed APK locally:** export the four `RICKNOTES_KEY*` variables from `.env.example` (with `RICKNOTES_KEYSTORE_FILE` pointing at the `.jks`), then `./gradlew assembleRelease`. Without them it fails with `Release signing is not configured: set <names>`.
 
 ## Configuration
 
@@ -60,6 +121,13 @@ Build-time values come from environment variables listed in `.env.example`:
 | Variable | Required | What it does |
 |----------|----------|--------------|
 | `ANDROID_HOME` | no | Where the Android SDK lives. Default `~/Android/Sdk`; `local.properties` (written by the setup script) also points Gradle at it |
+| `RICKNOTES_BUILD_NUMBER` | no | `versionCode` and `versionName`. Default 1; CI sets the run number |
+| `RICKNOTES_KEYSTORE_FILE` | for release and Preview builds | Path to the release keystore (`.jks`) |
+| `RICKNOTES_KEYSTORE_PASSWORD` | for release and Preview builds | The keystore's password |
+| `RICKNOTES_KEY_ALIAS` | for release and Preview builds | The key's alias in the keystore (`ricknotes`) |
+| `RICKNOTES_KEY_PASSWORD` | for release and Preview builds | The key's password |
+
+In CI the keystore comes from the `RICKNOTES_KEYSTORE_BASE64` secret, decoded to a temporary file for the build and deleted after it.
 
 ## Pinned versions
 
@@ -103,9 +171,10 @@ app/src/main/kotlin/com/rickphobia/ricknotes/
   MainActivity.kt      entrypoint: wiring only
   adapters/settings/   SharedPreferences-backed SettingsSource
   home/                home screen (Compose)
+app/src/preview/res/   the Preview app's label
 config/detekt.yml      detekt rules on top of the defaults
 gradle/                version catalog, wrapper, pinned daemon JDK
-scripts/               setup-android-sdk.sh
+scripts/               setup-android-sdk.sh; pr-try-link.sh (CI's PR-body link), with tests in scripts/tests/
 docs/                  spec, tickets, decisions
 ```
 
@@ -113,6 +182,10 @@ docs/                  spec, tickets, decisions
 
 - The app logs to Logcat with the tag `RickNotes` (`adb logcat -s RickNotes`). The rolling log file and "Share log" button arrive in ticket 07.
 - **`SDK location not found`:** run `scripts/setup-android-sdk.sh`, or set `ANDROID_HOME`.
+- **`Release signing is not configured: set ...`:** a release or Preview build needs the named variables; see [Signing key](#signing-key). In CI, a missing `RICKNOTES_KEYSTORE_BASE64` secret fails the signing step with its own message.
+- **No Preview link on a PR:** the `preview` job in the PR's `ricknotes` run publishes it; check that run's log. A PR that doesn't touch `projects/ricknotes/` doesn't run it.
+- **Obtainium finds no update or the wrong app:** check the app's **Filter release titles by regular expression** is `^ricknotes-v[0-9]+$` and **Include prereleases** is off.
+- **"App not installed" on an update:** the APK is signed with a different key from the installed app (a debug build, or a new key); uninstall first.
 - **`Cannot find a Java installation ... matching {languageVersion=21}`:** Gradle couldn't download the JDK (offline?). Install a JDK 21 and rerun.
 - **`core must stay free of Android`:** something in `core` imports `android`/`androidx` or depends on an Android library. Move that code into an adapter in `app`.
 - **ktlint failures:** `./gradlew ktlintFormat` fixes most of them.

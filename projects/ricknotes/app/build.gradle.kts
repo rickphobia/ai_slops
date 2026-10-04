@@ -12,6 +12,25 @@ val (compileSdkMajor, compileSdkMinor) =
         .split(".")
         .map(String::toInt)
 
+// CI passes its run number so every build installs over the last one; a hand-made build is number 1.
+val buildNumber =
+    providers
+        .environmentVariable("RICKNOTES_BUILD_NUMBER")
+        .map(String::toInt)
+        .getOrElse(1)
+
+// The release key never enters the repo: it is read from these variables (see .env.example).
+// Only packaging the release and preview APKs needs them, so lint, tests and debug builds work
+// without them.
+val releaseSigning =
+    listOf(
+        "RICKNOTES_KEYSTORE_FILE",
+        "RICKNOTES_KEYSTORE_PASSWORD",
+        "RICKNOTES_KEY_ALIAS",
+        "RICKNOTES_KEY_PASSWORD",
+    ).associateWith { name -> providers.environmentVariable(name).orNull?.takeIf(String::isNotBlank) }
+val missingSigningVariables = releaseSigning.filterValues { it == null }.keys.toList()
+
 android {
     namespace = "com.rickphobia.ricknotes"
     compileSdk {
@@ -29,9 +48,33 @@ android {
             libs.versions.targetSdk
                 .get()
                 .toInt()
-        // Ticket 02 replaces these with the CI run number.
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = buildNumber
+        // The same number as the release tag (ricknotes-v<N>), so Obtainium can match what is installed.
+        versionName = buildNumber.toString()
+    }
+
+    signingConfigs {
+        if (missingSigningVariables.isEmpty()) {
+            create("release") {
+                storeFile = file(releaseSigning.getValue("RICKNOTES_KEYSTORE_FILE")!!)
+                storePassword = releaseSigning.getValue("RICKNOTES_KEYSTORE_PASSWORD")
+                keyAlias = releaseSigning.getValue("RICKNOTES_KEY_ALIAS")
+                keyPassword = releaseSigning.getValue("RICKNOTES_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.findByName("release")
+        }
+        // Pull-request builds: a separate app with its own settings, so an unmerged build never
+        // replaces RickNotes or touches its Study folder. Its label is in src/preview/res.
+        create("preview") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+        }
     }
 
     buildFeatures {
@@ -68,6 +111,24 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     testImplementation(libs.junit)
+}
+
+// Without this, a release build with no key would quietly produce an unsigned APK.
+val checkReleaseSigning by tasks.registering {
+    description = "Fails, naming the missing variables, when the release signing key is not configured."
+    val missing = missingSigningVariables
+    doLast {
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Release signing is not configured: set ${missing.joinToString()} " +
+                    "(see .env.example and the README's \"Signing key\" section).",
+            )
+        }
+    }
+}
+
+tasks.matching { it.name == "packageRelease" || it.name == "packagePreview" }.configureEach {
+    dependsOn(checkReleaseSigning)
 }
 
 ktlint {
