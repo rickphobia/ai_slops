@@ -17,4 +17,7 @@
   <string name="opening_document">Opening…</string>
   <string name="page_number">Page %1$d</string>
   <string name="page_failed">Couldn\'t draw page %1$d.</string>
+  <string name="clear">Clear</string>
+  <string name="pen_test">Pen test</string>
+  <string name="pen_test_help">Touch, hover over or press pen buttons in the grey area. To check a button while hovering, hold the pen still just above the area and press it.</string>
 </resources>

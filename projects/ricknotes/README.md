@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: tickets 01-04. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder". Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: zoom, jump to page and resume (ticket 05).
+`in progress`: tickets 01-04 and 06. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: zoom, jump to page and resume (ticket 05).
 
 ## Requirements
 
@@ -177,6 +177,7 @@ app/src/main/kotlin/com/rickphobia/ricknotes/
   studyfolder/         "All files access" and folder picker screens
   home/                home screen: the PDF list (Compose)
   settings/            Settings screen ("Change folder")
+  diagnostics/         hidden pen test screen: raw stylus events, newest first
   viewer/              open Document: PdfRenderer adapter, page list, open errors
 app/src/test/kotlin/   JUnit tests for app code that runs on the JVM
 app/src/preview/res/   the Preview app's label
@@ -185,6 +186,21 @@ gradle/                version catalog, wrapper, pinned daemon JDK
 scripts/               setup-android-sdk.sh; pr-try-link.sh (CI's PR-body link), with tests in scripts/tests/
 docs/                  spec, tickets, decisions
 ```
+
+## Pen buttons
+
+Which buttons of the Lenovo Xiaoxin Stylus 2023 reach the app on ZUXOS, as seen on the pen test screen (Settings, long-press the "Settings" title). Draw, hover or press buttons in the grey area; each row shows the event, tool type, buttons held, pressure, hover state and key code. Rows are also logged at debug level (`adb logcat RickNotes:D '*:S'`). Ticket 15 was to build the Pen button settings from this table; see the results below.
+
+Results, 2026-10-04 (ZUXOS 1.15.10.060, Android 16):
+
+| Button | Action tried | What the app received |
+|---|---|---|
+| Side button (the pen has one) | press while touching | nothing: no button state on touch events, no key event |
+| Side button | press while hovering | nothing: no button state on hover events, no key event |
+| Side button | press with the pen away from the screen | nothing |
+| Eraser end | — | the pen has none |
+
+ZUXOS keeps the side button for itself: by default, hold creates a note and press shows or hides the system pen menu (Settings → stylus). With both of those turned off, the button still sends nothing to apps. So no Pen button is available on this pen.
 
 ## Debugging
 
