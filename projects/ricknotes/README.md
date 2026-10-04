@@ -189,17 +189,18 @@ docs/                  spec, tickets, decisions
 
 ## Pen buttons
 
-Which buttons of the Lenovo Xiaoxin Stylus 2023 reach the app on ZUXOS, as seen on the pen test screen (Settings, long-press the "Settings" title). Draw, hover or press buttons in the grey area; each row shows the event, tool type, buttons held, pressure, hover state and key code. Rows are also logged at debug level (`adb logcat RickNotes:D '*:S'`). Ticket 15 builds the Pen button settings from this table.
+Which buttons of the Lenovo Xiaoxin Stylus 2023 reach the app on ZUXOS, as seen on the pen test screen (Settings, long-press the "Settings" title). Draw, hover or press buttons in the grey area; each row shows the event, tool type, buttons held, pressure, hover state and key code. Rows are also logged at debug level (`adb logcat RickNotes:D '*:S'`). Ticket 15 was to build the Pen button settings from this table; see the results below.
+
+Results, 2026-10-04 (ZUXOS 1.15.10.060, Android 16):
 
 | Button | Action tried | What the app received |
 |---|---|---|
-| Side button 1 | press while touching | _to fill in_ |
-| Side button 1 | press while hovering | _to fill in_ |
-| Side button 1 | double-tap | _to fill in_ |
-| Side button 2 | press while touching | _to fill in_ |
-| Side button 2 | press while hovering | _to fill in_ |
-| Side button 2 | double-tap | _to fill in_ |
-| Eraser end (if any) | touch / hover | _to fill in_ |
+| Side button (the pen has one) | press while touching | nothing: no button state on touch events, no key event |
+| Side button | press while hovering | nothing: no button state on hover events, no key event |
+| Side button | press with the pen away from the screen | nothing |
+| Eraser end | — | the pen has none |
+
+ZUXOS keeps the side button for itself: by default, hold creates a note and press shows or hides the system pen menu (Settings → stylus). With both of those turned off, the button still sends nothing to apps. So no Pen button is available on this pen.
 
 ## Debugging
 
