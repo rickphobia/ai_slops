@@ -48,12 +48,8 @@ _Avoid_: correction, annotation
 An optional setting, off by default, where one finger on the page erases whole strokes instead of scrolling. Two fingers always scroll and zoom.
 _Avoid_: touch eraser, palm mode
 
-**Pen button**:
-A button on the stylus that reaches the app and can be given an action, such as eraser while held or undo on click.
-_Avoid_: side key, shortcut
-
 **Favourite pens**:
-The short list of pen colours that a pen button's "next colour" action cycles through.
+The short list of pen colours that tapping the current pen in the toolbar cycles through.
 
 **Lasso**:
 The tool that selects your own strokes to move or delete them.

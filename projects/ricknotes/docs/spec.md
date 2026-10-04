@@ -32,7 +32,7 @@ One **Milestone** at a time. A milestone is several tickets (one PR each) and is
 | # | Milestone | Done when |
 |---|-----------|-----------|
 | 1 | Open a Document from the Study folder; scroll and zoom | A 100-page lecture scrolls and zooms smoothly with no stutter, in the **Preview app** installed from a PR |
-| 2 | Pen on a Document, saved to its Ink file | Write, force-close, reopen: the ink is all there. A page of tutorial working feels as good as Nebo. Palm resting on the screen never marks or erases. Pen buttons do what Settings says |
+| 2 | Pen on a Document, saved to its Ink file | Write, force-close, reopen: the ink is all there. A page of tutorial working feels as good as Nebo. Palm resting on the screen never marks or erases |
 | 3 | Folder tree, Notebooks, inserted pages, Send to app, sync set up | Ink written on the tablet shows up in the Drive copy within 15 minutes; a new Notebook opens in another PDF reader; a Document sent to Claude arrives with the preset prompt on the clipboard |
 | 4 | Split view | The split button or Ctrl+\ opens a second Pane; each Pane holds Tabs; dragging a Tab across moves it; the layout comes back after restarting the app |
 | 5 | Error log | 3 red marks on 2 pages make 3 labelled Entries; collecting again adds none; Review shows Entries due today |
@@ -92,13 +92,13 @@ Milestones 1–2 are specified in detail below and ticketed now. Milestone 2 is 
 35. As a student, I want each finger erase to be one undo step, so that an accidental erase is easy to reverse.
 36. As a student, I want a two-finger tap to undo and a three-finger tap to redo, each with its own on/off switch, so that I don't reach for the toolbar.
 
-### Pen buttons (milestone 2)
+### Pen test and quick colour switch (milestone 2)
 
 37. As the owner, I want a pen test screen that shows every event my Lenovo Xiaoxin Stylus 2023 sends, so that we learn which buttons reach the app.
-38. As a student, I want to give each usable **Pen button** an action, such as eraser, highlighter or Lasso while held, or undo, redo or next colour on click, so that common actions are on the pen.
-39. As a student, I want the defaults to be "hold = eraser, click = undo", so that the pen is useful before I touch Settings.
-40. As a student, I want "next colour" to cycle through my **Favourite pens** list (default black → blue → red → green), so that switching to red for marking is one click.
-41. As a student, I want Settings to say plainly when the system keeps a pen button for itself, so that I'm not left guessing why it does nothing.
+38. ~~Pen button actions~~ Dropped: the pen test showed the stylus's side button never reaches apps on ZUXOS, and the pen has no eraser end.
+39. ~~Pen button defaults~~ Dropped with 38.
+40. As a student, I want tapping the current pen in the toolbar to cycle through my **Favourite pens** list (default black → blue → red → green), so that switching to red for marking is one tap.
+41. As a student, I want to edit my Favourite pens list in Settings, so that the cycle only goes through the colours I use.
 
 ### Notes that never get lost (milestone 2, and every milestone after)
 
@@ -221,19 +221,19 @@ Decision 0003 has the reasons. One file per Document, named `<pdf name>.ink.json
 
 ### Seam 2: Touch interpreter
 
-The second test seam. It takes plain touch events (pointer ID, pen or finger or eraser end, position, pressure, contact size, hovering, pen buttons held, time) and the current settings, and returns actions: draw, erase strokes at a point, scroll or zoom, undo, redo, start or end a held-button tool, or ignore.
+The second test seam. It takes plain touch events (pointer ID, pen or finger, position, pressure, contact size, hovering, time) and the current settings, and returns actions: draw, erase strokes at a point, scroll or zoom, undo, redo, or ignore.
 
-- Pen: draws with the current tool. A held Pen button switches tool while held, and a clicked Pen button runs its action, as mapped in Settings.
+- Pen: draws with the current tool.
 - One finger: scrolls by default. With Finger erase on, it erases whole strokes instead, as one undo step per gesture.
 - Two fingers: always scroll and pinch-zoom.
 - Finger touches are ignored while the pen hovers and for about 0.5 s after it lifts, and any touch with a contact larger than a fingertip is ignored. Touches Android marks as a palm or cancels are dropped.
 - A two-finger tap undoes and a three-finger tap redoes (a tap is a short touch without movement), each behind its own switch.
 - Thresholds (lockout time, size limit, tap time and distance) are named settings in `core` so they can be tuned on the tablet without hunting through code.
 
-### Pen buttons
+### Pen test screen and Favourite pens
 
-- A hidden pen test screen (reached from Settings) lists every touch, hover, button and key event the stylus produces. It is built first in milestone 2, and the findings for the Lenovo Xiaoxin Stylus 2023 go into the README.
-- Settings map each button that reaches the app to an action: eraser, highlighter or Lasso while held; undo, redo or next colour on click. Defaults: hold = eraser, click = undo. Buttons the system keeps for itself are listed as unavailable.
+- A hidden pen test screen (reached from Settings) lists every touch, hover, button and key event the stylus produces. Its findings for the Lenovo Xiaoxin Stylus 2023 are in the README: ZUXOS keeps the side button for itself (even with its system actions turned off) and the pen has no eraser end, so there are no pen button actions in v1. If a future pen's buttons do reach apps, the pen test screen will show it.
+- Tapping the current pen in the toolbar cycles through the Favourite pens list, editable in Settings (default black → blue → red → green).
 
 ### PDF view
 
@@ -243,7 +243,7 @@ The second test seam. It takes plain touch events (pointer ID, pen or finger or 
 
 ### Settings and configuration
 
-- App settings (Study folder, Finger erase, tap gestures, Pen button mapping, Favourite pens, last page and zoom per Document) live in the app's private storage and are loaded and validated in one place.
+- App settings (Study folder, Finger erase, tap gestures, Favourite pens, last page and zoom per Document) live in the app's private storage and are loaded and validated in one place.
 - Presets (milestone 3) are a JSON file listing each Preset's name, prompt and whether ink is included by default. The app ships a default file, and editing it needs no code change.
 - Build-time values (signing key location and passwords, and later the converter's Tailscale address) come from environment variables listed in `.env.example`, never from code.
 
@@ -283,7 +283,7 @@ Starting prompts, to be edited in the Presets file:
   - undo and redo across add, erase and Lasso moves
   - stable stroke and page IDs
   - the Ink file round-trips exactly, including packed points
-- **Touch interpreter tests** feed invented event sequences. Examples: a palm landing 200 ms after the pen lifts; a large contact; one finger with Finger erase on and off; two-finger scroll; two- and three-finger taps; a held and a clicked Pen button; a pen and a finger at once.
+- **Touch interpreter tests** feed invented event sequences. Examples: a palm landing 200 ms after the pen lifts; a large contact; one finger with Finger erase on and off; two-finger scroll; two- and three-finger taps; a pen and a finger at once.
 - **Not unit-tested:** rendering, Jetpack Ink drawing and Compose screens. Each ticket lists a short on-tablet check, run in the Preview app on a copy of the Study folder. Each milestone's "done when" test is the gate.
 - **Prior art:** none in this repo (the other projects are Godot and web). Ticket 01 sets the conventions: JUnit tests in `core` mirroring its packages, run with one Gradle command named in the README and in CI.
 - Rule 6 from the original spec (test every build on a copy of the Study folder) is enforced by the Preview app, not by discipline.
@@ -303,5 +303,5 @@ Starting prompts, to be edited in the Presets file:
 ## Further Notes
 
 - **Rules that protect notes**, which every ticket follows: never change an existing PDF; save within 2 seconds and on going to the background; always save via temporary file and swap; keep Versions and a restore screen; warn about Conflict copies, never merge; test in the Preview app on a copy of the Study folder; keep Nebo or Xodo installed for the first 2 weeks of the semester.
-- **To check before or during the relevant ticket, not assumed:** current Jetpack Ink and AndroidX versions; Obtainium's release-name filter; FolderSync's Conflict copy naming; which Xiaoxin Stylus 2023 buttons reach apps on ZUXOS; whether adb over Tailscale connects to the tablet; how the Gemini and Claude apps accept shared files plus text.
+- **To check before or during the relevant ticket, not assumed:** current Jetpack Ink and AndroidX versions; Obtainium's release-name filter; FolderSync's Conflict copy naming; whether adb over Tailscale connects to the tablet; how the Gemini and Claude apps accept shared files plus text.
 - The tablet is at the dorm and the Beelink at home. Anything that has to work day to day must work with only GitHub and the tablet; the Beelink is for development sessions (reachable over Tailscale and code-server) and, from milestone 8, the converter.
