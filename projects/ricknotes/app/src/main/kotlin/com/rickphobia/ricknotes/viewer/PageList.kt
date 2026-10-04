@@ -74,9 +74,9 @@ internal fun PageList(document: OpenDocument) {
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).clipToBounds(),
     ) {
-        val screen = Screen(constraints.maxWidth, constraints.maxHeight)
+        val screen = ViewportSize(constraints.maxWidth, constraints.maxHeight)
         val gapPx = with(LocalDensity.current) { PAGE_GAP.roundToPx() }
-        val pageWidthPx = (screen.width * view.value.zoom).roundToInt() - gapPx * 2
+        val pageWidthPx = zoomedListWidth(screen, view.value) - gapPx * 2
         val pageLayout = { index: Int, size: PageSize ->
             PageLayout(index, size, baseWidthPx = screen.width - gapPx * 2, sharpMarginPx = sharpMargin(screen))
         }
@@ -127,7 +127,13 @@ private fun restoredPosition(document: OpenDocument): ReadingPosition {
     return position
 }
 
-private fun sharpMargin(screen: Screen): Int = minOf(screen.width, screen.height) / SHARP_MARGIN_SHARE
+/** The page list's width at [view]'s zoom: the pages plus the gaps either side. */
+private fun zoomedListWidth(
+    screen: ViewportSize,
+    view: ZoomView,
+): Int = (screen.width * view.zoom).roundToInt()
+
+private fun sharpMargin(screen: ViewportSize): Int = minOf(screen.width, screen.height) / SHARP_MARGIN_SHARE
 
 /** Saves where the student is once it stops changing, and again when the Document closes. */
 @Composable
@@ -153,7 +159,7 @@ private fun SavePosition(
 private fun Modifier.zoomable(
     view: MutableState<ZoomView>,
     listState: LazyListState,
-    screen: Screen,
+    screen: ViewportSize,
 ): Modifier =
     pinchAndPan(
         key = screen,
@@ -174,7 +180,7 @@ private fun Modifier.zoomable(
         },
         onPanX = { dx -> view.value = view.value.panBy(dx, screen.width.toFloat()) },
     ).layout { measurable, constraints ->
-        val contentWidth = (screen.width * view.value.zoom).roundToInt()
+        val contentWidth = zoomedListWidth(screen, view.value)
         val placeable = measurable.measure(Constraints.fixed(contentWidth, constraints.maxHeight))
         layout(constraints.maxWidth, constraints.maxHeight) {
             placeable.place(-view.value.panX.roundToInt(), 0)
@@ -190,10 +196,10 @@ private data class SettledView(
 private fun settle(
     info: LazyListLayoutInfo,
     view: ZoomView,
-    screen: Screen,
+    screen: ViewportSize,
     gapPx: Int,
 ): SettledView {
-    val pageWidth = (screen.width * view.zoom).roundToInt() - gapPx * 2
+    val pageWidth = zoomedListWidth(screen, view) - gapPx * 2
     val parts =
         visiblePages(info).associate { page ->
             page.index to

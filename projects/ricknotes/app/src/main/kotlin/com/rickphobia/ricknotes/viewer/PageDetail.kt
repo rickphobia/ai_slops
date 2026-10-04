@@ -14,8 +14,8 @@ data class PixelRect(
         other.left >= left && other.top >= top && other.right <= right && other.bottom <= bottom
 }
 
-/** The screen the pages show on, in pixels. */
-data class Screen(
+/** The size of the screen area the pages show in, in pixels. */
+data class ViewportSize(
     val width: Int,
     val height: Int,
 )
@@ -30,7 +30,7 @@ data class PlacedPage(
     /** The part of the page on screen, in the page's own zoomed pixels, or null if none of it shows. */
     fun visiblePart(
         panX: Int,
-        screen: Screen,
+        screen: ViewportSize,
     ): PixelRect? {
         val part =
             PixelRect(

@@ -5,7 +5,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PageDetailTest {
-    private val screen = Screen(width = 1000, height = 800)
+    private val screen = ViewportSize(width = 1000, height = 800)
 
     @Test
     fun `the visible part of a page is where it meets the screen`() {

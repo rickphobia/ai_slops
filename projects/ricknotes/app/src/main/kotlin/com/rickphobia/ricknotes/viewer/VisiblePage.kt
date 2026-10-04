@@ -1,7 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import kotlin.math.abs
-
 /** A page the list has laid out: [top] is its distance from the screen's top, in pixels. */
 data class VisiblePage(
     val index: Int,
@@ -9,21 +7,20 @@ data class VisiblePage(
     val height: Int,
 )
 
-/** The page across the middle of the screen (or nearest it, if the middle is a gap), or null if none is laid out. */
+/**
+ * The page filling most of the screen, the earlier one on a tie, or null if none is laid out. A page
+ * a jump or reopen puts at the top of the screen is therefore the current page, so saving the
+ * current page and reopening there never drifts to the next one.
+ */
 fun currentPage(
     visible: List<VisiblePage>,
     viewportHeight: Int,
-): Int? {
-    val middle = viewportHeight / 2
-    return visible
-        .minByOrNull { page ->
-            when {
-                middle < page.top -> page.top - middle
-                middle >= page.top + page.height -> abs(middle - (page.top + page.height))
-                else -> 0
-            }
+): Int? =
+    visible
+        .sortedBy { it.index }
+        .maxByOrNull { page ->
+            (minOf(page.top + page.height, viewportHeight) - maxOf(page.top, 0)).coerceAtLeast(0)
         }?.index
-}
 
 /** The page index for a page number typed by the student, or null if no such page exists. */
 fun pageIndexFromNumber(
