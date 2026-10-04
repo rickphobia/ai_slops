@@ -1,0 +1,19 @@
+# 14: Palm safety and finger gestures
+
+**What to build:** My palm can rest on the screen while I write without ever marking or erasing anything. Two fingers always scroll and zoom. In Settings I can switch on **Finger erase** (off by default), after which one finger erases whole strokes instead of scrolling, and switch on two-finger tap for undo and three-finger tap for redo. See the spec's Touch interpreter section.
+
+**Blocked by:** 12 (Eraser, undo and redo)
+
+**Status:** ready
+
+**Touches:** core-touch, app-input, app-settings
+
+**Effort:** medium
+
+- [ ] Finger touches are ignored while the pen hovers and for about 0.5 s after it lifts (tested)
+- [ ] Touches larger than a fingertip are ignored, and touches Android marks as a palm or cancels are dropped (tested)
+- [ ] Finger erase setting, off by default; when on, one finger erases whole strokes, one undo step per gesture (tested)
+- [ ] Two-finger tap undo and three-finger tap redo, each with its own switch (tested)
+- [ ] Thresholds are named settings in `core`, not numbers scattered through the code
+- [ ] The app passes contact size, hover state and Android's palm/cancel flags through to `core`
+- [ ] On-tablet check written in the PR: write a page with the palm resting; turn on Finger erase and erase with a finger; tap to undo and redo
