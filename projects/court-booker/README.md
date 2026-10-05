@@ -70,7 +70,7 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_SESSION_DAYS` | no | `30` | How long a login lasts |
 | `COURT_BOOKER_SECURE_COOKIES` | no | `true` | Send cookies over https only. Set `false` only for local http |
 | `COURT_BOOKER_LOGIN_MAX_FAILURES` | no | `5` | Wrong passwords that trigger the lockout |
-| `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES` | no | `15` | The lockout window, see "How it works" |
+| `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES` | no | `15` | The window failures are counted in, and how long the lock lasts; see "How it works" |
 
 ## How it works
 
@@ -78,10 +78,10 @@ Every setting is an environment variable, read and validated once at startup by 
 - The FastAPI app uses the path prefix as its `root_path`, so it works behind nginx forwarding `/ai-projects/court-booker/...` unchanged.
 - `/healthz` needs no login and returns `{"status": "ok"}`, with no data.
 - At startup `serve` opens the SQLite file and applies any schema migrations it hasn't had (`adapters/sqlite/database.py`, tracked with `PRAGMA user_version`). A file from a newer release is refused rather than guessed at.
-- **Login** (`auth/`, `web/login_pages.py`): the password is checked against the scrypt hash. Success sets a signed session cookie (HttpOnly, SameSite=Strict, Secure, scoped to the prefix) holding only its issue time; the signature also covers the password hash, so changing the password logs every session out. Logout deletes the cookie.
+- **Login** (`auth/`, `web/login_pages.py`): the password is checked against the scrypt hash. Success sets a signed session cookie (HttpOnly, SameSite=Strict, Secure, scoped to the prefix) holding only its issue time; the signature also covers the password hash, so changing the password logs every session out. Logout deletes the cookie. Sessions aren't stored on the server, so a cookie copied off a device stays valid until it expires; to cut off every session at once, change `COURT_BOOKER_SESSION_SECRET` and restart.
 - **Who sees what:** `/login` and `/healthz` are public; every other page sits on a router guarded by `require_operator` and redirects a logged-out visitor to `/login`. New pages go on such a router (see `web/app.py`).
 - **CSRF:** every page gives the browser a random nonce cookie and puts an HMAC of it in each form. An app-wide dependency rejects any POST whose token doesn't match with `403`.
-- **Lockout:** each wrong password is stored in the `login_failures` table. Once `COURT_BOOKER_LOGIN_MAX_FAILURES` of them fall within the last `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, every login is refused, the right password included, until enough of them are older than that. Refused attempts aren't counted, so nobody can extend the lock forever; a successful login clears the count. It survives a restart because it's in the database.
+- **Lockout:** each wrong password is stored in the `login_failures` table. When a wrong password makes `COURT_BOOKER_LOGIN_MAX_FAILURES` within `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, every login is refused for the next `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, the right password included. Refused attempts aren't counted, so nobody can stretch a lock; a successful login clears the count. It survives a restart because it's in the database. The count is shared, not per visitor: there is one Operator, so a stranger guessing can lock the Operator out too, for one lockout at a time.
 
 The full design (scheduler, Picktime browser adapter, encrypted Profile) is in `docs/spec.md`.
 

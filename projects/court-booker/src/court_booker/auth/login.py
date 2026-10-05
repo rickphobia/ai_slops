@@ -58,20 +58,34 @@ class OperatorLogin:
     def attempt(self, password: str) -> LoginResult:
         """Check `password`, refusing every attempt while too many recent ones have failed.
 
-        Attempts refused by the lockout aren't recorded, so someone hammering the form can't
-        keep the Operator locked out forever: the lock lifts `lockout` after the failures.
+        The lock starts at the failure that makes `max_failures` within `lockout`, and lasts
+        `lockout` from then. Attempts refused by the lock aren't recorded, so someone hammering
+        the form can't stretch it: it lifts on time and the count starts again.
         """
         with self._lock:
             now = self.clock.now()
-            recent = self.failures.since(now - self.lockout)
-            if len(recent) >= self.max_failures:
-                # The lock lifts once enough of the oldest failures fall out of the window.
-                unlocks_at = recent[len(recent) - self.max_failures] + self.lockout
+            unlocks_at = self._unlocks_at(now)
+            if unlocks_at is not None:
                 minutes_left = math.ceil((unlocks_at - now).total_seconds() / 60)
                 return LockedOut(minutes_left=max(minutes_left, 1))
             if self.password_hash.matches(password):
                 self.failures.clear()
                 return LoggedIn()
             self.failures.record(now)
-            self.failures.forget_before(now - self.lockout)
+            # Only failures that could still be part of a lock matter (see _unlocks_at).
+            self.failures.forget_before(now - 2 * self.lockout)
             return WrongPassword()
+
+    def _unlocks_at(self, now: datetime) -> datetime | None:
+        """When the current lock lifts, or None if login isn't locked."""
+        # A lock still running started within `lockout`, from failures within `lockout` of that.
+        recent = self.failures.since(now - 2 * self.lockout)
+        if not recent:
+            return None
+        # Refused attempts aren't recorded, so the newest failure is the one that set any lock.
+        newest = recent[-1]
+        unlocks_at = newest + self.lockout
+        counted = [moment for moment in recent if moment > newest - self.lockout]
+        if len(counted) >= self.max_failures and now < unlocks_at:
+            return unlocks_at
+        return None

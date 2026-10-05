@@ -50,6 +50,26 @@ def test_a_logged_out_visitor_is_sent_to_login(client: TestClient) -> None:
     assert response.headers["location"] == f"{PREFIX}/login"
 
 
+def test_every_page_but_login_and_healthz_needs_the_operator(client: TestClient) -> None:
+    # The OpenAPI schema is FastAPI's public list of every route, however it was included.
+    paths = client.app.openapi()["paths"]  # type: ignore[attr-defined]
+    guarded = [
+        (method.upper(), path)
+        for path, methods in paths.items()
+        if path not in ("/login", "/healthz")
+        for method in methods
+    ]
+    assert ("GET", "/") in guarded
+
+    for method, path in guarded:
+        token = csrf_token_in(client.get(f"{PREFIX}/login").text)
+        response = client.request(
+            method, f"{PREFIX}{path}", data={"csrf_token": token}, follow_redirects=False
+        )
+        assert response.status_code == 303, path
+        assert response.headers["location"] == f"{PREFIX}/login", path
+
+
 def test_the_login_page_and_healthz_need_no_login(client: TestClient) -> None:
     assert client.get(f"{PREFIX}/login").status_code == 200
     assert client.get(f"{PREFIX}/healthz").status_code == 200

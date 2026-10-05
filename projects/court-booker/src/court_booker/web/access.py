@@ -1,9 +1,9 @@
 """Who may see what: the session cookie, CSRF checks and rendering pages with a CSRF token."""
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
@@ -53,7 +53,7 @@ class Access:
         )
 
     def render(
-        self, request: Request, template: str, context: dict[str, Any], status_code: int = 200
+        self, request: Request, template: str, context: Mapping[str, object], status_code: int = 200
     ) -> Response:
         """Render a page, giving its forms a CSRF token tied to this browser's nonce cookie."""
         nonce = request.cookies.get(CSRF_COOKIE)
