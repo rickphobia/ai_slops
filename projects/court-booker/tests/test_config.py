@@ -5,7 +5,7 @@ import pytest
 
 from court_booker.auth.passwords import parse_password_hash
 from court_booker.config import ConfigError, Settings, load_settings
-from tests.support import OPERATOR_PASSWORD_HASH, SESSION_SECRET, required_env
+from tests.support import OPERATOR_PASSWORD_HASH, PROFILE_KEY, SESSION_SECRET, required_env
 
 
 def test_defaults_apply_when_only_the_secrets_are_set() -> None:
@@ -21,6 +21,7 @@ def test_defaults_apply_when_only_the_secrets_are_set() -> None:
         secure_cookies=True,
         login_max_failures=5,
         login_lockout=timedelta(minutes=15),
+        profile_key=PROFILE_KEY.encode(),
     )
 
 
@@ -51,6 +52,7 @@ def test_reads_every_setting_from_the_environment() -> None:
         secure_cookies=False,
         login_max_failures=3,
         login_lockout=timedelta(minutes=60),
+        profile_key=PROFILE_KEY.encode(),
     )
 
 
@@ -58,11 +60,17 @@ def test_secrets_are_kept_out_of_the_settings_repr() -> None:
     text = repr(load_settings(required_env()))
 
     assert SESSION_SECRET not in text
+    assert PROFILE_KEY not in text
     assert OPERATOR_PASSWORD_HASH.split(":")[-1] not in text
 
 
 @pytest.mark.parametrize(
-    "variable", ["COURT_BOOKER_OPERATOR_PASSWORD_HASH", "COURT_BOOKER_SESSION_SECRET"]
+    "variable",
+    [
+        "COURT_BOOKER_OPERATOR_PASSWORD_HASH",
+        "COURT_BOOKER_SESSION_SECRET",
+        "COURT_BOOKER_PROFILE_KEY",
+    ],
 )
 def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
     environ = required_env()
@@ -88,6 +96,7 @@ def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
         ("COURT_BOOKER_SECURE_COOKIES", "yes"),
         ("COURT_BOOKER_LOGIN_MAX_FAILURES", "five"),
         ("COURT_BOOKER_LOGIN_LOCKOUT_MINUTES", "-1"),
+        ("COURT_BOOKER_PROFILE_KEY", "not-a-fernet-key"),
     ],
 )
 def test_a_bad_value_fails_naming_the_variable(variable: str, value: str) -> None:
@@ -100,3 +109,10 @@ def test_a_bad_password_hash_is_not_echoed_in_the_error() -> None:
         load_settings(required_env(COURT_BOOKER_OPERATOR_PASSWORD_HASH="hunter2"))
 
     assert "hunter2" not in str(error.value)
+
+
+def test_a_bad_profile_key_is_not_echoed_in_the_error() -> None:
+    with pytest.raises(ConfigError, match="not a Fernet key") as error:
+        load_settings(required_env(COURT_BOOKER_PROFILE_KEY="short-secret-key"))
+
+    assert "short-secret-key" not in str(error.value)

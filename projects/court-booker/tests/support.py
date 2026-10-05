@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from court_booker.adapters.sqlite.database import SqliteDatabase
 from court_booker.adapters.sqlite.login_failures import SqliteLoginFailures
+from court_booker.adapters.sqlite.profile_store import SqliteProfileStore
 from court_booker.auth.passwords import hash_password
 from court_booker.config import load_settings
 from court_booker.web.app import create_app
@@ -17,6 +18,7 @@ OPERATOR_PASSWORD = "correct horse battery staple"
 # A cheap scrypt cost keeps the tests fast; production hashes use the default cost.
 OPERATOR_PASSWORD_HASH = str(hash_password(OPERATOR_PASSWORD, cost=2**10))
 SESSION_SECRET = "s" * 32
+PROFILE_KEY = "k" * 43 + "="  # any 32 bytes in url-safe base64 is a Fernet key
 
 
 class FakeClock:
@@ -35,6 +37,7 @@ def required_env(**overrides: str) -> dict[str, str]:
     return {
         "COURT_BOOKER_OPERATOR_PASSWORD_HASH": OPERATOR_PASSWORD_HASH,
         "COURT_BOOKER_SESSION_SECRET": SESSION_SECRET,
+        "COURT_BOOKER_PROFILE_KEY": PROFILE_KEY,
         **overrides,
     }
 
@@ -44,7 +47,12 @@ def make_client(database_path: Path, clock: FakeClock, **env: str) -> TestClient
     settings = load_settings(required_env(COURT_BOOKER_DATABASE_PATH=str(database_path), **env))
     database = SqliteDatabase(settings.database_path)
     database.migrate()
-    app = create_app(settings, login_failures=SqliteLoginFailures(database), clock=clock)
+    app = create_app(
+        settings,
+        login_failures=SqliteLoginFailures(database),
+        profile_store=SqliteProfileStore(database, settings.profile_key, clock),
+        clock=clock,
+    )
     # https, because the session cookie is Secure and the client won't send it over http.
     return TestClient(app, base_url="https://testserver")
 

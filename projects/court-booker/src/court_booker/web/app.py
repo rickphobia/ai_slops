@@ -8,11 +8,18 @@ from court_booker.auth.login import LoginFailures, OperatorLogin
 from court_booker.auth.session_cookies import CsrfTokens, SessionSigner
 from court_booker.clock import Clock
 from court_booker.config import Settings
-from court_booker.web import home_page, login_pages
+from court_booker.profile.profile import ProfileStore
+from court_booker.web import home_page, login_pages, profile_page
 from court_booker.web.access import Access, LoginRequired, check_csrf, path_for, require_operator
 
 
-def create_app(settings: Settings, *, login_failures: LoginFailures, clock: Clock) -> FastAPI:
+def create_app(
+    settings: Settings,
+    *,
+    login_failures: LoginFailures,
+    profile_store: ProfileStore,
+    clock: Clock,
+) -> FastAPI:
     # root_path makes routes match both behind nginx (/ai-projects/court-booker/healthz) and
     # directly (/healthz), and makes generated links carry the prefix.
     app = FastAPI(
@@ -43,6 +50,8 @@ def create_app(settings: Settings, *, login_failures: LoginFailures, clock: Cloc
         cookie_path=settings.root_path or "/",
     )
 
+    app.state.profile_store = profile_store
+
     @app.exception_handler(LoginRequired)
     def send_to_login(request: Request, _: LoginRequired) -> Response:
         return RedirectResponse(path_for(request, "login"), status_code=303)
@@ -54,4 +63,5 @@ def create_app(settings: Settings, *, login_failures: LoginFailures, clock: Cloc
     app.include_router(login_pages.router)
     # Everything else needs the Operator; new pages go on routers included this way.
     app.include_router(home_page.router, dependencies=[Depends(require_operator)])
+    app.include_router(profile_page.router, dependencies=[Depends(require_operator)])
     return app

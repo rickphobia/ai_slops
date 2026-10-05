@@ -18,6 +18,13 @@ MIGRATIONS: tuple[str, ...] = (
     );
     CREATE INDEX login_failures_failed_at ON login_failures (failed_at);
     """,
+    """
+    CREATE TABLE profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),  -- there is only ever one Profile
+        token BLOB NOT NULL,  -- Fernet token of the Profile as JSON
+        updated_at TEXT NOT NULL  -- UTC, ISO 8601
+    );
+    """,
 )
 
 
