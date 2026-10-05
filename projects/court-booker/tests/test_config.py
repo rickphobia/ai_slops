@@ -1,10 +1,12 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from court_booker.auth.passwords import parse_password_hash
 from court_booker.config import ConfigError, Settings, load_settings
+from court_booker.schedule.schedule import ScheduleRules
 from tests.support import OPERATOR_PASSWORD_HASH, PROFILE_KEY, SESSION_SECRET, required_env
 
 
@@ -22,6 +24,14 @@ def test_defaults_apply_when_only_the_secrets_are_set() -> None:
         login_max_failures=5,
         login_lockout=timedelta(minutes=15),
         profile_key=PROFILE_KEY.encode(),
+        slots=(time(8), time(10), time(12), time(14), time(16), time(18), time(20)),
+        schedule=ScheduleRules(
+            venue_timezone=ZoneInfo("Asia/Kuala_Lumpur"),
+            booking_window_days=2,
+            jitter_min=timedelta(seconds=60),
+            jitter_max=timedelta(seconds=120),
+            open_date_delay=timedelta(seconds=60),
+        ),
     )
 
 
@@ -37,6 +47,12 @@ def test_reads_every_setting_from_the_environment() -> None:
             COURT_BOOKER_SECURE_COOKIES="false",
             COURT_BOOKER_LOGIN_MAX_FAILURES="3",
             COURT_BOOKER_LOGIN_LOCKOUT_MINUTES="60",
+            COURT_BOOKER_SLOTS=" 19:30, 09:00 ",
+            COURT_BOOKER_VENUE_TIMEZONE="Asia/Singapore",
+            COURT_BOOKER_BOOKING_WINDOW_DAYS="0",
+            COURT_BOOKER_RUN_JITTER_MIN_SECONDS="0",
+            COURT_BOOKER_RUN_JITTER_MAX_SECONDS="30",
+            COURT_BOOKER_OPEN_DATE_DELAY_SECONDS="5",
         )
     )
 
@@ -53,6 +69,14 @@ def test_reads_every_setting_from_the_environment() -> None:
         login_max_failures=3,
         login_lockout=timedelta(minutes=60),
         profile_key=PROFILE_KEY.encode(),
+        slots=(time(9), time(19, 30)),
+        schedule=ScheduleRules(
+            venue_timezone=ZoneInfo("Asia/Singapore"),
+            booking_window_days=0,
+            jitter_min=timedelta(0),
+            jitter_max=timedelta(seconds=30),
+            open_date_delay=timedelta(seconds=5),
+        ),
     )
 
 
@@ -97,6 +121,16 @@ def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
         ("COURT_BOOKER_LOGIN_MAX_FAILURES", "five"),
         ("COURT_BOOKER_LOGIN_LOCKOUT_MINUTES", "-1"),
         ("COURT_BOOKER_PROFILE_KEY", "not-a-fernet-key"),
+        ("COURT_BOOKER_SLOTS", ""),
+        ("COURT_BOOKER_SLOTS", "08:00,8pm"),
+        ("COURT_BOOKER_SLOTS", "08:00,08:00"),
+        ("COURT_BOOKER_SLOTS", "08:00:30"),
+        ("COURT_BOOKER_VENUE_TIMEZONE", "Malaysia/Nowhere"),
+        ("COURT_BOOKER_VENUE_TIMEZONE", "../etc/passwd"),
+        ("COURT_BOOKER_BOOKING_WINDOW_DAYS", "-1"),
+        ("COURT_BOOKER_RUN_JITTER_MIN_SECONDS", "-5"),
+        ("COURT_BOOKER_RUN_JITTER_MAX_SECONDS", "soon"),
+        ("COURT_BOOKER_OPEN_DATE_DELAY_SECONDS", "-1"),
     ],
 )
 def test_a_bad_value_fails_naming_the_variable(variable: str, value: str) -> None:
@@ -116,3 +150,12 @@ def test_a_bad_profile_key_is_not_echoed_in_the_error() -> None:
         load_settings(required_env(COURT_BOOKER_PROFILE_KEY="short-secret-key"))
 
     assert "short-secret-key" not in str(error.value)
+
+
+def test_a_jitter_window_that_ends_before_it_starts_fails() -> None:
+    with pytest.raises(ConfigError, match="COURT_BOOKER_RUN_JITTER_MAX_SECONDS"):
+        load_settings(
+            required_env(
+                COURT_BOOKER_RUN_JITTER_MIN_SECONDS="120", COURT_BOOKER_RUN_JITTER_MAX_SECONDS="60"
+            )
+        )

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from court_booker.adapters.sqlite.booking_request_store import SqliteBookingRequestRepository
 from court_booker.adapters.sqlite.database import SqliteDatabase
 from court_booker.adapters.sqlite.login_failures import SqliteLoginFailures
 from court_booker.adapters.sqlite.profile_store import SqliteProfileStore
@@ -32,6 +33,16 @@ class FakeClock:
         self.current += delta
 
 
+class FixedRandom:
+    """Always picks the same point in a range: 0.0 is its low end, 1.0 its high end."""
+
+    def __init__(self, fraction: float = 0.5) -> None:
+        self.fraction = fraction
+
+    def uniform(self, low: float, high: float) -> float:
+        return low + (high - low) * self.fraction
+
+
 def required_env(**overrides: str) -> dict[str, str]:
     """The smallest environment the app starts with, plus `overrides`."""
     return {
@@ -42,7 +53,9 @@ def required_env(**overrides: str) -> dict[str, str]:
     }
 
 
-def make_client(database_path: Path, clock: FakeClock, **env: str) -> TestClient:
+def make_client(
+    database_path: Path, clock: FakeClock, random_source: FixedRandom | None = None, **env: str
+) -> TestClient:
     """The whole app over a real SQLite file, as the server builds it, at a fake time."""
     settings = load_settings(required_env(COURT_BOOKER_DATABASE_PATH=str(database_path), **env))
     database = SqliteDatabase(settings.database_path)
@@ -51,7 +64,9 @@ def make_client(database_path: Path, clock: FakeClock, **env: str) -> TestClient
         settings,
         login_failures=SqliteLoginFailures(database),
         profile_store=SqliteProfileStore(database, settings.profile_key, clock),
+        booking_request_repository=SqliteBookingRequestRepository(database),
         clock=clock,
+        random_source=random_source or FixedRandom(),
     )
     # https, because the session cookie is Secure and the client won't send it over http.
     return TestClient(app, base_url="https://testserver")

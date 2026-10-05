@@ -2,15 +2,18 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import time, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from cryptography.fernet import Fernet
 
 from court_booker.auth.passwords import InvalidPasswordHash, PasswordHash, parse_password_hash
+from court_booker.schedule.schedule import ScheduleRules
 
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 _MIN_SESSION_SECRET_LENGTH = 32
+_DEFAULT_SLOTS = "08:00,10:00,12:00,14:00,16:00,18:00,20:00"
 
 
 class ConfigError(Exception):
@@ -34,10 +37,20 @@ class Settings:
     login_lockout: timedelta
     # Encrypts the Profile in the database (decision 0003).
     profile_key: bytes = field(repr=False)
+    # The Slot start times the Court has, earliest first.
+    slots: tuple[time, ...]
+    schedule: ScheduleRules
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
     """Build Settings from `environ`, raising ConfigError that names the first bad variable."""
+    jitter_min = _non_negative_int(environ, "COURT_BOOKER_RUN_JITTER_MIN_SECONDS", default=60)
+    jitter_max = _non_negative_int(environ, "COURT_BOOKER_RUN_JITTER_MAX_SECONDS", default=120)
+    if jitter_max < jitter_min:
+        raise ConfigError(
+            f"COURT_BOOKER_RUN_JITTER_MAX_SECONDS ({jitter_max}) must not be less than "
+            f"COURT_BOOKER_RUN_JITTER_MIN_SECONDS ({jitter_min})"
+        )
     return Settings(
         log_level=_log_level(environ, "COURT_BOOKER_LOG_LEVEL", default="INFO"),
         host=_non_blank(environ, "COURT_BOOKER_HOST", default="127.0.0.1"),
@@ -59,6 +72,22 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
             minutes=_positive_int(environ, "COURT_BOOKER_LOGIN_LOCKOUT_MINUTES", default=15)
         ),
         profile_key=_fernet_key(environ, "COURT_BOOKER_PROFILE_KEY"),
+        slots=_slots(environ, "COURT_BOOKER_SLOTS", default=_DEFAULT_SLOTS),
+        schedule=ScheduleRules(
+            venue_timezone=_timezone(
+                environ, "COURT_BOOKER_VENUE_TIMEZONE", default="Asia/Kuala_Lumpur"
+            ),
+            booking_window_days=_non_negative_int(
+                environ, "COURT_BOOKER_BOOKING_WINDOW_DAYS", default=2
+            ),
+            jitter_min=timedelta(seconds=jitter_min),
+            jitter_max=timedelta(seconds=jitter_max),
+            open_date_delay=timedelta(
+                seconds=_non_negative_int(
+                    environ, "COURT_BOOKER_OPEN_DATE_DELAY_SECONDS", default=60
+                )
+            ),
+        ),
     )
 
 
@@ -103,6 +132,41 @@ def _positive_int(environ: Mapping[str, str], name: str, *, default: int) -> int
     if number < 1:
         raise ConfigError(f"{name} must be at least 1, got {number}")
     return number
+
+
+def _non_negative_int(environ: Mapping[str, str], name: str, *, default: int) -> int:
+    number = _whole_number(environ, name, default=default)
+    if number < 0:
+        raise ConfigError(f"{name} must not be negative, got {number}")
+    return number
+
+
+def _slots(environ: Mapping[str, str], name: str, *, default: str) -> tuple[time, ...]:
+    raw = environ.get(name, default)
+    starts: list[time] = []
+    for text in (part.strip() for part in raw.split(",")):
+        try:
+            # Exactly HH:MM: a Slot is named by its start time, to the minute.
+            if len(text) != 5:
+                raise ValueError
+            starts.append(time.fromisoformat(text))
+        except ValueError:
+            raise ConfigError(
+                f"{name} must be comma-separated HH:MM start times, got {text!r}"
+            ) from None
+    if len(set(starts)) != len(starts):
+        raise ConfigError(f"{name} lists the same start time twice: {raw!r}")
+    return tuple(sorted(starts))
+
+
+def _timezone(environ: Mapping[str, str], name: str, *, default: str) -> ZoneInfo:
+    value = _non_blank(environ, name, default=default)
+    try:
+        return ZoneInfo(value)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise ConfigError(
+            f"{name} must be an IANA timezone name like Asia/Kuala_Lumpur, got {value!r}"
+        ) from None
 
 
 def _boolean(environ: Mapping[str, str], name: str, *, default: bool) -> bool:

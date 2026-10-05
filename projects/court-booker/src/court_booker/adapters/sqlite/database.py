@@ -25,6 +25,25 @@ MIGRATIONS: tuple[str, ...] = (
         updated_at TEXT NOT NULL  -- UTC, ISO 8601
     );
     """,
+    """
+    CREATE TABLE booking_requests (
+        id INTEGER PRIMARY KEY,
+        play_date TEXT NOT NULL,  -- venue date, ISO 8601
+        status TEXT NOT NULL,  -- Waiting, Cancelled
+        run_at TEXT NOT NULL,  -- UTC, ISO 8601; chosen once at creation
+        created_at TEXT NOT NULL  -- UTC, ISO 8601
+    );
+    -- One live Booking Request per date. A Cancelled one doesn't count, so a request
+    -- cancelled by mistake can be made again.
+    CREATE UNIQUE INDEX booking_requests_one_per_date
+        ON booking_requests (play_date) WHERE status != 'Cancelled';
+    CREATE TABLE slot_attempts (
+        request_id INTEGER NOT NULL REFERENCES booking_requests (id),
+        slot TEXT NOT NULL,  -- start time, HH:MM
+        status TEXT NOT NULL,  -- Waiting
+        PRIMARY KEY (request_id, slot)
+    );
+    """,
 )
 
 
