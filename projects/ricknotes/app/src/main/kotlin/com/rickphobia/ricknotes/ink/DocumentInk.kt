@@ -33,11 +33,21 @@ internal fun penBrush(
     widthPt: Float,
 ): Brush = Brush.createWithColorIntArgb(StockBrushes.pressurePen(), colourArgb, widthPt, EPSILON_PT)
 
-/** A finished Stroke, with the mesh Jetpack Ink built for it so it isn't rebuilt every frame. */
+/**
+ * A finished Stroke, with the mesh Jetpack Ink built for it so it isn't rebuilt every frame.
+ * [onFirstDraw] runs once, after its page has drawn it for the first time.
+ */
 internal class DrawnStroke(
     val stroke: Stroke,
     val mesh: InkStroke,
-)
+    private var onFirstDraw: (() -> Unit)? = null,
+) {
+    fun drawn() {
+        val firstDraw = onFirstDraw ?: return
+        onFirstDraw = null
+        firstDraw()
+    }
+}
 
 /**
  * The ink of one open Document: its strokes for drawing, kept in `core`'s Document session, which
@@ -116,7 +126,12 @@ internal fun PageInk(
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
             // The renderer uses the transform to pick its detail but leaves applying it to us.
-            native.withMatrix(pageToBox) { strokes.forEach { renderer.draw(native, it.mesh, pageToBox) } }
+            native.withMatrix(pageToBox) {
+                strokes.forEach {
+                    renderer.draw(native, it.mesh, pageToBox)
+                    it.drawn()
+                }
+            }
         }
     }
 }
