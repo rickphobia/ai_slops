@@ -16,6 +16,11 @@
   <string name="no_pdfs">No PDFs in this folder yet.</string>
   <string name="opening_document">Opening…</string>
   <string name="page_number">Page %1$d</string>
+  <string name="page_indicator">%1$d / %2$d</string>
+  <string name="go_to_page">Go to page</string>
+  <string name="page_number_range">Page number (1–%1$d)</string>
+  <string name="go">Go</string>
+  <string name="cancel">Cancel</string>
   <string name="page_failed">Couldn\'t draw page %1$d.</string>
   <string name="clear">Clear</string>
   <string name="pen_test">Pen test</string>

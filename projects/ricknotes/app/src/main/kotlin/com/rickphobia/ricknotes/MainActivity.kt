@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
+import com.rickphobia.ricknotes.adapters.settings.SharedPreferencesReadingPositions
 import com.rickphobia.ricknotes.adapters.settings.SharedPreferencesSettingsSource
 import com.rickphobia.ricknotes.files.TreeDocumentPaths
 
@@ -23,14 +24,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(LOG_TAG, "started ${BuildConfig.VERSION_NAME}")
-        val settings = SharedPreferencesSettingsSource.open(this)
+        val storage =
+            AppStorage(
+                settings = SharedPreferencesSettingsSource.open(this),
+                readingPositions = SharedPreferencesReadingPositions.open(this),
+            )
 
         enableEdgeToEdge()
         setContent {
             RickNotesApp(
                 versionName = BuildConfig.VERSION_NAME,
                 hasAllFilesAccess = hasAllFilesAccess.value,
-                settings = settings,
+                storage = storage,
                 openAllFilesAccessSetting = ::openAllFilesAccessSetting,
                 pickedFolderPath = ::pickedFolderPath,
             )
