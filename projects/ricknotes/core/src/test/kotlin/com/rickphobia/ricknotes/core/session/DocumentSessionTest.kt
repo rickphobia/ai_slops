@@ -48,6 +48,7 @@ private class FakeClock : Clock {
 private class RecordingListener : SaveListener {
     val statuses = mutableListOf<SaveStatus>()
     val failures = mutableListOf<InkSaveFailed>()
+    val versionFailures = mutableListOf<VersionFailed>()
     var saves = 0
 
     override fun statusChanged(status: SaveStatus) {
@@ -64,6 +65,10 @@ private class RecordingListener : SaveListener {
 
     override fun saveFailed(error: InkSaveFailed) {
         failures.add(error)
+    }
+
+    override fun versionFailed(error: VersionFailed) {
+        versionFailures.add(error)
     }
 }
 
@@ -227,6 +232,101 @@ class DocumentSessionTest {
 
         assertEquals(StrokeId("first"), reopened.id)
         assertEquals(PageId("pdf-2"), reopened.pageId)
+    }
+
+    private val versionsFolder: Path get() = pdf.resolveSibling(".versions")
+
+    private fun versions(): List<String> =
+        if (!Files.exists(versionsFolder)) {
+            emptyList()
+        } else {
+            Files.list(versionsFolder).use { files -> files.map { it.fileName.toString() }.sorted().toList() }
+        }
+
+    private fun saveOneStroke(id: String) =
+        open().apply {
+            addStroke(stroke(id))
+            saveNow()
+        }
+
+    @Test
+    fun `opening a Document with an Ink file takes a Version of it before any change`() {
+        saveOneStroke("a")
+        val before = Files.readAllBytes(inkFile)
+        assertEquals(emptyList<String>(), versions())
+
+        clock.advance(1_000)
+        open()
+
+        assertEquals(listOf("Week 1.pdf.ink.json.1000.version"), versions())
+        assertArrayEquals(before, Files.readAllBytes(versionsFolder.resolve(versions().single())))
+    }
+
+    @Test
+    fun `no Version is taken of a Document with no Ink file or a damaged one`() {
+        open()
+        Files.writeString(inkFile, "{")
+        open()
+
+        assertEquals(emptyList<String>(), versions())
+    }
+
+    @Test
+    fun `while writing, a Version is taken at most every 15 minutes`() {
+        saveOneStroke("a")
+        val session = open()
+        val minute = 60_000L
+        repeat(40) { i ->
+            session.addStroke(stroke("m$i"))
+            clock.advance(minute)
+        }
+
+        // On open (0), then at the first save at least 15 minutes after the last Version: 15:02, 30:02.
+        assertEquals(
+            listOf(0L, 15 * minute + 2_000, 30 * minute + 2_000).map { "Week 1.pdf.ink.json.$it.version" }.sorted(),
+            versions(),
+        )
+    }
+
+    @Test
+    fun `a Version taken while writing holds the Ink file as it was before that save`() {
+        saveOneStroke("a")
+        val session = open()
+        clock.advance(DocumentSession.VERSION_INTERVAL_MS)
+        session.addStroke(stroke("b"))
+        val beforeSave = Files.readAllBytes(inkFile)
+
+        session.saveNow()
+
+        assertArrayEquals(beforeSave, Files.readAllBytes(versionsFolder.resolve(versions().last())))
+    }
+
+    @Test
+    fun `only the newest 10 Versions of a Document are kept, and other Documents' Versions are left alone`() {
+        Files.createDirectories(versionsFolder)
+        Files.writeString(versionsFolder.resolve("Week 2.pdf.ink.json.5.version"), "other")
+        saveOneStroke("a")
+
+        repeat(12) {
+            clock.advance(1_000)
+            open()
+        }
+
+        val ours = versions().filter { it.startsWith("Week 1.pdf.") }
+        assertEquals((3..12).map { "Week 1.pdf.ink.json.${it * 1_000}.version" }.sorted(), ours)
+        assertTrue(Files.exists(versionsFolder.resolve("Week 2.pdf.ink.json.5.version")))
+    }
+
+    @Test
+    fun `a Version that can't be written is reported and doesn't stop the Document opening`() {
+        saveOneStroke("a")
+        Files.writeString(versionsFolder, "a file where the folder should be")
+        val listener = RecordingListener()
+
+        val session = open(listener = listener)
+
+        assertFalse(session.readOnly)
+        assertEquals(1, listener.versionFailures.size)
     }
 
     private companion object {

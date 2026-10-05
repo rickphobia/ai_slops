@@ -54,12 +54,15 @@ interface SaveListener {
     ) {}
 
     fun saveFailed(error: InkSaveFailed) {}
+
+    fun versionFailed(error: VersionFailed) {}
 }
 
 /**
  * One open Document's ink: the seam the screen talks to (spec, Seam 1). It loads the Ink file
  * beside the PDF, keeps the strokes, and saves [SAVE_DELAY_MS] after the last change or at once on
- * [saveNow]. It may be called from any thread.
+ * [saveNow]. It takes a Version of the Ink file on open and, while ink is being added, before the
+ * first save at least [VERSION_INTERVAL_MS] after the last one. It may be called from any thread.
  */
 class DocumentSession private constructor(
     private val store: InkFileStore,
@@ -72,6 +75,7 @@ class DocumentSession private constructor(
     /** True when the Ink file couldn't be read: nothing may be drawn and nothing is ever saved. */
     val readOnly: Boolean = warnings.any { it is SessionWarning.InkFileUnreadable }
 
+    private val versions = VersionStore(store.inkFile)
     private val lock = Any()
 
     // Held for a whole save, so two saves never write the temporary file at once.
@@ -83,6 +87,9 @@ class DocumentSession private constructor(
     private var savedRevision = 0L
     private var pendingSave: Scheduled? = null
     private var currentStatus = SaveStatus.SAVED
+
+    // Starts at open, whether or not there was an Ink file to take a Version of. Guarded by [writing].
+    private var lastVersionMs = clock.nowMs()
 
     val strokes: List<Stroke> get() = synchronized(lock) { strokeList.toList() }
 
@@ -114,7 +121,10 @@ class DocumentSession private constructor(
                 synchronized(lock) {
                     (InkFile(pageCount, pages, strokeList.toList()) to revision).takeIf { revision != savedRevision }
                 }
-            changes?.let { (file, savingRevision) -> write(file, savingRevision) }
+            changes?.let { (file, savingRevision) ->
+                if (clock.nowMs() - lastVersionMs >= VERSION_INTERVAL_MS) takeVersion()
+                write(file, savingRevision)
+            }
         }
     }
 
@@ -148,6 +158,12 @@ class DocumentSession private constructor(
         }
     }
 
+    // Call with [writing] held. A failure is retried at the next save.
+    private fun takeVersion() {
+        val now = clock.nowMs()
+        if (takeVersion(versions, store.fileName, now, listener)) lastVersionMs = now
+    }
+
     // Call with [lock] held.
     private fun scheduleSave(delayMs: Long) {
         pendingSave?.cancel()
@@ -168,6 +184,9 @@ class DocumentSession private constructor(
         /** A failed save is tried again this often until it works. */
         const val RETRY_DELAY_MS = 5_000L
 
+        /** While writing, a Version is taken at most this often. */
+        const val VERSION_INTERVAL_MS = 15 * 60_000L
+
         /**
          * Opens the ink of the Document at [pdf], which has [pdfPageCount] pages. A missing Ink file
          * starts empty; an unreadable one opens read-only with a warning.
@@ -183,8 +202,10 @@ class DocumentSession private constructor(
                 try {
                     load(store)
                 } catch (e: InkFileDamaged) {
+                    // No Version of a damaged file: it would push a good Version out of the newest 10.
                     return readOnly(store, clock, listener, pdfPageCount, e)
                 }
+            if (loaded != null) takeVersion(VersionStore(store.inkFile), store.fileName, clock.nowMs(), listener)
             val warnings =
                 listOfNotNull(
                     loaded?.takeIf { it.pdfPageCount != pdfPageCount }?.let {
@@ -206,6 +227,24 @@ class DocumentSession private constructor(
                 }
             return text?.let { InkFileCodec.decode(it, fileName) }
         }
+
+        /** True if the Version was taken; a failure is reported and must not stop the Document opening or saving. */
+        private fun takeVersion(
+            versions: VersionStore,
+            fileName: String,
+            nowMs: Long,
+            listener: SaveListener,
+        ): Boolean =
+            try {
+                versions.take(nowMs)
+                true
+            } catch (e: IOException) {
+                listener.versionFailed(VersionFailed(fileName, e))
+                false
+            } catch (e: SecurityException) {
+                listener.versionFailed(VersionFailed(fileName, e))
+                false
+            }
 
         private fun readOnly(
             store: InkFileStore,
