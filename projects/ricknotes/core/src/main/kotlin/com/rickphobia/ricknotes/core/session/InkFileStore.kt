@@ -23,7 +23,8 @@ internal class InkFileStore(
     /** The Ink file's text, or null if this Document has none yet. */
     fun read(): String? =
         try {
-            Files.readString(inkFile)
+            // Not Files.readString: Android only has it from API 36.1, and the tablet is on 36.
+            String(Files.readAllBytes(inkFile), Charsets.UTF_8)
         } catch (_: NoSuchFileException) {
             null
         }
