@@ -23,9 +23,10 @@ RUN uv sync --locked --no-dev
 ENV PATH=/app/.venv/bin:$PATH \
     COURT_BOOKER_HOST=0.0.0.0 \
     COURT_BOOKER_PORT=8000 \
-    COURT_BOOKER_DATABASE_PATH=/app/data/court-booker.sqlite3
+    COURT_BOOKER_DATABASE_PATH=/app/data/court-booker.sqlite3 \
+    COURT_BOOKER_SCREENSHOT_DIR=/app/data/screenshots
 
-# The SQLite file lives here; the server mounts a volume over it so data survives redeploys.
+# The SQLite file and screenshots live here; the server mounts a volume over it so data survives redeploys.
 RUN mkdir /app/data && chown pwuser:pwuser /app/data
 
 # pwuser is the image's unprivileged user.
