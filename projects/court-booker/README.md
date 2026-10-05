@@ -17,12 +17,13 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 ```bash
 cd projects/court-booker
 uv sync                  # creates .venv with the locked dependencies
-cp .env.example .env     # then fill in the two secrets:
+cp .env.example .env     # then fill in the three secrets:
 uv run court-booker hash-password   # asks for the Operator password twice, prints its hash
 openssl rand -hex 32                # a session secret
+openssl rand -base64 32 | tr '+/' '-_'   # a Profile key
 ```
 
-Put the hash in `COURT_BOOKER_OPERATOR_PASSWORD_HASH` and the secret in `COURT_BOOKER_SESSION_SECRET`. Neither belongs in the repo; on the server they live in the env file outside it. `hash-password` also reads the password from a pipe (first line), for scripts.
+Put the hash in `COURT_BOOKER_OPERATOR_PASSWORD_HASH`, the secret in `COURT_BOOKER_SESSION_SECRET` and the key in `COURT_BOOKER_PROFILE_KEY`. None belongs in the repo; on the server they live in the env file outside it. `hash-password` also reads the password from a pipe (first line), for scripts.
 
 ## Run
 
@@ -66,6 +67,7 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_ROOT_PATH` | no | `/ai-projects/court-booker` | Public path prefix the host nginx serves the app under |
 | `COURT_BOOKER_OPERATOR_PASSWORD_HASH` | **yes** | | The Operator password as an scrypt hash from `court-booker hash-password` |
 | `COURT_BOOKER_SESSION_SECRET` | **yes** | | At least 32 characters; signs session cookies and CSRF tokens. Changing it logs the Operator out |
+| `COURT_BOOKER_PROFILE_KEY` | **yes** | | Fernet key (32 random bytes, url-safe base64) that encrypts the Profile. Losing or changing it means re-entering the Profile |
 | `COURT_BOOKER_DATABASE_PATH` | no | `data/court-booker.sqlite3` (`/app/data/court-booker.sqlite3` in the image) | The SQLite file; its folder is created if missing |
 | `COURT_BOOKER_SESSION_DAYS` | no | `30` | How long a login lasts |
 | `COURT_BOOKER_SECURE_COOKIES` | no | `true` | Send cookies over https only. Set `false` only for local http |
@@ -82,8 +84,9 @@ Every setting is an environment variable, read and validated once at startup by 
 - **Who sees what:** `/login` and `/healthz` are public; every other page sits on a router guarded by `require_operator` and redirects a logged-out visitor to `/login`. New pages go on such a router (see `web/app.py`).
 - **CSRF:** every page gives the browser a random nonce cookie and puts an HMAC of it in each form. An app-wide dependency rejects any POST whose token doesn't match with `403`.
 - **Lockout:** each wrong password is stored in the `login_failures` table. When a wrong password makes `COURT_BOOKER_LOGIN_MAX_FAILURES` within `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, every login is refused for the next `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, the right password included. Refused attempts aren't counted, so nobody can stretch a lock; a successful login clears the count. It survives a restart because it's in the database. The count is shared, not per visitor: there is one Operator, so a stranger guessing can lock the Operator out too, for one lockout at a time.
+- **Profile** (`profile/`, `adapters/sqlite/profile_store.py`, `web/profile_page.py`): the `/profile` page shows and saves friend B's first name, email, unit number and mobile. `parse_profile` checks every field (all required, an email shape, mobile digits only) and the page shows a message under each bad one. The Profile is stored as one row holding a Fernet token of its JSON, encrypted with `COURT_BOOKER_PROFILE_KEY` (decision 0003); the key is never in the database. Logs name the fields that failed, never their values.
 
-The full design (scheduler, Picktime browser adapter, encrypted Profile) is in `docs/spec.md`.
+The full design (scheduler, Picktime browser adapter) is in `docs/spec.md`.
 
 ## Folder layout
 
@@ -94,7 +97,8 @@ src/court_booker/
   clock.py           # the current time, faked in tests
   cli.py             # entrypoint: `court-booker serve` and `hash-password`
   auth/              # password hashes, session cookies and CSRF tokens, login lockout
-  adapters/sqlite/   # the database file, migrations, stored login failures
+  profile/           # the Profile value and its validation rules
+  adapters/sqlite/   # the database file, migrations, stored login failures, encrypted Profile
   web/app.py         # FastAPI app wiring and /healthz
   web/access.py      # session and CSRF checks, page rendering
   web/*_page(s).py   # pages, with their templates in web/templates/
@@ -114,6 +118,7 @@ docs/                # spec, tickets, decisions
 - Logins are logged: `operator logged in` (info), `login failed: wrong password` and `login refused: locked out ...` (warning), each with the client address. Passwords are never logged.
 - Logged in but sent straight back to the login page: over plain http, set `COURT_BOOKER_SECURE_COOKIES=false`; otherwise check you used the prefixed URL.
 - Locked out: wait the lockout minutes, or, on the server, clear it with `sqlite3 <database file> 'DELETE FROM login_failures'`.
+- The Profile page fails with `ProfileUnreadable` in the logs: `COURT_BOOKER_PROFILE_KEY` isn't the key the Profile was saved with. Restore the old key, or delete the row (`sqlite3 <database file> 'DELETE FROM profile'`) and enter the Profile again.
 - A form answers `403 The form expired`: its CSRF token no longer matches the browser's cookie (for example after cookies were cleared). Reload the page and submit again.
 
 ## Decisions

@@ -13,11 +13,13 @@
     header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
     h1 { font-size: 1.4rem; margin: 0 0 1rem; }
     label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-    input[type=password] { width: 100%; font-size: 1rem; padding: 0.7rem; margin-bottom: 1rem; }
+    input { width: 100%; font-size: 1rem; padding: 0.7rem; margin-bottom: 1rem; }
     button { font-size: 1rem; padding: 0.7rem 1.2rem; border: 0; border-radius: 0.4rem;
              background: var(--accent); color: #fff; cursor: pointer; }
     button.quiet { background: transparent; color: inherit; text-decoration: underline; padding: 0; }
     .error { color: var(--error); font-weight: 600; }
+    .error.field { margin-top: -0.75rem; }
+    .notice { color: var(--accent); font-weight: 600; }
   </style>
 </head>
 <body>

@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 
+from cryptography.fernet import Fernet
+
 from court_booker.auth.passwords import InvalidPasswordHash, PasswordHash, parse_password_hash
 
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
@@ -30,6 +32,8 @@ class Settings:
     secure_cookies: bool
     login_max_failures: int
     login_lockout: timedelta
+    # Encrypts the Profile in the database (decision 0003).
+    profile_key: bytes = field(repr=False)
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -54,6 +58,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         login_lockout=timedelta(
             minutes=_positive_int(environ, "COURT_BOOKER_LOGIN_LOCKOUT_MINUTES", default=15)
         ),
+        profile_key=_fernet_key(environ, "COURT_BOOKER_PROFILE_KEY"),
     )
 
 
@@ -132,3 +137,16 @@ def _session_secret(environ: Mapping[str, str], name: str) -> bytes:
             "(make one with `openssl rand -hex 32`)"
         )
     return value.encode()
+
+
+def _fernet_key(environ: Mapping[str, str], name: str) -> bytes:
+    key = _required(environ, name).encode()
+    try:
+        Fernet(key)
+    except ValueError:
+        # Like the other secrets, the value itself stays out of the message.
+        raise ConfigError(
+            f"{name} is not a Fernet key (32 random bytes in url-safe base64; "
+            "see .env.example for how to make one)"
+        ) from None
+    return key

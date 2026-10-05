@@ -26,6 +26,19 @@ def test_a_bad_setting_stops_startup_with_a_message_naming_it(
     assert "COURT_BOOKER_PORT" in record["message"]
 
 
+def test_a_missing_profile_key_stops_startup(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for name, value in required_env().items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.delenv("COURT_BOOKER_PROFILE_KEY")
+
+    assert main(["serve"]) == 2
+
+    record = json.loads(capsys.readouterr().out)
+    assert "COURT_BOOKER_PROFILE_KEY is required" in record["message"]
+
+
 def test_hash_password_runs_without_any_settings(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

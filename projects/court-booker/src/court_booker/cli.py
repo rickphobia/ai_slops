@@ -11,6 +11,7 @@ import uvicorn
 
 from court_booker.adapters.sqlite.database import DatabaseError, SqliteDatabase
 from court_booker.adapters.sqlite.login_failures import SqliteLoginFailures
+from court_booker.adapters.sqlite.profile_store import SqliteProfileStore
 from court_booker.auth.passwords import hash_password
 from court_booker.clock import SystemClock
 from court_booker.config import ConfigError, Settings, load_settings
@@ -27,7 +28,13 @@ def serve(settings: Settings) -> int:
     except DatabaseError as error:
         logger.error("database unusable: %s", error)
         return 2
-    app = create_app(settings, login_failures=SqliteLoginFailures(database), clock=SystemClock())
+    clock = SystemClock()
+    app = create_app(
+        settings,
+        login_failures=SqliteLoginFailures(database),
+        profile_store=SqliteProfileStore(database, settings.profile_key, clock),
+        clock=clock,
+    )
     logger.info(
         "starting web server",
         extra={"host": settings.host, "port": settings.port, "root_path": settings.root_path},

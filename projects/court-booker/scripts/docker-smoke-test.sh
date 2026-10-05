@@ -16,6 +16,7 @@ trap 'docker rm --force "$container" >/dev/null' EXIT
 docker run --detach --name "$container" --publish "127.0.0.1:$port:8000" \
   --env COURT_BOOKER_OPERATOR_PASSWORD_HASH="$password_hash" \
   --env COURT_BOOKER_SESSION_SECRET="$(openssl rand -hex 32)" \
+  --env COURT_BOOKER_PROFILE_KEY="$(openssl rand -base64 32 | tr "+/" "-_")" \
   "$image" >/dev/null
 
 for _ in $(seq 30); do

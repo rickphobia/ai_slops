@@ -4,15 +4,15 @@
 
 **Blocked by:** 02 (Operator login)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** profile, adapters/profile-store, web, config
 
 **Effort:** low
 
-- [ ] Profile page shows the saved values and saves edits; each field has a clear error message (missing field, bad email, mobile not digits)
-- [ ] The Profile is stored as one Fernet-encrypted record; a test checks the database file contains none of the Profile values in plain text
-- [ ] The app refuses to start, with a clear message, when the encryption key is missing or invalid; a `.env.example` comment says how to generate one
-- [ ] Profile values never appear in logs (tested by capturing log output during save)
-- [ ] Tests through the test client cover first save, edit, validation errors and the logged-out redirect
-- [ ] README and `.env.example` updated
+- [x] Profile page shows the saved values and saves edits; each field has a clear error message (missing field, bad email, mobile not digits)
+- [x] The Profile is stored as one Fernet-encrypted record; a test checks the database file contains none of the Profile values in plain text
+- [x] The app refuses to start, with a clear message, when the encryption key is missing or invalid; a `.env.example` comment says how to generate one
+- [x] Profile values never appear in logs (tested by capturing log output during save)
+- [x] Tests through the test client cover first save, edit, validation errors and the logged-out redirect
+- [x] README and `.env.example` updated
