@@ -8,7 +8,7 @@
 
 **Touches:** adapters/picktime-browser, entrypoint
 
-**Effort:** `medium`
+**Effort:** medium
 
 - [ ] A `CourtBookingSite` interface: book one Slot for a date and Profile, with a dry-run flag, returning a typed outcome (Booked, Taken, NotOpen, NetworkError, Rejected with Picktime's message), a screenshot path and the duration
 - [ ] The Playwright adapter opens the page fresh, picks the Court, the date and the Slot, fills first name, email, Unit Number and Mobile, submits (unless dry-run), reads the result and saves a screenshot of the final state; normal desktop Chrome user agent and viewport, page timeout from config

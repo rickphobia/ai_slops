@@ -8,7 +8,7 @@
 
 **Touches:** profile, adapters/profile-store, web, config
 
-**Effort:** `low`
+**Effort:** low
 
 - [ ] Profile page shows the saved values and saves edits; each field has a clear error message (missing field, bad email, mobile not digits)
 - [ ] The Profile is stored as one Fernet-encrypted record; a test checks the database file contains none of the Profile values in plain text

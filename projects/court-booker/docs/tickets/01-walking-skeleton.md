@@ -8,7 +8,7 @@
 
 **Touches:** project setup, config, logging, web, entrypoint, docker, CI, README
 
-**Effort:** `medium`
+**Effort:** medium
 
 - [x] Python project managed with `uv`, pinned Python version, committed lock file; `ruff` (lint + format), `mypy --strict` and `pytest` configured
 - [x] Config module loads every setting the spec lists that this ticket uses from environment variables, validates them, and fails at startup with a message naming the bad or missing variable; `.env.example` lists every variable with dummy values
