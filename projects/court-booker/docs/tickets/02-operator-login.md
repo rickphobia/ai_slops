@@ -4,18 +4,18 @@
 
 **Blocked by:** 01 (Walking skeleton)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** auth, adapters/sqlite, web, entrypoint
 
 **Effort:** `medium`
 
-- [ ] `hash-password` subcommand prints a scrypt hash; the Operator password hash and session secret come from config, never from the repo
-- [ ] Login and logout pages; signed, HttpOnly, SameSite=Strict session cookie with a configurable lifetime
-- [ ] Every form carries a CSRF token, and a POST without a valid one is rejected
-- [ ] Every page except login and `/healthz` redirects a logged-out visitor to login
-- [ ] After the configured number of failed attempts, login is refused for the configured minutes, even with the right password; failures are stored in SQLite so a restart doesn't reset them
-- [ ] SQLite adapter with schema migrations applied at startup (first table: login failures)
-- [ ] Failed and successful logins are logged at the right level, never with the password
-- [ ] Tests through the test client cover redirect, login, logout, bad CSRF, lockout and lockout expiry (fake clock)
-- [ ] README and `.env.example` updated
+- [x] `hash-password` subcommand prints a scrypt hash; the Operator password hash and session secret come from config, never from the repo
+- [x] Login and logout pages; signed, HttpOnly, SameSite=Strict session cookie with a configurable lifetime
+- [x] Every form carries a CSRF token, and a POST without a valid one is rejected
+- [x] Every page except login and `/healthz` redirects a logged-out visitor to login
+- [x] After the configured number of failed attempts, login is refused for the configured minutes, even with the right password; failures are stored in SQLite so a restart doesn't reset them
+- [x] SQLite adapter with schema migrations applied at startup (first table: login failures)
+- [x] Failed and successful logins are logged at the right level, never with the password
+- [x] Tests through the test client cover redirect, login, logout, bad CSRF, lockout and lockout expiry (fake clock)
+- [x] README and `.env.example` updated
