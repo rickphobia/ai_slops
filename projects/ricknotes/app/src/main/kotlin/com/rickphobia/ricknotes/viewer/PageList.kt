@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
@@ -33,12 +32,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.ink.DocumentInk
 import com.rickphobia.ricknotes.ink.InkLayer
 import com.rickphobia.ricknotes.ink.PageInk
+import com.rickphobia.ricknotes.logging.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -168,10 +167,7 @@ private fun TouchLayer(
 private fun restoredPosition(document: OpenDocument): ReadingPosition {
     val position =
         document.positions.load(document.path)?.fitTo(document.pageSizes.size) ?: ReadingPosition(0, ZoomLimits.MIN)
-    Log.i(
-        MainActivity.LOG_TAG,
-        "reopening ${File(document.path).name} at page ${position.pageIndex + 1}, zoom ${position.zoom}",
-    )
+    AppLog.i("reopening ${File(document.path).name} at page ${position.pageIndex + 1}, zoom ${position.zoom}")
     return position
 }
 

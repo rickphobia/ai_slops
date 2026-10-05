@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,8 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
+import com.rickphobia.ricknotes.logging.AppLog
 
 /** "12 / 100" over the pages. Tapping it asks for a page and [onJump] goes there. */
 @Composable
@@ -38,7 +37,7 @@ internal fun PageNavigator(
             pageCount = pageCount,
             onJump = { index ->
                 asking = false
-                Log.i(MainActivity.LOG_TAG, "jumping to page ${index + 1} of $pageCount")
+                AppLog.i("jumping to page ${index + 1} of $pageCount")
                 onJump(index)
             },
             onDismiss = { asking = false },

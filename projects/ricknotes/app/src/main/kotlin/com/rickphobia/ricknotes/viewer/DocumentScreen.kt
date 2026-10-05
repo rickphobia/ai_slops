@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
 import com.rickphobia.ricknotes.files.PdfEntry
+import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
 
 private sealed interface Opening {
@@ -51,7 +50,7 @@ fun DocumentScreen(
             try {
                 Opening.Ready(pages.open())
             } catch (e: DocumentOpenException) {
-                Log.w(MainActivity.LOG_TAG, e.message, e)
+                AppLog.w("opening a Document failed: ${e.message}", e)
                 Opening.Failed(e)
             }
     }

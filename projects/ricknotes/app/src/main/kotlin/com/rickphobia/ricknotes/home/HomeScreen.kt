@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.home
 
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,10 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.files.PdfLister
+import com.rickphobia.ricknotes.logging.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -40,7 +39,7 @@ fun HomeScreen(
     val pdfs by produceState<List<PdfEntry>?>(initialValue = null, studyFolder) {
         value =
             withContext(Dispatchers.IO) {
-                PdfLister.list(File(studyFolder)).also { Log.i(MainActivity.LOG_TAG, "listed ${it.size} PDFs") }
+                PdfLister.list(File(studyFolder)).also { AppLog.i("listed ${it.size} PDFs") }
             }
     }
 

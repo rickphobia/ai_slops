@@ -6,10 +6,9 @@ import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
-import android.util.Log
 import android.util.LruCache
 import androidx.core.graphics.createBitmap
-import com.rickphobia.ricknotes.MainActivity
+import com.rickphobia.ricknotes.logging.AppLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -74,8 +73,7 @@ class PdfPages(
                     throw openFailure(e)
                 }
             if (sizes.isEmpty()) throw openFailure(IOException("the PDF has no pages"))
-            Log.i(
-                MainActivity.LOG_TAG,
+            AppLog.i(
                 "opened ${file.name}: ${sizes.size} pages in ${SystemClock.elapsedRealtime() - started} ms",
             )
             sizes
@@ -149,8 +147,7 @@ class PdfPages(
         } catch (e: IllegalArgumentException) {
             throw PageRenderException(file.name, pageIndex, e)
         }.also {
-            Log.d(
-                MainActivity.LOG_TAG,
+            AppLog.d(
                 "rendered ${file.name} page ${pageIndex + 1}${if (transform == null) "" else " (part)"} " +
                     "at ${widthPx}x${heightPx}px in " +
                     "${SystemClock.elapsedRealtime() - started} ms",
@@ -167,7 +164,7 @@ class PdfPages(
             descriptor?.close()
             renderer = null
             descriptor = null
-            Log.i(MainActivity.LOG_TAG, "closed ${file.name}")
+            AppLog.i("closed ${file.name}")
         }
         executor.shutdown()
     }

@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: tickets 01-06 (milestone 1, waiting on its check on the tablet) and 08 (first ink). On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. The pen writes in black, one finger scrolls (and flings), two fingers pinch-zoom (1x to 5x) and pan; a finger never draws. Strokes stay on their spot of the page at any zoom, but are kept in memory only: closing the Document loses them until saving arrives (ticket 09). Pages turn sharp again a moment after the view stops moving. The page indicator ("12 / 100") jumps to a page when tapped, and each Document reopens at the page and zoom it was left at. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: the shareable log (ticket 07) and saving ink (ticket 09).
+`in progress`: tickets 01-06 (milestone 1, waiting on its check on the tablet), 07 (shareable log) and 08 (first ink). On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder" and "Share log", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. The pen writes in black, one finger scrolls (and flings), two fingers pinch-zoom (1x to 5x) and pan; a finger never draws. Strokes stay on their spot of the page at any zoom, but are kept in memory only: closing the Document loses them until saving arrives (ticket 09). Pages turn sharp again a moment after the view stops moving. The page indicator ("12 / 100") jumps to a page when tapped, and each Document reopens at the page and zoom it was left at. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: saving ink (ticket 09).
 
 ## Requirements
 
@@ -167,6 +167,8 @@ Zoom (`viewer/ZoomView`, 1x is the page filling the screen's width, up to 5x) ma
 
 A PDF that can't be opened raises `DocumentOpenException` (`Missing`, `PasswordProtected` or `Damaged`), and the screen shows its message, which names the file and the reason.
 
+Logging goes through `logging/AppLog`, which writes every line to logcat and to a rolling file in the app's private storage (`files/logs/`): `logging/RollingLogFile` moves `ricknotes.log` to `ricknotes.1.log` when it would pass 1 MB, so the log never takes more than 2 MB. "Share log" in Settings copies both into one file in the cache and sends it through the Android share menu with a `FileProvider`. The file leaves the tablet, so it holds file names, timings and errors only: never stroke data, page images or clipboard text (the pen test screen logs to logcat only for that reason).
+
 ## Folder layout
 
 ```
@@ -179,6 +181,7 @@ app/src/main/kotlin/com/rickphobia/ricknotes/
   MainActivity.kt      entrypoint: wiring only
   RickNotesApp.kt      which screen shows
   adapters/settings/   SharedPreferences-backed settings and reading-position storage
+  logging/             AppLog and the rolling log file behind "Share log"
   files/               PDF listing, picker result to path
   studyfolder/         "All files access" and folder picker screens
   home/                home screen: the PDF list (Compose)

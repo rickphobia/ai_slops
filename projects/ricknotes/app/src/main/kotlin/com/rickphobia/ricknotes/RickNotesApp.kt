@@ -1,7 +1,6 @@
 package com.rickphobia.ricknotes
 
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +19,7 @@ import com.rickphobia.ricknotes.core.settings.SettingsStore
 import com.rickphobia.ricknotes.diagnostics.PenTestScreen
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.home.HomeScreen
+import com.rickphobia.ricknotes.logging.AppLog
 import com.rickphobia.ricknotes.settings.SettingsScreen
 import com.rickphobia.ricknotes.studyfolder.AllFilesAccessScreen
 import com.rickphobia.ricknotes.studyfolder.PickFolderScreen
@@ -62,35 +62,41 @@ private fun startScreen(source: SettingsSource): Screen =
     try {
         SettingsLoader.load(source).studyFolder?.let { Screen.Home(it) } ?: Screen.PickFolder(problem = null)
     } catch (e: InvalidSettingException) {
-        Log.w(MainActivity.LOG_TAG, "stored settings unusable: ${e.message}")
+        AppLog.w("stored settings unusable: ${e.message}")
         Screen.PickFolder(problemText(e))
     }
+
+/** What the screens ask Android to do, provided by `MainActivity`. */
+class SystemActions(
+    val openAllFilesAccessSetting: () -> Unit,
+    val pickedFolderPath: (Uri) -> String?,
+    val shareLog: () -> Unit,
+)
 
 @Composable
 fun <S> RickNotesApp(
     versionName: String,
     hasAllFilesAccess: Boolean,
     storage: AppStorage<S>,
-    openAllFilesAccessSetting: () -> Unit,
-    pickedFolderPath: (Uri) -> String?,
+    system: SystemActions,
 ) where S : SettingsSource, S : SettingsStore {
     var screen by remember(hasAllFilesAccess) { mutableStateOf(startScreen(storage.settings)) }
 
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
-            val path = pickedFolderPath(uri)
+            val path = system.pickedFolderPath(uri)
             screen =
                 if (path == null) {
-                    Log.w(MainActivity.LOG_TAG, "picked folder is not on the tablet's own storage")
+                    AppLog.w("picked folder is not on the tablet's own storage")
                     Screen.PickFolder("Pick a folder on the tablet's own storage, not an SD card or USB drive.")
                 } else {
                     try {
                         SettingsLoader.saveStudyFolder(storage.settings, path)
-                        Log.i(MainActivity.LOG_TAG, "study folder chosen")
+                        AppLog.i("study folder chosen")
                         Screen.Home(path)
                     } catch (e: InvalidSettingException) {
-                        Log.w(MainActivity.LOG_TAG, "picked folder unusable: ${e.message}")
+                        AppLog.w("picked folder unusable: ${e.message}")
                         Screen.PickFolder(problemText(e))
                     }
                 }
@@ -100,7 +106,7 @@ fun <S> RickNotesApp(
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             if (!hasAllFilesAccess) {
-                AllFilesAccessScreen(onOpenSetting = openAllFilesAccessSetting)
+                AllFilesAccessScreen(onOpenSetting = system.openAllFilesAccessSetting)
                 return@Surface
             }
             when (val current = screen) {
@@ -122,6 +128,7 @@ fun <S> RickNotesApp(
                         studyFolder = current.studyFolder,
                         onChangeFolder = pickFolder,
                         onOpenPenTest = { screen = Screen.PenTest(current.studyFolder) },
+                        onShareLog = system.shareLog,
                         onBack = { screen = Screen.Home(current.studyFolder) },
                     )
                 }
