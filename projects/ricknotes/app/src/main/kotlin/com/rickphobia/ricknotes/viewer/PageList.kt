@@ -2,6 +2,7 @@ package com.rickphobia.ricknotes.viewer
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,7 +32,12 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
 import com.rickphobia.ricknotes.MainActivity
+import com.rickphobia.ricknotes.core.ink.PageId
+import com.rickphobia.ricknotes.ink.DocumentInk
+import com.rickphobia.ricknotes.ink.InkLayer
+import com.rickphobia.ricknotes.ink.PageInk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -59,8 +65,9 @@ internal data class OpenDocument(
 )
 
 /**
- * The pages of a Document in one zoomable column: one finger scrolls, two fingers pinch-zoom and
- * pan. It reopens where the student left it and remembers where they leave it.
+ * The pages of a Document in one zoomable column, with the ink layer over them: the pen writes, one
+ * finger scrolls, two fingers pinch-zoom and pan. It reopens where the student left it and
+ * remembers where they leave it.
  */
 @Composable
 internal fun PageList(document: OpenDocument) {
@@ -70,6 +77,8 @@ internal fun PageList(document: OpenDocument) {
     val view = remember { mutableStateOf(ZoomView(restored.zoom, panX = 0f)) }
     var settled by remember { mutableStateOf<SettledView?>(null) }
     val scope = rememberCoroutineScope()
+    val ink = remember(document.path) { DocumentInk() }
+    val strokeRenderer = remember { CanvasStrokeRenderer.create() }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).clipToBounds(),
@@ -97,7 +106,9 @@ internal fun PageList(document: OpenDocument) {
             state = listState,
             contentPadding = PaddingValues(PAGE_GAP),
             verticalArrangement = Arrangement.spacedBy(PAGE_GAP),
-            modifier = Modifier.zoomable(view, listState, screen),
+            // Every touch goes to the ink layer on top, which moves the list itself.
+            userScrollEnabled = false,
+            modifier = Modifier.zoomedLayout(view, screen),
         ) {
             itemsIndexed(document.pageSizes) { index, size ->
                 val part = settled?.takeIf { it.pageWidth == pageWidthPx }
@@ -105,9 +116,10 @@ internal fun PageList(document: OpenDocument) {
                     document.pages,
                     pageLayout(index, size),
                     part?.let { SettledPart(it.pageWidth, it.visibleParts[index]) },
-                )
+                ) { PageInk(ink.on(PageId.ofPdfPage(index)), size.widthPt.toFloat(), strokeRenderer) }
             }
         }
+        TouchLayer(ink, document.pageSizes, PageListView(view, listState, screen, gapPx))
         PageNavigator(
             pageIndex = current,
             pageCount = pageCount,
@@ -115,6 +127,38 @@ internal fun PageList(document: OpenDocument) {
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
+}
+
+/** What the touch layer needs to find pages on screen and move them. */
+private class PageListView(
+    val zoom: MutableState<ZoomView>,
+    val listState: LazyListState,
+    val screen: ViewportSize,
+    val gapPx: Int,
+)
+
+/** The ink layer over the pages: it takes every touch, writes with the pen and moves [list] with fingers. */
+@Composable
+private fun TouchLayer(
+    ink: DocumentInk,
+    pageSizes: List<PageSize>,
+    list: PageListView,
+) {
+    val scope = rememberCoroutineScope()
+    val flingBehavior = ScrollableDefaults.flingBehavior()
+    val navigation =
+        remember(list.listState, list.screen, scope, flingBehavior) {
+            PageNavigation(list.zoom, list.listState, list.screen, scope, flingBehavior)
+        }
+    InkLayer(
+        ink = ink,
+        placements = {
+            val view = list.zoom.value
+            val pageWidth = zoomedListWidth(list.screen, view) - list.gapPx * 2
+            pagePlacements(visiblePages(list.listState.layoutInfo), pageSizes, pageWidth, list.gapPx, view)
+        },
+        navigation = navigation,
+    )
 }
 
 private fun restoredPosition(document: OpenDocument): ReadingPosition {
@@ -153,33 +197,14 @@ private fun SavePosition(
 }
 
 /**
- * Pinch-zoom and sideways pan for the page list. The list is laid out as wide as the zoomed pages
- * and slides sideways under the screen; up and down is the list's own scrolling.
+ * Lays the page list out as wide as the zoomed pages and slides it sideways under the screen; up
+ * and down is the list's own scrolling.
  */
-private fun Modifier.zoomable(
+private fun Modifier.zoomedLayout(
     view: MutableState<ZoomView>,
-    listState: LazyListState,
     screen: ViewportSize,
 ): Modifier =
-    pinchAndPan(
-        key = screen,
-        onPinch = { centroid, pan, zoomChange ->
-            val pinch =
-                Pinch(
-                    focusX = centroid.x,
-                    focusY = centroid.y,
-                    offsetInFirstPage = listState.firstVisibleItemScrollOffset.toFloat(),
-                    zoomChange = zoomChange,
-                    moveX = pan.x,
-                    moveY = pan.y,
-                    viewportWidth = screen.width.toFloat(),
-                )
-            val step = view.value.pinch(pinch)
-            view.value = step.view
-            listState.dispatchRawDelta(step.scrollY)
-        },
-        onPanX = { dx -> view.value = view.value.panBy(dx, screen.width.toFloat()) },
-    ).layout { measurable, constraints ->
+    layout { measurable, constraints ->
         val contentWidth = zoomedListWidth(screen, view.value)
         val placeable = measurable.measure(Constraints.fixed(contentWidth, constraints.maxHeight))
         layout(constraints.maxWidth, constraints.maxHeight) {
