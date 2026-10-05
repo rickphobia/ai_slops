@@ -221,7 +221,8 @@ ZUXOS keeps the side button for itself: by default, hold creates a note and pres
 
 ## Debugging
 
-- The app logs to Logcat with the tag `RickNotes` (`adb logcat -s RickNotes`). The rolling log file and "Share log" button arrive in ticket 07.
+- The app logs to Logcat with the tag `RickNotes` (`adb logcat -s RickNotes`) and to the rolling log file that Settings → "Share log" sends.
+- **The app crashes:** the crash is written to the log before the app closes (`logging/CrashRecorder`). Reopen the app, go to Settings → "Share log", and look for "crashed on thread": the full stack trace follows it.
 - **Stuck on the "All files access" screen:** turn the setting on for this app (RickNotes and RickNotes Preview are listed separately), then press Back.
 - **"The Study folder ... does not exist" on start:** the folder was renamed, moved or deleted; pick it again.
 - **A PDF shows "Can't open ...":** the message says why. "password-protected": remove the password in another app (RickNotes doesn't ask for one). "damaged or not a PDF": Android's PDF reader couldn't parse it; check it opens elsewhere. Logcat has the underlying error. Page open and render times are logged at debug level (`adb logcat RickNotes:D '*:S'`), with "(part)" for the sharp part of a zoomed page.
