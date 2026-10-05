@@ -1,0 +1,42 @@
+name: court-booker
+
+on:
+  push:
+    paths:
+      - "projects/court-booker/**"
+      - ".github/workflows/court-booker.yml"
+  pull_request:
+    paths:
+      - "projects/court-booker/**"
+      - ".github/workflows/court-booker.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: court-booker-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: projects/court-booker
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.13"
+          enable-cache: true
+          cache-dependency-glob: projects/court-booker/uv.lock
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run mypy
+      - run: uv run pytest
+      # shellcheck comes preinstalled on the runner.
+      - run: shellcheck scripts/*.sh
+      - run: scripts/docker-smoke-test.sh
