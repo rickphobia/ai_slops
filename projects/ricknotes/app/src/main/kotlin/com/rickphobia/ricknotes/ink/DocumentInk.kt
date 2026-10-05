@@ -88,15 +88,35 @@ internal class DocumentInk private constructor(
             val held = InkSessions.open(pdf, pageCount)
             val strokes = held.session.strokes
             AppLog.i("loaded ${strokes.size} strokes for ${pdf.name}")
-            return DocumentInk(pdf, held, strokes.map { DrawnStroke(it, it.toMesh()) })
+            return DocumentInk(
+                pdf,
+                held,
+                strokes.mapNotNull { stroke ->
+                    stroke.toMesh()?.let { DrawnStroke(stroke, it) }
+                },
+            )
         }
     }
 }
 
-/** Rebuilds the mesh of a saved Stroke from its points, as Jetpack Ink drew it when it was wet. */
-private fun Stroke.toMesh(): InkStroke {
+/**
+ * Rebuilds the mesh of a saved Stroke from its points, as Jetpack Ink drew it when it was wet, or
+ * null if Ink rejects them: one stroke that can't be drawn must not keep the Document from opening.
+ * It stays in the Ink file either way.
+ */
+private fun Stroke.toMesh(): InkStroke? {
     val inputs = MutableStrokeInputBatch()
-    for (point in points) {
+    try {
+        addTo(inputs)
+    } catch (e: IllegalArgumentException) {
+        AppLog.e("can't draw saved stroke ${id.value} on page ${pageId.value}; it is kept but not shown", e)
+        return null
+    }
+    return InkStroke(penBrush(colourArgb, widthPt), inputs)
+}
+
+private fun Stroke.addTo(inputs: MutableStrokeInputBatch) {
+    for (point in inkInputPoints(points)) {
         inputs.add(
             type = InputToolType.STYLUS,
             x = point.x,
@@ -105,7 +125,6 @@ private fun Stroke.toMesh(): InkStroke {
             pressure = point.pressure,
         )
     }
-    return InkStroke(penBrush(colourArgb, widthPt), inputs)
 }
 
 /**
