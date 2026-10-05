@@ -8,7 +8,7 @@
 
 **Touches:** booking_run, scheduler, entrypoint, web
 
-**Effort:** `medium`
+**Effort:** medium
 
 - [ ] Scheduler tick claims due Booking Requests one at a time with an atomic Waiting → Booking… update, so a request is never run twice; one tick at startup, then one every configured interval in the background
 - [ ] Booking run tries each Slot in time order with a random pause between them (from the injected random source), decrypting the Profile at run time

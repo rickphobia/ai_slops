@@ -8,7 +8,7 @@
 
 **Touches:** booking_requests, schedule, adapters/sqlite, web
 
-**Effort:** `medium`
+**Effort:** medium
 
 - [ ] `schedule` has pure functions for Release Time (midnight venue time, Booking Window days before the date) and the run time (Release Time plus a jitter from an injected random source within the configured window, or now plus a short delay when the date is already open); unit tests cover month and year ends, already-open dates and dates far ahead
 - [ ] The run time is chosen once at creation and stored; editing Slots keeps it

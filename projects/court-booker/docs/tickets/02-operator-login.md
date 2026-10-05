@@ -8,7 +8,7 @@
 
 **Touches:** auth, adapters/sqlite, web, entrypoint
 
-**Effort:** `medium`
+**Effort:** medium
 
 - [ ] `hash-password` subcommand prints a scrypt hash; the Operator password hash and session secret come from config, never from the repo
 - [ ] Login and logout pages; signed, HttpOnly, SameSite=Strict session cookie with a configurable lifetime

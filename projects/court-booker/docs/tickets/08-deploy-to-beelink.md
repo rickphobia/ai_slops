@@ -8,7 +8,7 @@
 
 **Touches:** deploy, README
 
-**Effort:** `low`
+**Effort:** low
 
 - [ ] `deploy/update-site.sh` follows the pawn-swarm pattern (own checkout in `~/homelab/dev`, `flock`, does nothing if `main` hasn't moved, names the failing step): builds the image tagged with the commit, starts the new container with the env file and data volume on the shared Docker network, waits for `/healthz`, then retires the old one; on failure the old one keeps running
 - [ ] `deploy/rollback.sh` restarts the previous image tag

@@ -8,7 +8,7 @@
 
 **Touches:** scheduler, booking_run, web
 
-**Effort:** `low`
+**Effort:** low
 
 - [ ] A request picked up more than 5 minutes after its run time is marked "ran late" with the actual run time shown on the list
 - [ ] A Waiting request whose date has passed becomes Done with every Slot Failed "missed"
