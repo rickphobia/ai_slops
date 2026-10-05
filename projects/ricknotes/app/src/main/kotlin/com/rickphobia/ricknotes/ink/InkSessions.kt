@@ -1,12 +1,11 @@
 package com.rickphobia.ricknotes.ink
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.session.DocumentSession
 import com.rickphobia.ricknotes.core.session.InkSaveFailed
 import com.rickphobia.ricknotes.core.session.SaveListener
 import com.rickphobia.ricknotes.core.session.SaveStatus
+import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
 
 /** A Document session and its save status as Compose state. */
@@ -39,7 +38,7 @@ internal object InkSessions {
             entries.getOrPut(pdf.path) {
                 val status = SaveStatusState(pdf.name)
                 val session = DocumentSession.open(pdf.toPath(), pageCount, SaveThread, status)
-                session.warnings.forEach { Log.w(MainActivity.LOG_TAG, "${pdf.name}: $it") }
+                session.warnings.forEach { AppLog.w("${pdf.name}: $it") }
                 Entry(HeldSession(session, status))
             }
         entry.openTabs++
@@ -54,9 +53,9 @@ internal object InkSessions {
             val saved = entry.held.session.status == SaveStatus.SAVED
             synchronized(InkSessions) { if (saved && entry.openTabs == 0) entries.remove(pdf.path) }
             if (saved) {
-                Log.i(MainActivity.LOG_TAG, "closed ${pdf.name}")
+                AppLog.i("closed ${pdf.name}")
             } else {
-                Log.w(MainActivity.LOG_TAG, "closed ${pdf.name} with ink not yet saved; still retrying")
+                AppLog.w("closed ${pdf.name} with ink not yet saved; still retrying")
             }
         }
     }
@@ -78,10 +77,10 @@ internal class SaveStatusState(
         bytes: Int,
         durationMs: Long,
     ) {
-        Log.i(MainActivity.LOG_TAG, "saved $fileName: $bytes bytes in $durationMs ms")
+        AppLog.i("saved $fileName: $bytes bytes in $durationMs ms")
     }
 
     override fun saveFailed(error: InkSaveFailed) {
-        Log.e(MainActivity.LOG_TAG, "save failed for $documentName; will retry", error)
+        AppLog.e("save failed for $documentName; will retry", error)
     }
 }

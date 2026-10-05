@@ -1,16 +1,15 @@
 package com.rickphobia.ricknotes.ink
 
-import android.util.Log
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.session.Clock
 import com.rickphobia.ricknotes.core.session.Scheduled
+import com.rickphobia.ricknotes.logging.AppLog
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
  * The [Clock] Document sessions save with: wall-clock time, and one background thread for the
- * whole app that loads and saves every Ink file, so disk work never holds up the pen and a closing
- * save always finishes before the same Document is read again. It lives as long as the app.
+ * whole app that runs every save and retry, so disk work never holds up the pen and a retry can
+ * outlive its screen. It lives as long as the app.
  */
 internal object SaveThread : Clock {
     private val executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "ink-save") }
@@ -37,7 +36,7 @@ internal object SaveThread : Clock {
             try {
                 task()
             } catch (e: RuntimeException) {
-                Log.e(MainActivity.LOG_TAG, "ink save thread task failed", e)
+                AppLog.e("ink save thread task failed", e)
                 throw e
             }
         }

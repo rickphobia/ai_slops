@@ -1,7 +1,6 @@
 package com.rickphobia.ricknotes.ink
 
 import android.graphics.Matrix
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -16,11 +15,11 @@ import androidx.ink.brush.InputToolType
 import androidx.ink.brush.StockBrushes
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
 import androidx.ink.strokes.MutableStrokeInputBatch
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.Stroke
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
+import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
 import androidx.ink.strokes.Stroke as InkStroke
 
@@ -78,7 +77,7 @@ internal class DocumentInk private constructor(
         ): DocumentInk {
             val held = InkSessions.open(pdf, pageCount)
             val strokes = held.session.strokes
-            Log.i(MainActivity.LOG_TAG, "loaded ${strokes.size} strokes for ${pdf.name}")
+            AppLog.i("loaded ${strokes.size} strokes for ${pdf.name}")
             return DocumentInk(pdf, held, strokes.map { DrawnStroke(it, it.toMesh()) })
         }
     }

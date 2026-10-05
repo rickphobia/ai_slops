@@ -20,5 +20,5 @@
 - [x] A damaged Ink file opens the Document read-only with a message, and is never overwritten (tested)
 - [x] PDF page count different from the one recorded shows a warning (tested)
 - [x] Temporary files use a name pattern the sync app can be told to skip; written in the README
-- [x] Saves and failures logged (ticket 07 hasn't merged, so to Logcat like the rest of the app)
+- [x] Saves and failures logged (through ticket 07's `AppLog`, so they reach the shareable log file)
 - [x] On-tablet check written in the PR: write, force-close within 3 s of the last stroke, reopen: all ink there; the PDF's modified time is unchanged

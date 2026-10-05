@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,8 +25,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
+import com.rickphobia.ricknotes.logging.AppLog
 import kotlin.math.roundToInt
 
 /**
@@ -79,7 +78,7 @@ internal fun PageView(
                         SharpImage(SharpPart(plan.region, part.pageWidth), bitmap.asImageBitmap())
                     } catch (e: PageRenderException) {
                         // The stretched whole page still shows; a blurry page beats a blank one.
-                        Log.e(MainActivity.LOG_TAG, e.message, e)
+                        AppLog.e("drawing a page failed: ${e.message}", e)
                         null
                     }
             }
@@ -129,7 +128,7 @@ private fun wholePage(
             try {
                 PageImage.Drawn(pages.render(index, layout.size, layout.baseWidthPx).asImageBitmap())
             } catch (e: PageRenderException) {
-                Log.e(MainActivity.LOG_TAG, e.message, e)
+                AppLog.e("drawing a page failed: ${e.message}", e)
                 PageImage.Failed
             }
     }

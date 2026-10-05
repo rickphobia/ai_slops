@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,12 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.ink.DocumentInk
+import com.rickphobia.ricknotes.logging.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -60,7 +59,7 @@ fun DocumentScreen(
                 val sizes = pages.open()
                 Opening.Ready(sizes, withContext(Dispatchers.IO) { DocumentInk.open(File(pdf.path), sizes.size) })
             } catch (e: DocumentOpenException) {
-                Log.w(MainActivity.LOG_TAG, e.message, e)
+                AppLog.w("opening a Document failed: ${e.message}", e)
                 Opening.Failed(e)
             }
     }

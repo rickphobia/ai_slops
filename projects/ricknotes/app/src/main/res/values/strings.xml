@@ -12,6 +12,9 @@
   <string name="back">Back</string>
   <string name="study_folder">Study folder</string>
   <string name="change_folder">Change folder</string>
+  <string name="problems">Problems</string>
+  <string name="share_log">Share log</string>
+  <string name="share_log_chooser">Send the RickNotes log</string>
   <string name="listing_pdfs">Looking for PDFs…</string>
   <string name="no_pdfs">No PDFs in this folder yet.</string>
   <string name="opening_document">Opening…</string>

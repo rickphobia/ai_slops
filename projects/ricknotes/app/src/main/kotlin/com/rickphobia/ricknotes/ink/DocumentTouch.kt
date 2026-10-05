@@ -2,14 +2,12 @@ package com.rickphobia.ricknotes.ink
 
 import android.graphics.Matrix
 import android.graphics.Path
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.ink.authoring.InProgressStrokeId
 import androidx.ink.authoring.InProgressStrokesFinishedListener
 import androidx.ink.authoring.InProgressStrokesView
 import androidx.ink.strokes.StrokeInput
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.DefaultPen
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
@@ -22,6 +20,7 @@ import com.rickphobia.ricknotes.core.ink.Tool
 import com.rickphobia.ricknotes.core.ink.pageAt
 import com.rickphobia.ricknotes.core.touch.TouchAction
 import com.rickphobia.ricknotes.core.touch.TouchInterpreter
+import com.rickphobia.ricknotes.logging.AppLog
 import java.util.UUID
 import androidx.ink.strokes.Stroke as InkStroke
 
@@ -112,12 +111,12 @@ internal class DocumentTouch(
     ) {
         navigation.stop()
         if (ink.readOnly) {
-            Log.d(MainActivity.LOG_TAG, "pen down on a read-only Document; no stroke")
+            AppLog.d("pen down on a read-only Document; no stroke")
             return
         }
         val page = pageAt(placements(), ScreenPoint(action.x, action.y))
         if (page == null) {
-            Log.d(MainActivity.LOG_TAG, "pen down outside any page; no stroke")
+            AppLog.d("pen down outside any page; no stroke")
             return
         }
         // Without this Android batches pen samples once per frame, which the pen tip shows as lag.
@@ -146,7 +145,7 @@ internal class DocumentTouch(
                 start == null -> {}
 
                 mesh.inputs.isEmpty() -> {
-                    Log.w(MainActivity.LOG_TAG, "dropped a stroke with no points on page ${start.pageId.value}")
+                    AppLog.w("dropped a stroke with no points on page ${start.pageId.value}")
                 }
 
                 else -> {
