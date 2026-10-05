@@ -8,6 +8,7 @@ from datetime import date, time, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, ClassVar
+from urllib.parse import urlencode
 
 import pytest
 
@@ -87,7 +88,7 @@ def page_url(server: BookingPageServer, **query: str) -> str:
     """The local booking page, with 7 and 8 Oct open unless `query` says otherwise."""
     query = {"open": "20261007,20261008", **query}
     port = server.server_address[1]
-    return f"http://127.0.0.1:{port}/?" + "&".join(f"{key}={value}" for key, value in query.items())
+    return f"http://127.0.0.1:{port}/?{urlencode(query, safe=',')}"
 
 
 def site_for(server: BookingPageServer, screenshots: Path, **query: str) -> PicktimeBrowserSite:
@@ -233,3 +234,14 @@ def test_dry_run_fails_when_something_covers_the_book_button(
     assert isinstance(attempt.outcome, NetworkError)
     assert attempt.outcome.step == "fill form"
     assert submissions == []
+
+
+def test_a_venue_rule_that_says_not_available_stays_rejected(
+    page_server: BookingPageServer, submissions: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    message = "Booking not available: one booking per unit per day"
+    site = site_for(page_server, tmp_path, result="rejected", message=message)
+
+    attempt = book(site, time(20, 0))
+
+    assert attempt.outcome == Rejected(message)

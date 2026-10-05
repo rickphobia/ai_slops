@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 _VIEWPORT: ViewportSize = {"width": 1366, "height": 768}
 _CONFIRMED = "your booking has been confirmed"
 # Picktime's wording for a Slot someone else got first (lower case, matched as a substring).
-_TAKEN_PHRASES = ("no longer available", "not available", "already full")
+# Kept narrow: anything else stays Rejected with Picktime's text, so venue rules show up.
+_TAKEN_PHRASES = ("no longer available", "already full")
 
 
 class _Steps:
@@ -41,11 +42,11 @@ class _Steps:
 
     def __init__(self, day: date, slot: time) -> None:
         self.current = "open page"
-        self._fields = {"date": day.isoformat(), "slot": slot.strftime("%H:%M")}
+        self.log_fields = {"date": day.isoformat(), "slot": slot.strftime("%H:%M")}
 
     def start(self, step: str) -> None:
         self.current = step
-        logger.info("picktime: %s", step, extra={**self._fields, "step": step})
+        logger.info("picktime: %s", step, extra={**self.log_fields, "step": step})
 
 
 class PicktimeBrowserSite:
@@ -59,7 +60,7 @@ class PicktimeBrowserSite:
         screenshot_dir: Path,
         clock: Clock,
     ) -> None:
-        self.page_url = page_url
+        self._page_url = page_url
         self._court_name = court_name
         # The page shows Slot times in the browser's timezone, so run the browser in the venue's.
         self._timezone = timezone
@@ -91,10 +92,10 @@ class PicktimeBrowserSite:
             "picktime attempt finished: %s",
             type(outcome).__name__,
             extra={
-                "date": day.isoformat(),
-                "slot": slot.strftime("%H:%M"),
+                **steps.log_fields,
                 "dry_run": dry_run,
                 "outcome": type(outcome).__name__,
+                "failed_step": outcome.step if isinstance(outcome, NetworkError) else None,
                 # Picktime's own words, as-is: they explain venue rules we didn't know about.
                 "picktime_message": outcome.message if isinstance(outcome, Rejected) else None,
                 "duration_seconds": round(duration.total_seconds(), 2),
@@ -117,7 +118,7 @@ class PicktimeBrowserSite:
         self, page: Page, steps: _Steps, day: date, slot: time, profile: Profile, *, dry_run: bool
     ) -> SlotOutcome:
         steps.start("open page")
-        page.goto(self.page_url, wait_until="domcontentloaded")
+        page.goto(self._page_url, wait_until="domcontentloaded")
 
         steps.start("pick court")
         page.locator(".resource-list li", has_text=self._court_name).first.click()

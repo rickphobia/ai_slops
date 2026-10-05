@@ -4,7 +4,7 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 
 ## Status
 
-`in progress`: walking skeleton, Operator login, the encrypted Profile, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, and lets the Operator log in and out, locally and in Docker. Profile, Booking Requests and booking come in the next tickets (`docs/tickets/`).
+`in progress`: walking skeleton, Operator login, the encrypted Profile, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, lets the Operator log in and save the Profile, and `dry-run` fills the live Picktime form. Booking Requests and booking at Release Time come in the next tickets (`docs/tickets/`).
 
 ## Requirements
 

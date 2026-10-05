@@ -117,7 +117,10 @@ def test_dry_run_fills_the_form_with_the_stored_profile_and_prints_the_screensho
     site = RecordingSite(ReadyToBook())
     stdout = io.StringIO()
 
-    assert dry_run(date(2026, 10, 8), time(20, 0), StoredProfile(PROFILE), site, stdout) == 0
+    assert (
+        dry_run(date(2026, 10, 8), time(20, 0), StoredProfile(PROFILE), site, stdout, io.StringIO())
+        == 0
+    )
 
     assert site.calls == [(date(2026, 10, 8), time(20, 0), PROFILE, True)]
     assert "ReadyToBook" in stdout.getvalue()
@@ -128,7 +131,12 @@ def test_dry_run_reports_any_other_outcome_as_a_failure() -> None:
     stdout = io.StringIO()
 
     exit_code = dry_run(
-        date(2026, 10, 8), time(20, 0), StoredProfile(PROFILE), RecordingSite(NotOpen()), stdout
+        date(2026, 10, 8),
+        time(20, 0),
+        StoredProfile(PROFILE),
+        RecordingSite(NotOpen()),
+        stdout,
+        io.StringIO(),
     )
 
     assert exit_code == 1
@@ -137,12 +145,12 @@ def test_dry_run_reports_any_other_outcome_as_a_failure() -> None:
 
 def test_dry_run_without_a_profile_stops_before_opening_the_page() -> None:
     site = RecordingSite(ReadyToBook())
-    stdout = io.StringIO()
+    stdout, stderr = io.StringIO(), io.StringIO()
 
-    assert dry_run(date(2026, 10, 8), time(20, 0), StoredProfile(None), site, stdout) == 1
+    assert dry_run(date(2026, 10, 8), time(20, 0), StoredProfile(None), site, stdout, stderr) == 1
 
     assert site.calls == []
-    assert "No Profile saved yet" in stdout.getvalue()
+    assert "No Profile saved yet" in stderr.getvalue()
 
 
 def test_dry_run_command_reads_the_profile_from_the_database(
@@ -154,7 +162,7 @@ def test_dry_run_command_reads_the_profile_from_the_database(
 
     assert main(["dry-run", "--date", "2026-10-08", "--slot", "20:00"]) == 1
 
-    assert "No Profile saved yet" in capsys.readouterr().out
+    assert "No Profile saved yet" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(

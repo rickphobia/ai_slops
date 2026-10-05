@@ -49,16 +49,21 @@ def serve(settings: Settings) -> int:
 
 
 def dry_run(
-    day: date, slot: time, profile_store: ProfileStore, site: CourtBookingSite, stdout: TextIO
+    day: date,
+    slot: time,
+    profile_store: ProfileStore,
+    site: CourtBookingSite,
+    stdout: TextIO,
+    stderr: TextIO,
 ) -> int:
     """Fill the live booking form for `slot` on `day` with the stored Profile; never click Book."""
     try:
         profile = profile_store.load()
     except ProfileUnreadable as error:
-        print(f"Can't read the stored Profile: {error}", file=stdout)
+        print(f"Can't read the stored Profile: {error}", file=stderr)
         return 1
     if profile is None:
-        print("No Profile saved yet; save one on the Profile page first.", file=stdout)
+        print("No Profile saved yet; save one on the Profile page first.", file=stderr)
         return 1
     attempt = site.book(day, slot, profile, dry_run=True)
     print(f"Outcome: {attempt.outcome}", file=stdout)
@@ -84,7 +89,7 @@ def run_dry_run(settings: Settings, day: date, slot: time) -> int:
         clock=clock,
     )
     profile_store = SqliteProfileStore(database, settings.profile_key, clock)
-    return dry_run(day, slot, profile_store, site, sys.stdout)
+    return dry_run(day, slot, profile_store, site, sys.stdout, sys.stderr)
 
 
 def _iso_date(value: str) -> date:
