@@ -37,6 +37,7 @@ internal fun InkLayer(
                         ink = ink,
                         placements = { currentPlacements.value() },
                         navigation = DelegatingNavigation { currentNavigation.value },
+                        clockMs = System::currentTimeMillis,
                     )
                 layer.inProgress.addFinishedStrokesListener(touch)
                 layer.onTouch = touch::onTouch

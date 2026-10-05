@@ -1,6 +1,7 @@
 package com.rickphobia.ricknotes.ink
 
 import android.graphics.Matrix
+import android.graphics.Path
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -14,6 +15,7 @@ import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.DefaultPen
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
+import com.rickphobia.ricknotes.core.ink.PagePoint
 import com.rickphobia.ricknotes.core.ink.ScreenPoint
 import com.rickphobia.ricknotes.core.ink.Stroke
 import com.rickphobia.ricknotes.core.ink.StrokeId
@@ -51,6 +53,7 @@ internal class DocumentTouch(
     private val ink: DocumentInk,
     private val placements: () -> List<PagePlacement>,
     private val navigation: TouchNavigation,
+    private val clockMs: () -> Long,
 ) : InProgressStrokesFinishedListener {
     private val interpreter = TouchInterpreter()
     private val penBrush =
@@ -126,9 +129,12 @@ internal class DocumentTouch(
         }
         // Without this Android batches pen samples once per frame, which the pen tip shows as lag.
         view.requestUnbufferedDispatch(event)
+        // A finished stroke is cut off at its page's edge, so the wet one is too: no tail that
+        // vanishes on pen up.
+        inProgress.maskPath = outside(page, view.width.toFloat(), view.height.toFloat())
         val id = inProgress.startStroke(event, action.pointerId, penBrush, page.screenToPage())
         drawing[action.pointerId] = id
-        started[id] = StartedStroke(page.pageId, System.currentTimeMillis())
+        started[id] = StartedStroke(page.pageId, clockMs())
     }
 
     private fun cancel(
@@ -155,7 +161,8 @@ internal class DocumentTouch(
                 }
             }
         }
-        // In the same frame as the page starts drawing them, so they never flicker or show twice.
+        // Jetpack Ink asks for this in the same UI-thread turn as the page starts drawing them,
+        // so a stroke is neither missing nor drawn twice for a frame.
         inProgress.removeFinishedStrokes(strokes.keys)
     }
 
@@ -176,6 +183,21 @@ internal class DocumentTouch(
             drawnAtMs = start.drawnAtMs,
             points = points,
         )
+    }
+}
+
+/** Everything on a [width] x [height] screen except the page: where wet ink is hidden. */
+private fun outside(
+    page: PagePlacement,
+    width: Float,
+    height: Float,
+): Path {
+    val corner = page.toScreen(PagePoint(0f, 0f))
+    val far = page.toScreen(PagePoint(page.widthPt, page.heightPt))
+    return Path().apply {
+        fillType = Path.FillType.EVEN_ODD
+        addRect(0f, 0f, width, height, Path.Direction.CW)
+        addRect(corner.x, corner.y, far.x, far.y, Path.Direction.CW)
     }
 }
 

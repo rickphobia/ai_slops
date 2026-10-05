@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
 import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.PageId
+import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.ink.DocumentInk
 import com.rickphobia.ricknotes.ink.InkLayer
 import com.rickphobia.ricknotes.ink.PageInk
@@ -135,7 +136,14 @@ private class PageListView(
     val listState: LazyListState,
     val screen: ViewportSize,
     val gapPx: Int,
-)
+) {
+    /** Where each page on screen is right now. */
+    fun placements(pageSizes: List<PageSize>): List<PagePlacement> {
+        val view = zoom.value
+        val pageWidth = zoomedListWidth(screen, view) - gapPx * 2
+        return pagePlacements(visiblePages(listState.layoutInfo), pageSizes, pageWidth, gapPx, view)
+    }
+}
 
 /** The ink layer over the pages: it takes every touch, writes with the pen and moves [list] with fingers. */
 @Composable
@@ -152,11 +160,7 @@ private fun TouchLayer(
         }
     InkLayer(
         ink = ink,
-        placements = {
-            val view = list.zoom.value
-            val pageWidth = zoomedListWidth(list.screen, view) - list.gapPx * 2
-            pagePlacements(visiblePages(list.listState.layoutInfo), pageSizes, pageWidth, list.gapPx, view)
-        },
+        placements = { list.placements(pageSizes) },
         navigation = navigation,
     )
 }
