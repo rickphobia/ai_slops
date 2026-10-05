@@ -50,7 +50,8 @@ other_containers() {
 # remove the old one. If it never gets healthy, remove it and leave the old one running.
 swap_to() {
   local tag="$1"
-  local name="court-booker-$tag-$(date +%s)"
+  local name
+  name="court-booker-$tag-$(date +%s)"
 
   # Started on the default bridge (internet access, no alias), so nginx keeps reaching the old
   # container until the new one is healthy. The host user owns the data folder, so run as it.
