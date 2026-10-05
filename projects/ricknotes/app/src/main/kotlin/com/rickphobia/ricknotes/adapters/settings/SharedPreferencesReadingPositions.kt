@@ -2,9 +2,8 @@ package com.rickphobia.ricknotes.adapters.settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.core.content.edit
-import com.rickphobia.ricknotes.MainActivity
+import com.rickphobia.ricknotes.logging.AppLog
 import com.rickphobia.ricknotes.viewer.ReadingPosition
 import com.rickphobia.ricknotes.viewer.ReadingPositions
 import java.io.File
@@ -20,7 +19,7 @@ class SharedPreferencesReadingPositions(
         val stored = preferences.getString(documentPath, null) ?: return null
         return ReadingPosition.decode(stored).also {
             if (it == null) {
-                Log.w(MainActivity.LOG_TAG, "ignoring unreadable reading position for ${File(documentPath).name}")
+                AppLog.w("ignoring unreadable reading position for ${File(documentPath).name}")
             }
         }
     }

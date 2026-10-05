@@ -24,6 +24,7 @@ fun SettingsScreen(
     studyFolder: String,
     onChangeFolder: () -> Unit,
     onOpenPenTest: () -> Unit,
+    onShareLog: () -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -37,5 +38,7 @@ fun SettingsScreen(
         Text(text = stringResource(R.string.study_folder), style = MaterialTheme.typography.titleMedium)
         Text(text = studyFolder, style = MaterialTheme.typography.bodyLarge)
         OutlinedButton(onClick = onChangeFolder) { Text(stringResource(R.string.change_folder)) }
+        Text(text = stringResource(R.string.problems), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(onClick = onShareLog) { Text(stringResource(R.string.share_log)) }
     }
 }
