@@ -4,20 +4,20 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** project setup, config, logging, web, entrypoint, docker, CI, README
 
 **Effort:** `medium`
 
-- [ ] Python project managed with `uv`, pinned Python version, committed lock file; `ruff` (lint + format), `mypy --strict` and `pytest` configured
-- [ ] Config module loads every setting the spec lists that this ticket uses from environment variables, validates them, and fails at startup with a message naming the bad or missing variable; `.env.example` lists every variable with dummy values
-- [ ] JSON-lines logger on stdout with a configurable level
-- [ ] FastAPI app served under the `/ai-projects/court-booker/` path prefix, with an unauthenticated `/healthz` that returns OK and no data
-- [ ] Thin entrypoint with a `serve` subcommand
-- [ ] Dockerfile based on a pinned Playwright Python image; the container starts and `/healthz` answers
-- [ ] At least one passing test (config validation) and one through the test client (`/healthz`)
+- [x] Python project managed with `uv`, pinned Python version, committed lock file; `ruff` (lint + format), `mypy --strict` and `pytest` configured
+- [x] Config module loads every setting the spec lists that this ticket uses from environment variables, validates them, and fails at startup with a message naming the bad or missing variable; `.env.example` lists every variable with dummy values
+- [x] JSON-lines logger on stdout with a configurable level
+- [x] FastAPI app served under the `/ai-projects/court-booker/` path prefix, with an unauthenticated `/healthz` that returns OK and no data
+- [x] Thin entrypoint with a `serve` subcommand
+- [x] Dockerfile based on a pinned Playwright Python image; the container starts and `/healthz` answers
+- [x] At least one passing test (config validation) and one through the test client (`/healthz`)
 - [ ] `.github/workflows/court-booker.yml` (`name: court-booker`, `paths:` scoped to the project) runs lint, format check, type check, tests and the Docker build, and is green
-- [ ] `.claude/settings.json` copied from the root
-- [ ] README filled in from the template: install, configure, run, test, Docker, config table, folder layout; status `in progress`
-- [ ] Project added to the index in the root README
+- [x] `.claude/settings.json` copied from the root
+- [x] README filled in from the template: install, configure, run, test, Docker, config table, folder layout; status `in progress`
+- [x] Project added to the index in the root README
