@@ -4,7 +4,7 @@ An Android tablet app for studying PDFs with a pen: it writes ink beside each PD
 
 ## Status
 
-`in progress`: tickets 01-04 and 06. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: zoom, jump to page and resume (ticket 05).
+`in progress`: tickets 01-04, 06 and 07. On first launch the app asks for "All files access", then for the Study folder, and lists every PDF in it; Settings has "Change folder" and "Share log", and long-pressing its title opens a hidden pen test screen. Tapping a PDF opens it as a Document that scrolls continuously from page to page; a damaged or password-protected PDF shows a message instead. Every merge to `main` publishes a signed APK for Obtainium, and every green pull request a signed Preview app. Next: zoom, jump to page and resume (ticket 05).
 
 ## Requirements
 
@@ -163,6 +163,8 @@ Two Gradle modules:
 
 A Document is drawn by `viewer/PdfPages`, the `PdfRenderer` adapter. `PdfRenderer` isn't safe to share between threads, so each open Document gets its own render thread and every renderer call runs there. The PDF is opened with `MODE_READ_ONLY` and nothing writes to it. Drawn pages are kept in an `LruCache` limited to a quarter of the app's heap limit; a page that scrolls away before its turn on the render thread is never drawn. `viewer/DocumentScreen` lays the pages out in a `LazyColumn`, each box sized to its page's shape before the page arrives, so the list never jumps. A PDF that can't be opened raises `DocumentOpenException` (`Missing`, `PasswordProtected` or `Damaged`), and the screen shows its message, which names the file and the reason.
 
+Logging goes through `logging/AppLog`, which writes every line to logcat and to a rolling file in the app's private storage (`files/logs/`): `logging/RollingLogFile` moves `ricknotes.log` to `ricknotes.1.log` when it would pass 1 MB, so the log never takes more than 2 MB. "Share log" in Settings copies both into one file in the cache and sends it through the Android share menu with a `FileProvider`. The file leaves the tablet, so it holds file names, timings and errors only: never stroke data, page images or clipboard text (the pen test screen logs to logcat only for that reason).
+
 ## Folder layout
 
 ```
@@ -173,6 +175,7 @@ app/src/main/kotlin/com/rickphobia/ricknotes/
   MainActivity.kt      entrypoint: wiring only
   RickNotesApp.kt      which screen shows
   adapters/settings/   SharedPreferences-backed settings storage
+  logging/             AppLog and the rolling log file behind "Share log"
   files/               PDF listing, picker result to path
   studyfolder/         "All files access" and folder picker screens
   home/                home screen: the PDF list (Compose)

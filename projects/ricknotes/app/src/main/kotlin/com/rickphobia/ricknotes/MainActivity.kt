@@ -5,14 +5,17 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import com.rickphobia.ricknotes.adapters.settings.SharedPreferencesSettingsSource
 import com.rickphobia.ricknotes.files.TreeDocumentPaths
+import com.rickphobia.ricknotes.logging.AppLog
+import java.io.File
+import java.io.IOException
 
 /** Wires the pieces together; the rules live in `core`. */
 class MainActivity : ComponentActivity() {
@@ -22,7 +25,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(LOG_TAG, "started ${BuildConfig.VERSION_NAME}")
+        AppLog.start(File(filesDir, LOG_DIR))
+        AppLog.i("started ${BuildConfig.VERSION_NAME}")
         val settings = SharedPreferencesSettingsSource.open(this)
 
         enableEdgeToEdge()
@@ -31,8 +35,12 @@ class MainActivity : ComponentActivity() {
                 versionName = BuildConfig.VERSION_NAME,
                 hasAllFilesAccess = hasAllFilesAccess.value,
                 settings = settings,
-                openAllFilesAccessSetting = ::openAllFilesAccessSetting,
-                pickedFolderPath = ::pickedFolderPath,
+                system =
+                    SystemActions(
+                        openAllFilesAccessSetting = ::openAllFilesAccessSetting,
+                        pickedFolderPath = ::pickedFolderPath,
+                        shareLog = ::shareLog,
+                    ),
             )
         }
     }
@@ -40,7 +48,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hasAllFilesAccess.value = Environment.isExternalStorageManager()
-        Log.i(LOG_TAG, "all files access granted: ${hasAllFilesAccess.value}")
+        AppLog.i("all files access granted: ${hasAllFilesAccess.value}")
     }
 
     private fun openAllFilesAccessSetting() {
@@ -53,7 +61,29 @@ class MainActivity : ComponentActivity() {
             primaryStorageRoot = Environment.getExternalStorageDirectory().path,
         )
 
-    companion object {
-        const val LOG_TAG = "RickNotes"
+    /** Copies the log into the shared cache folder and hands it to the Android share menu. */
+    private fun shareLog() {
+        val copy = File(File(cacheDir, SHARED_DIR), "ricknotes-log.txt")
+        try {
+            AppLog.exportTo(copy)
+        } catch (e: IOException) {
+            AppLog.e("copying the log for sharing failed", e)
+            return
+        }
+        AppLog.i("sharing the log (${copy.length()} bytes)")
+        val uri = FileProvider.getUriForFile(this, "$packageName.files", copy)
+        val send =
+            Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        startActivity(Intent.createChooser(send, getString(R.string.share_log_chooser)))
+    }
+
+    private companion object {
+        const val LOG_DIR = "logs"
+
+        // Must match res/xml/shared_files.xml.
+        const val SHARED_DIR = "shared"
     }
 }

@@ -1,6 +1,5 @@
 package com.rickphobia.ricknotes.viewer
 
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,9 +31,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.R
 import com.rickphobia.ricknotes.files.PdfEntry
+import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
 
 private val PAGE_GAP = 8.dp
@@ -65,7 +64,7 @@ fun DocumentScreen(
             try {
                 Opening.Ready(pages.open())
             } catch (e: DocumentOpenException) {
-                Log.w(MainActivity.LOG_TAG, e.message, e)
+                AppLog.w("opening a Document failed: ${e.message}", e)
                 Opening.Failed(e)
             }
     }
@@ -132,7 +131,7 @@ private fun Page(
             try {
                 PageImage.Drawn(pages.render(index, size, widthPx).asImageBitmap())
             } catch (e: PageRenderException) {
-                Log.e(MainActivity.LOG_TAG, e.message, e)
+                AppLog.e("drawing a page failed: ${e.message}", e)
                 PageImage.Failed
             }
     }
