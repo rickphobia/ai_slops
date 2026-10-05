@@ -15,6 +15,7 @@ coreKtx = "1.19.1"
 lifecycle = "2.11.0"
 ink = "1.0.0"
 junit = "4.13.2"
+kotlinxSerialization = "1.11.0"
 ktlint = "1.8.0"
 ktlintGradle = "14.2.0"
 detekt = "1.23.8"
@@ -23,6 +24,7 @@ detekt = "1.23.8"
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -32,11 +34,14 @@ androidx-ink-authoring = { module = "androidx.ink:ink-authoring", version.ref = 
 androidx-ink-brush = { module = "androidx.ink:ink-brush", version.ref = "ink" }
 androidx-ink-strokes = { module = "androidx.ink:ink-strokes", version.ref = "ink" }
 androidx-ink-rendering = { module = "androidx.ink:ink-rendering", version.ref = "ink" }
+# JSON for Ink files in core: pure Kotlin, so the JVM tests read the same files the tablet writes.
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

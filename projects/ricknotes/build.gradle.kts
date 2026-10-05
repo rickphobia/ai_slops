@@ -3,6 +3,7 @@ plugins {
     // Declaring the Kotlin plugin here also sets the Kotlin version AGP's built-in Kotlin uses in `app`.
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     // Applied here too so the root build scripts are checked.
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt) apply false

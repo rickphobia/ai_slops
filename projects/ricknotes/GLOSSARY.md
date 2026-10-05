@@ -20,6 +20,10 @@ _Avoid_: canvas, board, blank PDF
 The file beside a Document that holds everything drawn or pasted on it: strokes and placed snips.
 _Avoid_: annotations, overlay, notes file
 
+**Document session**:
+The app's hold on one Document's ink while it is open: it loads the Ink file, keeps the strokes, and saves them back. One per Document, even when it is open in two Tabs.
+_Avoid_: editor, controller
+
 **Version**:
 One earlier copy of an Ink file, kept so it can be restored. One is taken when a Document is opened and at most every 15 minutes of writing after that.
 _Avoid_: backup, snapshot

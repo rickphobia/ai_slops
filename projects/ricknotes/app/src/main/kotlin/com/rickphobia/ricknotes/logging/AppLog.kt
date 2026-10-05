@@ -21,6 +21,21 @@ object AppLog {
 
     fun start(dir: File) {
         file = RollingLogFile(dir, MAX_FILE_BYTES)
+        recordCrashes()
+    }
+
+    // Once per process: the activity may be created again, and a second recorder would log twice.
+    @Synchronized
+    private fun recordCrashes() {
+        val current = Thread.getDefaultUncaughtExceptionHandler()
+        if (current is CrashRecorder) return
+        Thread.setDefaultUncaughtExceptionHandler(
+            CrashRecorder({ report ->
+                Log.println(Log.ERROR, TAG, report)
+                // Each append closes the file, so the report is on disk before the app dies.
+                file?.append("${Instant.now()} E $report")
+            }, current),
+        )
     }
 
     fun d(message: String) = write(Log.DEBUG, "D", message, null)
