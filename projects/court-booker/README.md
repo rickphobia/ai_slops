@@ -4,12 +4,13 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 
 ## Status
 
-`in progress`: walking skeleton plus Operator login. The app starts, validates its settings, logs JSON, answers `/healthz`, and lets the Operator log in and out, locally and in Docker. Profile, Booking Requests and booking come in the next tickets (`docs/tickets/`).
+`in progress`: walking skeleton, Operator login, the encrypted Profile, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, and lets the Operator log in and out, locally and in Docker. Profile, Booking Requests and booking come in the next tickets (`docs/tickets/`).
 
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/) 0.9 or later. It installs the pinned Python (3.12, see `.python-version`) by itself.
 - Docker, for the image the server runs.
+- Headless Chromium for the browser tests and `dry-run`: `uv run playwright install --with-deps --only-shell chromium` once (the Docker image already has it).
 - No accounts or API keys yet; the only secrets are the two you make in Setup.
 
 ## Setup
@@ -17,6 +18,7 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 ```bash
 cd projects/court-booker
 uv sync                  # creates .venv with the locked dependencies
+uv run playwright install --with-deps --only-shell chromium   # the browser Playwright drives
 cp .env.example .env     # then fill in the three secrets:
 uv run court-booker hash-password   # asks for the Operator password twice, prints its hash
 openssl rand -hex 32                # a session secret
@@ -40,7 +42,19 @@ Then open <http://127.0.0.1:8000/ai-projects/court-booker/> and log in. Use the 
 uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 ```
 
-CI (`.github/workflows/court-booker.yml`) runs the same commands, `shellcheck` on `scripts/` and `deploy/`, and the Docker smoke test below.
+The browser adapter's tests (`tests/adapters/picktime_browser/`) drive real headless Chromium against a local copy of the booking page (`booking_page.html`), never the live site; they take about 30 seconds.
+
+CI (`.github/workflows/court-booker.yml`) installs Chromium, runs the same commands, `shellcheck` on `scripts/` and `deploy/`, and the Docker smoke test below.
+
+## Dry run (touches the live Picktime page)
+
+```bash
+uv run --env-file .env court-booker dry-run --date 2026-10-08 --slot 20:00
+```
+
+It reads the stored Profile, opens the **real** Picktime page in headless Chromium, picks the Court, the date and the Slot, fills in the form and stops before clicking Book. It makes a trial click on Book, which checks the button could be clicked and clicks nothing. It prints the outcome (`ReadyToBook()` when everything worked; `Taken()`, `NotOpen()` or `NetworkError(step=..., detail=...)` otherwise) and the screenshot's path. The exit code is 0 only for `ReadyToBook`.
+
+**It loads the live page, so use it sparingly:** before the first real booking and after any Picktime change. It never submits, so it books nothing. Use a date that's open (today up to the Booking Window) and a free Slot. The screenshot shows the Profile, so don't share it. On the server, run it inside the running container: `docker exec court-booker-<tag>-<n> court-booker dry-run --date ... --slot ...`.
 
 ## Docker
 
@@ -73,6 +87,11 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_SECURE_COOKIES` | no | `true` | Send cookies over https only. Set `false` only for local http |
 | `COURT_BOOKER_LOGIN_MAX_FAILURES` | no | `5` | Wrong passwords that trigger the lockout |
 | `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES` | no | `15` | The window failures are counted in, and how long the lock lasts; see "How it works" |
+| `COURT_BOOKER_PICKTIME_URL` | no | the 1120 Park Avenue booking page | The public Picktime booking page (http or https) |
+| `COURT_BOOKER_COURT_NAME` | no | `Badminton Hall 1` | The Court as that page lists it (matched as part of the entry's text) |
+| `COURT_BOOKER_VENUE_TIMEZONE` | no | `Asia/Kuala_Lumpur` | IANA timezone the browser runs in; the page shows Slot times in the browser's timezone |
+| `COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS` | no | `30` | How long one step on the page may take before the attempt is a network error |
+| `COURT_BOOKER_SCREENSHOT_DIR` | no | `data/screenshots` (`/app/data/screenshots` in the image) | Where each attempt's screenshot is saved; created if missing |
 
 ## Deploy
 
@@ -156,8 +175,9 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 - **CSRF:** every page gives the browser a random nonce cookie and puts an HMAC of it in each form. An app-wide dependency rejects any POST whose token doesn't match with `403`.
 - **Lockout:** each wrong password is stored in the `login_failures` table. When a wrong password makes `COURT_BOOKER_LOGIN_MAX_FAILURES` within `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, every login is refused for the next `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES`, the right password included. Refused attempts aren't counted, so nobody can stretch a lock; a successful login clears the count. It survives a restart because it's in the database. The count is shared, not per visitor: there is one Operator, so a stranger guessing can lock the Operator out too, for one lockout at a time.
 - **Profile** (`profile/`, `adapters/sqlite/profile_store.py`, `web/profile_page.py`): the `/profile` page shows and saves friend B's first name, email, unit number and mobile. `parse_profile` checks every field (all required, an email shape, mobile digits only) and the page shows a message under each bad one. The Profile is stored as one row holding a Fernet token of its JSON, encrypted with `COURT_BOOKER_PROFILE_KEY` (decision 0003); the key is never in the database. Logs name the fields that failed, never their values.
+- **Picktime** (`court_booking_site.py`, `adapters/picktime_browser/`): `CourtBookingSite.book(date, slot, profile, dry_run=...)` books one Slot and returns a `SlotAttempt`: the outcome (`Booked`, `Taken`, `NotOpen`, `NetworkError` with the step, `Rejected` with Picktime's text, or `ReadyToBook` for a dry run), the screenshot path and the duration. The Playwright adapter starts a fresh headless Chromium for each attempt, with a normal desktop Chrome user agent and the venue's timezone. It opens the page, picks the Court, then the date (missing or greyed out means `NotOpen`), then the Slot. If the date has no Slots it's `NotOpen`; if it has Slots but not this one, `Taken`. It fills the fields by their labels (First Name, Email Id, Unit Number, Mobile), clicks Book, and reads the confirmation (`Booked`) or Picktime's "Oops!" dialog (`Taken` when it says the Slot is no longer available, otherwise `Rejected`). Any Playwright error or timeout is a `NetworkError` naming the step it happened in. The selectors come from the live page as read on 2026-10-06; the error texts after Book are guesses until a real booking fails.
 
-The full design (scheduler, Picktime browser adapter) is in `docs/spec.md`.
+The full design (scheduler) is in `docs/spec.md`.
 
 ## Folder layout
 
@@ -166,9 +186,11 @@ src/court_booker/
   config.py          # settings from env vars, validated at startup
   json_logging.py    # JSON-lines log format on stdout
   clock.py           # the current time, faked in tests
-  cli.py             # entrypoint: `court-booker serve` and `hash-password`
+  court_booking_site.py  # the interface for booking one Slot, and its outcomes
+  cli.py             # entrypoint: `court-booker serve`, `hash-password` and `dry-run`
   auth/              # password hashes, session cookies and CSRF tokens, login lockout
   profile/           # the Profile value and its validation rules
+  adapters/picktime_browser/  # books a Slot through the real Picktime page (Playwright)
   adapters/sqlite/   # the database file, migrations, stored login failures, encrypted Profile
   web/app.py         # FastAPI app wiring and /healthz
   web/access.py      # session and CSRF checks, page rendering
@@ -195,6 +217,9 @@ docs/                # spec, tickets, decisions
 - Locked out: wait the lockout minutes, or, on the server, clear it with `sqlite3 <database file> 'DELETE FROM login_failures'`.
 - The Profile page fails with `ProfileUnreadable` in the logs: `COURT_BOOKER_PROFILE_KEY` isn't the key the Profile was saved with. Restore the old key, or delete the row (`sqlite3 <database file> 'DELETE FROM profile'`) and enter the Profile again.
 - A form answers `403 The form expired`: its CSRF token no longer matches the browser's cookie (for example after cookies were cleared). Reload the page and submit again.
+- Picktime attempts log one line per step (`picktime: open page`, `pick court`, `pick date`, `pick slot`, `fill form`, `submit`, `read result`, each with `date`, `slot` and `step`), then `picktime attempt finished` with the outcome, duration and screenshot path. Profile values are never logged. A failure logs `picktime step failed: <step>: <Playwright's message>`; open the screenshot to see what the page showed.
+- Every attempt ends in `NetworkError` at `pick court`, `pick date` or `fill form`: Picktime has probably changed its page. Run `dry-run`, look at the screenshot, and compare the page with the selectors in `adapters/picktime_browser/picktime_site.py`.
+- `Executable doesn't exist` from Playwright: run `uv run playwright install --only-shell chromium` (locally) or rebuild the image.
 
 ## Decisions
 
