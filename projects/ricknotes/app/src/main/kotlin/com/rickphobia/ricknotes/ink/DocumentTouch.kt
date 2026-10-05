@@ -26,6 +26,10 @@ import com.rickphobia.ricknotes.logging.AppLog
 import java.util.UUID
 import androidx.ink.strokes.Stroke as InkStroke
 
+// How long a finished stroke may stay in the wet layer waiting for its page to draw it. Long enough
+// for a slow frame, short enough that a stroke whose page scrolled away doesn't linger on screen.
+private const val HANDOFF_TIMEOUT_MS = 250L
+
 // The smallest detail a stroke's outline keeps, in PDF points. A page is drawn 4 to 20 px per point
 // (1x to 5x), so this is under half a pixel even at 5x.
 private const val EPSILON_PT = 0.02f
@@ -66,6 +70,7 @@ internal class DocumentTouch(
     // Strokes the pen is drawing, by pointer, and what each will need once Ink hands it back.
     private val drawing = mutableMapOf<Int, InProgressStrokeId>()
     private val started = mutableMapOf<InProgressStrokeId, StartedStroke>()
+    private val handoff = WetInkHandoff<InProgressStrokeId>(inProgress::removeFinishedStrokes)
 
     private data class StartedStroke(
         val pageId: PageId,
@@ -148,21 +153,25 @@ internal class DocumentTouch(
     override fun onStrokesFinished(strokes: Map<InProgressStrokeId, InkStroke>) {
         for ((id, mesh) in strokes) {
             val start = started.remove(id)
-            when {
-                start == null -> {}
-
-                mesh.inputs.isEmpty() -> {
-                    AppLog.w("dropped a stroke with no points on page ${start.pageId.value}")
-                }
-
-                else -> {
-                    ink.add(DrawnStroke(mesh.toStroke(start), mesh))
-                }
+            if (start != null && !mesh.inputs.isEmpty()) {
+                handOver(id, mesh, start)
+            } else {
+                start?.let { AppLog.w("dropped a stroke with no points on page ${it.pageId.value}") }
+                inProgress.removeFinishedStrokes(setOf(id))
             }
         }
-        // Jetpack Ink asks for this in the same UI-thread turn as the page starts drawing them,
-        // so a stroke is neither missing nor drawn twice for a frame.
-        inProgress.removeFinishedStrokes(strokes.keys)
+    }
+
+    /** Gives a finished stroke to its page, and takes it out of the wet layer once the page has drawn it. */
+    private fun handOver(
+        id: InProgressStrokeId,
+        mesh: InkStroke,
+        start: StartedStroke,
+    ) {
+        // Posted, so it runs after the page's draw and the wet copy is gone from the next frame.
+        ink.add(DrawnStroke(mesh.toStroke(start), mesh) { inProgress.post { handoff.drawnByPage(id) } })
+        handoff.handedOff(id)
+        inProgress.postDelayed({ handoff.timedOut(id) }, HANDOFF_TIMEOUT_MS)
     }
 
     private fun InkStroke.toStroke(start: StartedStroke): Stroke {
