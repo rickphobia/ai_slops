@@ -17,7 +17,7 @@
 - [x] Thin entrypoint with a `serve` subcommand
 - [x] Dockerfile based on a pinned Playwright Python image; the container starts and `/healthz` answers
 - [x] At least one passing test (config validation) and one through the test client (`/healthz`)
-- [ ] `.github/workflows/court-booker.yml` (`name: court-booker`, `paths:` scoped to the project) runs lint, format check, type check, tests and the Docker build, and is green
+- [x] `.github/workflows/court-booker.yml` (`name: court-booker`, `paths:` scoped to the project) runs lint, format check, type check, tests and the Docker build, and is green
 - [x] `.claude/settings.json` copied from the root
 - [x] README filled in from the template: install, configure, run, test, Docker, config table, folder layout; status `in progress`
 - [x] Project added to the index in the root README
