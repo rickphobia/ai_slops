@@ -102,18 +102,20 @@ internal class DocumentInk private constructor(
 /**
  * Rebuilds the mesh of a saved Stroke from its points, as Jetpack Ink drew it when it was wet, or
  * null if Ink rejects them: one stroke that can't be drawn must not keep the Document from opening.
- * It stays in the Ink file either way.
+ * It stays in the Ink file either way. Ink's native code reports a rejected input as an
+ * IllegalArgumentException, IllegalStateException or plain RuntimeException depending on the check,
+ * so all of them are caught.
  */
-private fun Stroke.toMesh(): InkStroke? {
-    val inputs = MutableStrokeInputBatch()
+@Suppress("TooGenericExceptionCaught")
+private fun Stroke.toMesh(): InkStroke? =
     try {
+        val inputs = MutableStrokeInputBatch()
         addTo(inputs)
-    } catch (e: IllegalArgumentException) {
+        InkStroke(penBrush(colourArgb, widthPt), inputs)
+    } catch (e: RuntimeException) {
         AppLog.e("can't draw saved stroke ${id.value} on page ${pageId.value}; it is kept but not shown", e)
-        return null
+        null
     }
-    return InkStroke(penBrush(colourArgb, widthPt), inputs)
-}
 
 private fun Stroke.addTo(inputs: MutableStrokeInputBatch) {
     for (point in inkInputPoints(points)) {
