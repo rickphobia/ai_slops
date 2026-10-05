@@ -31,6 +31,11 @@ class BookingRequest:
     run_at: datetime
 
 
+def slot_text(slot: time) -> str:
+    """A Slot's name: its start time as HH:MM, as forms, logs and the database use it."""
+    return slot.isoformat("minutes")
+
+
 class BookingRequestError(Exception):
     """A Booking Request rule was broken; the message is written for the Operator."""
 
@@ -136,7 +141,7 @@ class BookingRequests:
             extra={
                 "request_id": request_id,
                 "play_date": play_date.isoformat(),
-                "slots": [slot.isoformat("minutes") for slot in slots],
+                "slots": [slot_text(slot) for slot in slots],
                 "run_at": run_at.isoformat(),
             },
         )
@@ -145,6 +150,8 @@ class BookingRequests:
     def edit_slots(self, request_id: int, slot_texts: Sequence[str]) -> BookingRequest:
         """Replace the Slots of a Waiting request. Its date and run time stay as they were."""
         request = self.get(request_id)
+        if request.play_date < self.today():
+            raise DateInPast(request.play_date)
         slots = self._parse_slots(slot_texts)
         if not self._repository.replace_slots_if_waiting(request_id, slots):
             raise NotWaiting(self.get(request_id))
@@ -153,7 +160,7 @@ class BookingRequests:
             extra={
                 "request_id": request_id,
                 "play_date": request.play_date.isoformat(),
-                "slots": [slot.isoformat("minutes") for slot in slots],
+                "slots": [slot_text(slot) for slot in slots],
             },
         )
         return self.get(request_id)
@@ -193,7 +200,7 @@ class BookingRequests:
     def _parse_slots(self, slot_texts: Sequence[str]) -> tuple[time, ...]:
         if not slot_texts:
             raise NoSlots
-        by_text = {slot.isoformat("minutes"): slot for slot in self.slots}
+        by_text = {slot_text(slot): slot for slot in self.slots}
         chosen: set[time] = set()
         for text in slot_texts:
             if text not in by_text:

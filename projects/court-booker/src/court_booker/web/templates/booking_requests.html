@@ -20,7 +20,7 @@
           <p>Slots: {{ row.slots }}</p>
           <p>Status: <strong>{{ row.status }}</strong></p>
           {% if row.waiting %}
-            <p>Runs at {{ row.runs_at }} (Malaysia time)</p>
+            <p>Runs at {{ row.runs_at }} ({{ timezone }} time)</p>
             <div class="actions">
               <a href="{{ request.url_for('edit_booking_request', request_id=row.id).path }}">Edit</a>
               <form method="post" action="{{ request.url_for('cancel_booking_request', request_id=row.id).path }}">

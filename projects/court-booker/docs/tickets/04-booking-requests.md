@@ -13,7 +13,7 @@
 - [x] `schedule` has pure functions for Release Time (midnight venue time, Booking Window days before the date) and the run time (Release Time plus a jitter from an injected random source within the configured window, or now plus a short delay when the date is already open); unit tests cover month and year ends, already-open dates and dates far ahead
 - [x] The run time is chosen once at creation and stored; editing Slots keeps it
 - [x] Rules enforced with typed errors and clear messages: a Profile must exist, the date can't be in the past, at least one Slot, only configured Slots, one Booking Request per date
-- [x] New and edit pages: date picker plus one checkbox per Slot; mobile-friendly
+- [x] New and edit pages: date picker (new only; the date of an existing request is fixed because its run time was chosen for it) plus one checkbox per Slot; mobile-friendly
 - [x] List page (home): upcoming first, each showing date, Slots, status (Waiting / Cancelled) and run time in venue time
 - [x] Cancel works only while Waiting
 - [x] Tests through the test client with a fake clock and fixed random source cover every rule and the shown run time

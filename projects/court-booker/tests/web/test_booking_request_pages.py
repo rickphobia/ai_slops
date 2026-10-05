@@ -107,7 +107,7 @@ def test_a_future_date_runs_between_0001_and_0002_after_its_release_time(
     # Released at midnight on the 7th; the fixed random source picks the middle of 60 to 120 s.
     assert request_cards(client) == [
         "Fri 9 Oct 2026 Slots: 18:00, 20:00 Status: Waiting "
-        "Runs at Wed 7 Oct 2026, 00:01:30 (Malaysia time) Edit Cancel"
+        "Runs at Wed 7 Oct 2026, 00:01:30 (Asia/Kuala_Lumpur time) Edit Cancel"
     ]
 
 
@@ -141,7 +141,7 @@ def test_editing_slots_keeps_the_run_time(client: TestClient, clock: FakeClock) 
     assert response.status_code == 303
     assert request_cards(client) == [
         "Fri 9 Oct 2026 Slots: 10:00, 12:00 Status: Waiting "
-        "Runs at Wed 7 Oct 2026, 00:01:30 (Malaysia time) Edit Cancel"
+        "Runs at Wed 7 Oct 2026, 00:01:30 (Asia/Kuala_Lumpur time) Edit Cancel"
     ]
 
 

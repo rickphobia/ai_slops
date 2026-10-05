@@ -6,18 +6,18 @@ from datetime import date, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 from starlette.responses import Response
 
 from court_booker.booking_requests.booking_requests import (
     BookingRequest,
     BookingRequestError,
-    BookingRequestNotFound,
     BookingRequests,
     BookingRequestStatus,
     NotWaiting,
     ProfileMissing,
+    slot_text,
 )
 from court_booker.web.access import access_of, log_context, path_for
 
@@ -58,20 +58,19 @@ def create(request: Request, slots: SlotsField, play_date: str = Form("")) -> Re
 
 @router.get("/requests/{request_id}/edit", name="edit_booking_request")
 def edit_page(request: Request, request_id: int) -> Response:
-    booking_request = _get(request, request_id)
+    booking_request = _booking_requests(request).get(request_id)
     if booking_request.status is not BookingRequestStatus.WAITING:
         return _render_list(request, error=NotWaiting(booking_request), status_code=409)
     return _render_form(
         request,
         editing=booking_request,
         date_text=booking_request.play_date.isoformat(),
-        slot_texts=[slot.isoformat("minutes") for slot in booking_request.slots],
+        slot_texts=[slot_text(slot) for slot in booking_request.slots],
     )
 
 
 @router.post("/requests/{request_id}/edit", name="update_booking_request")
 def update(request: Request, request_id: int, slots: SlotsField) -> Response:
-    booking_request = _get(request, request_id)
     try:
         _booking_requests(request).edit_slots(request_id, slots)
     except NotWaiting as error:
@@ -79,6 +78,7 @@ def update(request: Request, request_id: int, slots: SlotsField) -> Response:
         return _render_list(request, error=error, status_code=409)
     except BookingRequestError as error:
         _log_refusal(request, "booking request not changed", error)
+        booking_request = _booking_requests(request).get(request_id)
         return _render_form(
             request,
             editing=booking_request,
@@ -91,20 +91,12 @@ def update(request: Request, request_id: int, slots: SlotsField) -> Response:
 
 @router.post("/requests/{request_id}/cancel", name="cancel_booking_request")
 def cancel(request: Request, request_id: int) -> Response:
-    _get(request, request_id)
     try:
         _booking_requests(request).cancel(request_id)
     except NotWaiting as error:
         _log_refusal(request, "booking request not cancelled", error)
         return _render_list(request, error=error, status_code=409)
     return RedirectResponse(path_for(request, "home"), status_code=303)
-
-
-def _get(request: Request, request_id: int) -> BookingRequest:
-    try:
-        return _booking_requests(request).get(request_id)
-    except BookingRequestNotFound as error:
-        raise HTTPException(status_code=404, detail=str(error)) from None
 
 
 def _log_refusal(request: Request, message: str, error: BookingRequestError) -> None:
@@ -120,7 +112,7 @@ def _render_list(
         {
             "id": item.id,
             "date": _day_text(item.play_date),
-            "slots": ", ".join(slot.isoformat("minutes") for slot in item.slots),
+            "slots": ", ".join(slot_text(slot) for slot in item.slots),
             "status": item.status.value,
             "waiting": item.status is BookingRequestStatus.WAITING,
             "runs_at": _moment_text(item.run_at, venue_timezone),
@@ -130,7 +122,7 @@ def _render_list(
     return access_of(request).render(
         request,
         "booking_requests.html",
-        {"rows": rows, "error": str(error) if error else None},
+        {"rows": rows, "timezone": venue_timezone.key, "error": str(error) if error else None},
         status_code=status_code,
     )
 
@@ -160,7 +152,7 @@ def _render_form(
             "min_date": booking_requests.today().isoformat(),
             "slots": [
                 {"value": text, "checked": text in slot_texts}
-                for text in (slot.isoformat("minutes") for slot in booking_requests.slots)
+                for text in (slot_text(slot) for slot in booking_requests.slots)
             ],
             "error": str(error) if error else None,
             "needs_profile": isinstance(error, ProfileMissing),

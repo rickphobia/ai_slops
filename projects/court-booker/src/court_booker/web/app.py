@@ -1,12 +1,13 @@
 """Builds the FastAPI app from validated Settings and the adapters it uses."""
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from starlette.responses import Response
 
 from court_booker.auth.login import LoginFailures, OperatorLogin
 from court_booker.auth.session_cookies import CsrfTokens, SessionSigner
 from court_booker.booking_requests.booking_requests import (
+    BookingRequestNotFound,
     BookingRequestRepository,
     BookingRequests,
 )
@@ -70,6 +71,10 @@ def create_app(
     @app.exception_handler(LoginRequired)
     def send_to_login(request: Request, _: LoginRequired) -> Response:
         return RedirectResponse(path_for(request, "login"), status_code=303)
+
+    @app.exception_handler(BookingRequestNotFound)
+    def not_found(_: Request, error: BookingRequestNotFound) -> Response:
+        return PlainTextResponse(str(error), status_code=404)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

@@ -9,6 +9,7 @@ from court_booker.booking_requests.booking_requests import (
     BookingRequest,
     BookingRequestStatus,
     DateTaken,
+    slot_text,
 )
 
 _WAITING = BookingRequestStatus.WAITING.value
@@ -75,7 +76,7 @@ class SqliteBookingRequestRepository:
 def _insert_slots(connection: sqlite3.Connection, request_id: int, slots: Sequence[time]) -> None:
     connection.executemany(
         "INSERT INTO slot_attempts (request_id, slot, status) VALUES (?, ?, ?)",
-        [(request_id, slot.isoformat("minutes"), _WAITING) for slot in slots],
+        [(request_id, slot_text(slot), _WAITING) for slot in slots],
     )
 
 
