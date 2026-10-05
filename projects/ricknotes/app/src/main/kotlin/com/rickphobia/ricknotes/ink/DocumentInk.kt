@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -20,9 +19,6 @@ import androidx.ink.strokes.MutableStrokeInputBatch
 import com.rickphobia.ricknotes.MainActivity
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.Stroke
-import com.rickphobia.ricknotes.core.session.DocumentSession
-import com.rickphobia.ricknotes.core.session.InkSaveFailed
-import com.rickphobia.ricknotes.core.session.SaveListener
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
 import java.io.File
@@ -46,73 +42,45 @@ internal class DrawnStroke(
 
 /**
  * The ink of one open Document: its strokes for drawing, kept in `core`'s Document session, which
- * saves them to the Ink file beside the PDF on [saveThread]. [saveStatus] follows the session, so
- * the screen can show "Not saved".
+ * saves them to the Ink file beside [pdf]. [saveStatus] follows the session, so the screen can show
+ * "Not saved".
  */
 internal class DocumentInk private constructor(
-    private val session: DocumentSession,
-    private val saveThread: SaveThread,
+    private val pdf: File,
+    private val held: HeldSession,
     loaded: List<DrawnStroke>,
-    private val status: SaveStatusState,
 ) {
+    private val session = held.session
     private val strokes = mutableStateListOf<DrawnStroke>().apply { addAll(loaded) }
 
     val readOnly: Boolean get() = session.readOnly
     val warnings: List<SessionWarning> get() = session.warnings
-    val saveStatus: SaveStatus get() = status.current.value
+    val saveStatus: SaveStatus get() = held.status.current.value
 
     fun add(stroke: DrawnStroke) {
-        strokes.add(stroke)
         session.addStroke(stroke.stroke)
+        strokes.add(stroke)
     }
 
     fun on(pageId: PageId): List<DrawnStroke> = strokes.filter { it.stroke.pageId == pageId }
 
-    /** Saves now, off the main thread: for when the app goes to the background. */
-    fun saveSoon() = saveThread.run(session::saveNow)
+    /** Saves on the save thread without waiting: for when the app goes to the background. */
+    fun saveInBackground() = SaveThread.run(session::saveNow)
 
-    /** Saves what is left and lets the save thread end once it has. */
-    fun close() {
-        saveSoon()
-        saveThread.close()
-    }
+    /** Saves what is left; the session keeps retrying after this if that save fails. */
+    fun close() = InkSessions.close(pdf)
 
     companion object {
-        /** Reads the Ink file beside [pdf] and builds every stroke's mesh. Slow: call it off the main thread. */
+        /** Opens the ink beside [pdf] and builds every stroke's mesh. Slow: call it off the main thread. */
         fun open(
             pdf: File,
             pageCount: Int,
         ): DocumentInk {
-            val status = SaveStatusState(pdf.name)
-            val saveThread = SaveThread(pdf.name)
-            val session = DocumentSession.open(pdf.toPath(), pageCount, saveThread, status)
-            session.warnings.forEach { Log.w(MainActivity.LOG_TAG, "${pdf.name}: $it") }
-            Log.i(MainActivity.LOG_TAG, "loaded ${session.strokes.size} strokes for ${pdf.name}")
-            return DocumentInk(session, saveThread, session.strokes.map { DrawnStroke(it, it.toMesh()) }, status)
+            val held = InkSessions.open(pdf, pageCount)
+            val strokes = held.session.strokes
+            Log.i(MainActivity.LOG_TAG, "loaded ${strokes.size} strokes for ${pdf.name}")
+            return DocumentInk(pdf, held, strokes.map { DrawnStroke(it, it.toMesh()) })
         }
-    }
-}
-
-/** The session's save status as Compose state, and the save log. */
-private class SaveStatusState(
-    private val documentName: String,
-) : SaveListener {
-    val current = mutableStateOf(SaveStatus.SAVED)
-
-    override fun statusChanged(status: SaveStatus) {
-        current.value = status
-    }
-
-    override fun saved(
-        fileName: String,
-        bytes: Int,
-        durationMs: Long,
-    ) {
-        Log.i(MainActivity.LOG_TAG, "saved $fileName: $bytes bytes in $durationMs ms")
-    }
-
-    override fun saveFailed(error: InkSaveFailed) {
-        Log.e(MainActivity.LOG_TAG, "save failed for $documentName; will retry", error)
     }
 }
 

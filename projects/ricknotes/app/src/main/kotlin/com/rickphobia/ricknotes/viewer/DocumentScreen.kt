@@ -105,7 +105,7 @@ fun DocumentScreen(
 /** Saves the ink when the app goes to the background, and once more when the Document closes. */
 @Composable
 private fun SaveWhenLeaving(ink: DocumentInk) {
-    LifecycleStartEffect(ink) { onStopOrDispose { ink.saveSoon() } }
+    LifecycleStartEffect(ink) { onStopOrDispose { ink.saveInBackground() } }
     DisposableEffect(ink) { onDispose { ink.close() } }
 }
 

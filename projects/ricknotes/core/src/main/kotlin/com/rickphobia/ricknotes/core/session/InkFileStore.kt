@@ -18,6 +18,7 @@ internal class InkFileStore(
 ) {
     val inkFile: Path = pdf.resolveSibling("${pdf.fileName}$INK_SUFFIX")
     val temporaryFile: Path = pdf.resolveSibling(".${pdf.fileName}$INK_SUFFIX$TEMPORARY_SUFFIX")
+    val fileName: String = inkFile.fileName.toString()
 
     /** The Ink file's text, or null if this Document has none yet. */
     fun read(): String? =
@@ -28,10 +29,10 @@ internal class InkFileStore(
         }
 
     /** @throws IOException if any step fails; the Ink file is then as it was before. */
-    fun write(text: String) {
+    fun write(bytes: ByteArray) {
         // A temporary file left by an interrupted save is simply written over.
         FileOutputStream(temporaryFile.toFile()).use { out ->
-            out.write(text.toByteArray(Charsets.UTF_8))
+            out.write(bytes)
             out.fd.sync()
         }
         Files.move(temporaryFile, inkFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)

@@ -36,10 +36,14 @@ enum class SaveStatus {
 /** A save that didn't reach the Ink file; the old file is untouched and the changes are kept. */
 class InkSaveFailed(
     val fileName: String,
-    cause: IOException,
+    cause: Exception,
 ) : Exception("couldn't save $fileName: ${cause.message}", cause)
 
-/** What the session reports as it saves, for the screen and the log. Called on whichever thread saved. */
+/**
+ * What the session reports as it saves, for the screen and the log. Called on whichever thread
+ * saved; [statusChanged] is called with the session's lock held, so statuses arrive in order and it
+ * must not call back into the session.
+ */
 interface SaveListener {
     fun statusChanged(status: SaveStatus) {}
 
@@ -85,15 +89,13 @@ class DocumentSession private constructor(
     val status: SaveStatus get() = synchronized(lock) { currentStatus }
 
     fun addStroke(stroke: Stroke) {
-        check(!readOnly) { "${store.inkFile.fileName} is open read-only" }
-        val newStatus =
-            synchronized(lock) {
-                strokeList.add(stroke)
-                revision++
-                scheduleSave(SAVE_DELAY_MS)
-                if (currentStatus == SaveStatus.FAILED) null else setStatus(SaveStatus.PENDING)
-            }
-        newStatus?.let(listener::statusChanged)
+        check(!readOnly) { "${store.fileName} is open read-only" }
+        synchronized(lock) {
+            strokeList.add(stroke)
+            revision++
+            scheduleSave(SAVE_DELAY_MS)
+            if (currentStatus != SaveStatus.FAILED) setStatus(SaveStatus.PENDING)
+        }
     }
 
     /** Saves any changes now, for when the app goes to the background or the Document closes. */
@@ -121,26 +123,29 @@ class DocumentSession private constructor(
         savingRevision: Long,
     ) {
         val started = clock.nowMs()
-        val text = InkFileCodec.encode(file)
-        try {
-            store.write(text)
-        } catch (e: IOException) {
-            val newStatus =
-                synchronized(lock) {
-                    scheduleSave(RETRY_DELAY_MS)
-                    setStatus(SaveStatus.FAILED)
-                }
-            listener.saveFailed(InkSaveFailed(store.inkFile.fileName.toString(), e))
-            newStatus?.let(listener::statusChanged)
-            return
-        }
-        val newStatus =
+        val bytes = InkFileCodec.encode(file).toByteArray(Charsets.UTF_8)
+        val failure =
+            try {
+                store.write(bytes)
+                null
+            } catch (e: IOException) {
+                e
+            } catch (e: SecurityException) {
+                e
+            }
+        if (failure != null) {
+            synchronized(lock) {
+                scheduleSave(RETRY_DELAY_MS)
+                setStatus(SaveStatus.FAILED)
+            }
+            listener.saveFailed(InkSaveFailed(store.fileName, failure))
+        } else {
             synchronized(lock) {
                 savedRevision = savingRevision
                 setStatus(if (savedRevision == revision) SaveStatus.SAVED else SaveStatus.PENDING)
             }
-        listener.saved(store.inkFile.fileName.toString(), text.length, clock.nowMs() - started)
-        newStatus?.let(listener::statusChanged)
+            listener.saved(store.fileName, bytes.size, clock.nowMs() - started)
+        }
     }
 
     // Call with [lock] held.
@@ -149,11 +154,11 @@ class DocumentSession private constructor(
         pendingSave = clock.schedule(delayMs) { save() }
     }
 
-    // Call with [lock] held. Returns the new status if it changed, for the listener once the lock is let go.
-    private fun setStatus(status: SaveStatus): SaveStatus? {
-        if (status == currentStatus) return null
+    // Call with [lock] held.
+    private fun setStatus(status: SaveStatus) {
+        if (status == currentStatus) return
         currentStatus = status
-        return status
+        listener.statusChanged(status)
     }
 
     companion object {
@@ -192,7 +197,7 @@ class DocumentSession private constructor(
 
         /** The Ink file's contents, or null if there is none. */
         private fun load(store: InkFileStore): InkFile? {
-            val fileName = store.inkFile.fileName.toString()
+            val fileName = store.fileName
             val text =
                 try {
                     store.read()
