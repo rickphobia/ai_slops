@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}court-booker{% endblock %}</title>
+  <style>
+    :root { color-scheme: light dark; --accent: #1d6f42; --error: #b3261e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 32rem; margin: 0 auto; padding: 1.5rem 1rem; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+    input[type=password] { width: 100%; font-size: 1rem; padding: 0.7rem; margin-bottom: 1rem; }
+    button { font-size: 1rem; padding: 0.7rem 1.2rem; border: 0; border-radius: 0.4rem;
+             background: var(--accent); color: #fff; cursor: pointer; }
+    button.quiet { background: transparent; color: inherit; text-decoration: underline; padding: 0; }
+    .error { color: var(--error); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
