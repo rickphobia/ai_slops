@@ -8,7 +8,7 @@ import androidx.ink.authoring.InProgressStrokeId
 import androidx.ink.authoring.InProgressStrokesFinishedListener
 import androidx.ink.authoring.InProgressStrokesView
 import androidx.ink.strokes.StrokeInput
-import com.rickphobia.ricknotes.core.ink.DefaultPen
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.core.ink.PagePoint
@@ -16,7 +16,6 @@ import com.rickphobia.ricknotes.core.ink.ScreenPoint
 import com.rickphobia.ricknotes.core.ink.Stroke
 import com.rickphobia.ricknotes.core.ink.StrokeId
 import com.rickphobia.ricknotes.core.ink.StrokePoint
-import com.rickphobia.ricknotes.core.ink.Tool
 import com.rickphobia.ricknotes.core.ink.pageAt
 import com.rickphobia.ricknotes.core.touch.TouchAction
 import com.rickphobia.ricknotes.core.touch.TouchInterpreter
@@ -42,9 +41,10 @@ internal interface TouchNavigation {
 
 /**
  * Carries out what `core`'s touch interpreter makes of each touch on an open Document. The pen's
- * strokes are drawn by Jetpack Ink's low-latency [InProgressStrokesView] in page coordinates, and
- * handed to [ink] once finished, which draws them with their page from then on and saves them. The
- * pen draws nothing on a read-only Document.
+ * strokes, with whichever [currentTool] is picked when each starts, are drawn by Jetpack Ink's
+ * low-latency [InProgressStrokesView] in page coordinates, and handed to [ink] once finished, which
+ * draws them with their page from then on and saves them. The pen draws nothing on a read-only
+ * Document.
  */
 internal class DocumentTouch(
     private val inProgress: InProgressStrokesView,
@@ -52,9 +52,9 @@ internal class DocumentTouch(
     private val placements: () -> List<PagePlacement>,
     private val navigation: TouchNavigation,
     private val clockMs: () -> Long,
+    private val currentTool: () -> InkTool,
 ) : InProgressStrokesFinishedListener {
     private val interpreter = TouchInterpreter()
-    private val penBrush = penBrush(DefaultPen.COLOUR_ARGB, DefaultPen.WIDTH_PT)
 
     // Strokes the pen is drawing, by pointer, and what each will need once Ink hands it back.
     private val drawing = mutableMapOf<Int, InProgressStrokeId>()
@@ -63,6 +63,7 @@ internal class DocumentTouch(
 
     private data class StartedStroke(
         val pageId: PageId,
+        val tool: InkTool,
         val drawnAtMs: Long,
     )
 
@@ -129,9 +130,11 @@ internal class DocumentTouch(
         // A finished stroke is cut off at its page's edge, so the wet one is too: no tail that
         // vanishes on pen up.
         inProgress.maskPath = outside(page, view.width.toFloat(), view.height.toFloat())
-        val id = inProgress.startStroke(event, action.pointerId, penBrush, page.screenToPage())
+        val tool = currentTool()
+        val brush = inkBrush(tool.tool, tool.colourArgb, tool.widthPt)
+        val id = inProgress.startStroke(event, action.pointerId, brush, page.screenToPage())
         drawing[action.pointerId] = id
-        started[id] = StartedStroke(page.pageId, clockMs())
+        started[id] = StartedStroke(page.pageId, tool, clockMs())
     }
 
     private fun cancel(
@@ -178,9 +181,9 @@ internal class DocumentTouch(
         return Stroke(
             id = StrokeId(UUID.randomUUID().toString()),
             pageId = start.pageId,
-            tool = Tool.PEN,
-            colourArgb = brush.colorIntArgb,
-            widthPt = brush.size,
+            tool = start.tool.tool,
+            colourArgb = start.tool.colourArgb,
+            widthPt = start.tool.widthPt,
             drawnAtMs = start.drawnAtMs,
             points = points,
         )

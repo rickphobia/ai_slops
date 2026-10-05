@@ -1,7 +1,8 @@
 package com.rickphobia.ricknotes.ink
 
-import com.rickphobia.ricknotes.core.ink.DefaultPen
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PageId
+import com.rickphobia.ricknotes.core.ink.PenColour
 import com.rickphobia.ricknotes.core.ink.Stroke
 import com.rickphobia.ricknotes.core.ink.StrokeId
 import com.rickphobia.ricknotes.core.ink.StrokePoint
@@ -13,7 +14,15 @@ import org.junit.Test
 
 class InkInputPointsTest {
     private fun stroke(points: List<StrokePoint>) =
-        Stroke(StrokeId("s"), PageId.ofPdfPage(0), Tool.PEN, DefaultPen.COLOUR_ARGB, DefaultPen.WIDTH_PT, 0, points)
+        Stroke(
+            StrokeId("s"),
+            PageId.ofPdfPage(0),
+            Tool.PEN,
+            PenColour.BLACK.argb,
+            InkTool.Pen(PenColour.BLACK).widthPt,
+            0,
+            points,
+        )
 
     private fun savedAndLoaded(stroke: Stroke): Stroke {
         val text = InkFileCodec.encode(InkFile(1, InkFile.pdfPages(1), listOf(stroke)))

@@ -17,6 +17,7 @@ import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
 import androidx.ink.strokes.MutableStrokeInputBatch
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.Stroke
+import com.rickphobia.ricknotes.core.ink.Tool
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
 import com.rickphobia.ricknotes.logging.AppLog
@@ -27,11 +28,19 @@ import androidx.ink.strokes.Stroke as InkStroke
 // (1x to 5x), so this is under half a pixel even at 5x.
 private const val EPSILON_PT = 0.02f
 
-/** The brush a pen Stroke of [colourArgb] and [widthPt] is drawn with, wet or saved. */
-internal fun penBrush(
+/** The brush a Stroke of [tool], [colourArgb] and [widthPt] is drawn with, wet or saved. */
+internal fun inkBrush(
+    tool: Tool,
     colourArgb: Int,
     widthPt: Float,
-): Brush = Brush.createWithColorIntArgb(StockBrushes.pressurePen(), colourArgb, widthPt, EPSILON_PT)
+): Brush {
+    val family =
+        when (tool) {
+            Tool.PEN -> StockBrushes.pressurePen()
+            Tool.HIGHLIGHTER -> StockBrushes.highlighter()
+        }
+    return Brush.createWithColorIntArgb(family, colourArgb, widthPt, EPSILON_PT)
+}
 
 /**
  * A finished Stroke, with the mesh Jetpack Ink built for it so it isn't rebuilt every frame.
@@ -71,7 +80,9 @@ internal class DocumentInk private constructor(
         strokes.add(stroke)
     }
 
-    fun on(pageId: PageId): List<DrawnStroke> = strokes.filter { it.stroke.pageId == pageId }
+    /** The page's strokes in drawing order: highlighter first, so it sits under the pen's writing. */
+    fun on(pageId: PageId): List<DrawnStroke> =
+        strokes.filter { it.stroke.pageId == pageId }.sortedBy { it.stroke.tool != Tool.HIGHLIGHTER }
 
     /** Saves on the save thread without waiting: for when the app goes to the background. */
     fun saveInBackground() = SaveThread.run(session::saveNow)
@@ -111,7 +122,7 @@ private fun Stroke.toMesh(): InkStroke? =
     try {
         val inputs = MutableStrokeInputBatch()
         addTo(inputs)
-        InkStroke(penBrush(colourArgb, widthPt), inputs)
+        InkStroke(inkBrush(tool, colourArgb, widthPt), inputs)
     } catch (e: RuntimeException) {
         AppLog.e("can't draw saved stroke ${id.value} on page ${pageId.value}; it is kept but not shown", e)
         null

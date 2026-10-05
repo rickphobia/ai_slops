@@ -9,7 +9,7 @@ class StrokeTest {
     private fun stroke(
         points: List<StrokePoint> = listOf(point),
         widthPt: Float = 1.5f,
-    ) = Stroke(StrokeId("s1"), PageId.ofPdfPage(0), Tool.PEN, DefaultPen.COLOUR_ARGB, widthPt, 0, points)
+    ) = Stroke(StrokeId("s1"), PageId.ofPdfPage(0), Tool.PEN, PenColour.BLACK.argb, widthPt, 0, points)
 
     @Test
     fun `a stroke needs at least one point`() {

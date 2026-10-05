@@ -31,4 +31,14 @@
   <string name="clear">Clear</string>
   <string name="pen_test">Pen test</string>
   <string name="pen_test_help">Touch, hover over or press pen buttons in the grey area. To check a button while hovering, hold the pen still just above the area and press it.</string>
+  <string name="pen_black">Black pen</string>
+  <string name="pen_blue">Blue pen</string>
+  <string name="pen_red">Red pen</string>
+  <string name="pen_green">Green pen</string>
+  <string name="highlighter">Highlighter</string>
+  <string name="favourite_pens">Favourite pens</string>
+  <string name="favourite_pens_help">Tapping the pen in use moves on to the next of these, in this order.</string>
+  <string name="move_up">Move up</string>
+  <string name="remove">Remove</string>
+  <string name="add_pen">Add %1$s</string>
 </resources>

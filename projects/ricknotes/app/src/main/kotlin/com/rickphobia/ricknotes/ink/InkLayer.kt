@@ -11,6 +11,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.ink.authoring.InProgressStrokesView
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.core.touch.TouchAction
 
@@ -24,9 +25,11 @@ internal fun InkLayer(
     ink: DocumentInk,
     placements: () -> List<PagePlacement>,
     navigation: TouchNavigation,
+    currentTool: () -> InkTool,
 ) {
     val currentPlacements = rememberUpdatedState(placements)
     val currentNavigation = rememberUpdatedState(navigation)
+    val tool = rememberUpdatedState(currentTool)
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
@@ -38,6 +41,7 @@ internal fun InkLayer(
                         placements = { currentPlacements.value() },
                         navigation = DelegatingNavigation { currentNavigation.value },
                         clockMs = System::currentTimeMillis,
+                        currentTool = { tool.value() },
                     )
                 layer.inProgress.addFinishedStrokesListener(touch)
                 layer.onTouch = touch::onTouch

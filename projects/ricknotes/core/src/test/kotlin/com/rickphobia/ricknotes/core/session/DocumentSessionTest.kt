@@ -1,7 +1,8 @@
 package com.rickphobia.ricknotes.core.session
 
-import com.rickphobia.ricknotes.core.ink.DefaultPen
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PageId
+import com.rickphobia.ricknotes.core.ink.PenColour
 import com.rickphobia.ricknotes.core.ink.Stroke
 import com.rickphobia.ricknotes.core.ink.StrokeId
 import com.rickphobia.ricknotes.core.ink.StrokePoint
@@ -87,8 +88,8 @@ class DocumentSessionTest {
         StrokeId(id),
         PageId.ofPdfPage(page),
         Tool.PEN,
-        DefaultPen.COLOUR_ARGB,
-        DefaultPen.WIDTH_PT,
+        PenColour.BLACK.argb,
+        InkTool.Pen(PenColour.BLACK).widthPt,
         drawnAtMs = 1_760_000_000_000,
         points = listOf(StrokePoint(10f, 20f, 0.5f, 0), StrokePoint(11.25f, 22.5f, 0.75f, 9)),
     )
