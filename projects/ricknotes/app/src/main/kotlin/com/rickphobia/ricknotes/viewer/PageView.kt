@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -49,30 +50,17 @@ internal data class PageLayout(
 /**
  * One page: its whole image at the screen's width, stretched while zooming, with a sharp image of
  * the part on screen drawn over it once the view settles. [settled] is null while it is moving.
+ * [overlay] is drawn on top, filling the page: its ink.
  */
 @Composable
 internal fun PageView(
     pages: PdfPages,
     layout: PageLayout,
     settled: SettledPart?,
+    overlay: @Composable () -> Unit,
 ) {
     val index = layout.index
-    // The page's box takes its final shape at once, so the list never jumps when a page arrives.
-    val drawn by produceState<PageImage>(
-        pages.cached(index, layout.baseWidthPx)?.let { PageImage.Drawn(it.asImageBitmap()) } ?: PageImage.Pending,
-        pages,
-        index,
-        layout.baseWidthPx,
-    ) {
-        if (value is PageImage.Drawn) return@produceState
-        value =
-            try {
-                PageImage.Drawn(pages.render(index, layout.size, layout.baseWidthPx).asImageBitmap())
-            } catch (e: PageRenderException) {
-                Log.e(MainActivity.LOG_TAG, e.message, e)
-                PageImage.Failed
-            }
-    }
+    val drawn by wholePage(pages, layout)
     var sharp by remember(pages, index) { mutableStateOf<SharpImage?>(null) }
     LaunchedEffect(settled, layout) {
         val part = settled ?: return@LaunchedEffect
@@ -97,6 +85,7 @@ internal fun PageView(
             }
         }
     }
+    // The page's box takes its final shape at once, so the list never jumps when a page arrives.
     Box(
         modifier = Modifier.fillMaxWidth().aspectRatio(layout.size.aspectRatio).background(Color.White),
         contentAlignment = Alignment.Center,
@@ -118,6 +107,31 @@ internal fun PageView(
             PageImage.Pending -> {}
         }
         sharp?.let { SharpOverlay(it) }
+        overlay()
+    }
+}
+
+/** The whole page drawn at the screen's width: from the cache at once if it is there. */
+@Composable
+private fun wholePage(
+    pages: PdfPages,
+    layout: PageLayout,
+): State<PageImage> {
+    val index = layout.index
+    return produceState(
+        pages.cached(index, layout.baseWidthPx)?.let { PageImage.Drawn(it.asImageBitmap()) } ?: PageImage.Pending,
+        pages,
+        index,
+        layout.baseWidthPx,
+    ) {
+        if (value is PageImage.Drawn) return@produceState
+        value =
+            try {
+                PageImage.Drawn(pages.render(index, layout.size, layout.baseWidthPx).asImageBitmap())
+            } catch (e: PageRenderException) {
+                Log.e(MainActivity.LOG_TAG, e.message, e)
+                PageImage.Failed
+            }
     }
 }
 
