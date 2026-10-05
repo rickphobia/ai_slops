@@ -1,0 +1,150 @@
+package com.rickphobia.ricknotes.viewer
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import com.rickphobia.ricknotes.R
+import com.rickphobia.ricknotes.logging.AppLog
+import kotlin.math.roundToInt
+
+/**
+ * What showed of a page when the view last settled: [visible] at a page [pageWidth] pixels wide,
+ * null if the page was off screen.
+ */
+internal data class SettledPart(
+    val pageWidth: Int,
+    val visible: PixelRect?,
+)
+
+/** How one page is drawn at the current zoom. */
+internal data class PageLayout(
+    val index: Int,
+    val size: PageSize,
+    val baseWidthPx: Int,
+    val sharpMarginPx: Int,
+)
+
+/**
+ * One page: its whole image at the screen's width, stretched while zooming, with a sharp image of
+ * the part on screen drawn over it once the view settles. [settled] is null while it is moving.
+ */
+@Composable
+internal fun PageView(
+    pages: PdfPages,
+    layout: PageLayout,
+    settled: SettledPart?,
+) {
+    val index = layout.index
+    // The page's box takes its final shape at once, so the list never jumps when a page arrives.
+    val drawn by produceState<PageImage>(
+        pages.cached(index, layout.baseWidthPx)?.let { PageImage.Drawn(it.asImageBitmap()) } ?: PageImage.Pending,
+        pages,
+        index,
+        layout.baseWidthPx,
+    ) {
+        if (value is PageImage.Drawn) return@produceState
+        value =
+            try {
+                PageImage.Drawn(pages.render(index, layout.size, layout.baseWidthPx).asImageBitmap())
+            } catch (e: PageRenderException) {
+                AppLog.e("drawing a page failed: ${e.message}", e)
+                PageImage.Failed
+            }
+    }
+    var sharp by remember(pages, index) { mutableStateOf<SharpImage?>(null) }
+    LaunchedEffect(settled, layout) {
+        val part = settled ?: return@LaunchedEffect
+        val scale = PageScale(part.pageWidth, layout.size.heightPx(part.pageWidth), layout.baseWidthPx)
+        when (val plan = planDetail(sharp?.part, part.visible, scale, layout.sharpMarginPx)) {
+            DetailPlan.Keep -> {}
+
+            DetailPlan.Drop -> {
+                sharp = null
+            }
+
+            is DetailPlan.Render -> {
+                sharp =
+                    try {
+                        val bitmap = pages.renderPart(index, layout.size, part.pageWidth, plan.region)
+                        SharpImage(SharpPart(plan.region, part.pageWidth), bitmap.asImageBitmap())
+                    } catch (e: PageRenderException) {
+                        // The stretched whole page still shows; a blurry page beats a blank one.
+                        AppLog.e("drawing a page failed: ${e.message}", e)
+                        null
+                    }
+            }
+        }
+    }
+    Box(
+        modifier = Modifier.fillMaxWidth().aspectRatio(layout.size.aspectRatio).background(Color.White),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (val current = drawn) {
+            is PageImage.Drawn -> {
+                Image(
+                    bitmap = current.bitmap,
+                    contentDescription = stringResource(R.string.page_number, index + 1),
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            PageImage.Failed -> {
+                Text(stringResource(R.string.page_failed, index + 1), color = Color.DarkGray)
+            }
+
+            PageImage.Pending -> {}
+        }
+        sharp?.let { SharpOverlay(it) }
+    }
+}
+
+/** Draws a sharp part where it belongs on the page, scaled if the zoom has moved on since it was drawn. */
+@Composable
+private fun SharpOverlay(sharp: SharpImage) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val scale = size.width / sharp.part.pageWidth
+        val region = sharp.part.region
+        drawImage(
+            image = sharp.bitmap,
+            dstOffset = IntOffset((region.left * scale).roundToInt(), (region.top * scale).roundToInt()),
+            dstSize = IntSize((region.width * scale).roundToInt(), (region.height * scale).roundToInt()),
+        )
+    }
+}
+
+private data class SharpImage(
+    val part: SharpPart,
+    val bitmap: ImageBitmap,
+)
+
+private sealed interface PageImage {
+    data object Pending : PageImage
+
+    data object Failed : PageImage
+
+    data class Drawn(
+        val bitmap: ImageBitmap,
+    ) : PageImage
+}

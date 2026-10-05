@@ -1,20 +1,11 @@
 package com.rickphobia.ricknotes.viewer
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,18 +16,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rickphobia.ricknotes.R
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
-
-private val PAGE_GAP = 8.dp
 
 private sealed interface Opening {
     data object InProgress : Opening
@@ -50,10 +35,11 @@ private sealed interface Opening {
     ) : Opening
 }
 
-/** One Document, scrolling continuously from page to page. */
+/** One Document, scrolling continuously from page to page, reopened where it was left in [positions]. */
 @Composable
 fun DocumentScreen(
     pdf: PdfEntry,
+    positions: ReadingPositions,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -88,81 +74,8 @@ fun DocumentScreen(
             }
 
             is Opening.Ready -> {
-                PageList(pages, current.pageSizes)
+                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions))
             }
         }
     }
-}
-
-@Composable
-private fun PageList(
-    pages: PdfPages,
-    pageSizes: List<PageSize>,
-) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant)) {
-        val widthPx = with(LocalDensity.current) { (maxWidth - PAGE_GAP * 2).roundToPx() }
-        LazyColumn(
-            contentPadding = PaddingValues(PAGE_GAP),
-            verticalArrangement = Arrangement.spacedBy(PAGE_GAP),
-        ) {
-            itemsIndexed(pageSizes) { index, size ->
-                Page(pages, index, size, widthPx)
-            }
-        }
-    }
-}
-
-@Composable
-private fun Page(
-    pages: PdfPages,
-    index: Int,
-    size: PageSize,
-    widthPx: Int,
-) {
-    // The page's box takes its final shape at once, so the list never jumps when a page arrives.
-    val drawn by produceState<PageImage>(
-        pages.cached(index, widthPx)?.let { PageImage.Drawn(it.asImageBitmap()) } ?: PageImage.Pending,
-        pages,
-        index,
-        widthPx,
-    ) {
-        if (value is PageImage.Drawn) return@produceState
-        value =
-            try {
-                PageImage.Drawn(pages.render(index, size, widthPx).asImageBitmap())
-            } catch (e: PageRenderException) {
-                AppLog.e("drawing a page failed: ${e.message}", e)
-                PageImage.Failed
-            }
-    }
-    Box(
-        modifier = Modifier.fillMaxWidth().aspectRatio(size.aspectRatio).background(Color.White),
-        contentAlignment = Alignment.Center,
-    ) {
-        when (val current = drawn) {
-            is PageImage.Drawn -> {
-                Image(
-                    bitmap = current.bitmap,
-                    contentDescription = stringResource(R.string.page_number, index + 1),
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            PageImage.Failed -> {
-                Text(stringResource(R.string.page_failed, index + 1), color = Color.DarkGray)
-            }
-
-            PageImage.Pending -> {}
-        }
-    }
-}
-
-private sealed interface PageImage {
-    data object Pending : PageImage
-
-    data object Failed : PageImage
-
-    data class Drawn(
-        val bitmap: ImageBitmap,
-    ) : PageImage
 }
