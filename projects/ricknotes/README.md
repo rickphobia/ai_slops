@@ -144,6 +144,7 @@ Every version is pinned: tools and libraries in `gradle/libs.versions.toml`, Gra
 | Core KTX | 1.19.1 | Google Maven `androidx.core` |
 | Lifecycle | 2.11.0 | Google Maven `androidx.lifecycle` |
 | Jetpack Ink | 1.0.0 | Google Maven `androidx.ink` |
+| kotlinx.serialization JSON | 1.11.0 | Maven Central `org.jetbrains.kotlinx:kotlinx-serialization-json` |
 | JUnit | 4.13.2 | Maven Central `junit:junit` |
 | ktlint / ktlint Gradle plugin | 1.8.0 / 14.2.0 | Maven Central `com.pinterest.ktlint`, Gradle Plugin Portal |
 | detekt | 1.23.8 (2.0 is still alpha) | Maven Central and Gradle Plugin Portal |
