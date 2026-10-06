@@ -42,4 +42,5 @@ jobs:
       - run: uv run pytest
       # shellcheck comes preinstalled on the runner.
       - run: shellcheck -x scripts/*.sh deploy/*.sh
+      - run: scripts/update-site.test.sh
       - run: scripts/docker-smoke-test.sh

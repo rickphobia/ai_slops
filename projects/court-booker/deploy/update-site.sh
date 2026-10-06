@@ -5,7 +5,8 @@
 set -Eeuo pipefail
 
 SCRIPT_NAME="update-site"
-# Sourced before the checkout below replaces it, so the functions are already in memory.
+# Sourced before the checkout below replaces it, so the functions are already in memory; sourced
+# again from the new checkout once it is in place.
 # shellcheck source=deploy/settings.sh
 source "$(dirname "${BASH_SOURCE[0]}")/settings.sh"
 
@@ -29,6 +30,10 @@ fi
 git -C "$SRC_DIR" fetch --quiet origin "$BRANCH"
 # The checkout is only ever built from, so discarding local changes is safe.
 git -C "$SRC_DIR" checkout --quiet --force --detach FETCH_HEAD
+# Load the settings again from the commit being deployed: the ones sourced above may be older (a
+# changed data mount, say). Changes to this file itself only apply from the next run.
+# shellcheck source=deploy/settings.sh
+source "$SRC_DIR/projects/court-booker/deploy/settings.sh"
 tag="$(git -C "$SRC_DIR" rev-parse --short=12 HEAD)"
 
 if [ "$FORCE" != "1" ] && [ -f "$DEPLOYED_TAG_FILE" ] \
