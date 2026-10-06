@@ -18,6 +18,9 @@ DEPLOYED_TAG_FILE="$STATE_DIR/court-booker.deployed-tag"
 PREVIOUS_TAG_FILE="$STATE_DIR/court-booker.previous-tag"
 LOCK_FILE="$STATE_DIR/court-booker.lock"
 HEALTH_TIMEOUT_SECONDS=60
+# Where DATA_DIR is mounted in the container: the folder the image keeps its database and
+# screenshots in (COURT_BOOKER_DATABASE_PATH and COURT_BOOKER_SCREENSHOT_DIR in the Dockerfile).
+DATA_MOUNT=/app/data
 
 log() { printf '%s %s: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SCRIPT_NAME" "$*" >&2; }
 
@@ -59,7 +62,7 @@ swap_to() {
     --restart unless-stopped \
     --user "$(id -u):$(id -g)" --env HOME=/tmp \
     --env-file "$ENV_FILE" --env COURT_BOOKER_HOST=0.0.0.0 \
-    --volume "$DATA_DIR:/data" \
+    --volume "$DATA_DIR:$DATA_MOUNT" \
     "$IMAGE_REPO:$tag" >/dev/null
 
   log "waiting up to ${HEALTH_TIMEOUT_SECONDS}s for /healthz in $name"
