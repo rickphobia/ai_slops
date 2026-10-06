@@ -235,6 +235,92 @@ class DocumentSessionTest {
         assertEquals(PageId("pdf-2"), reopened.pageId)
     }
 
+    @Test
+    fun `erasing removes the strokes, and nothing else, as one undo step`() {
+        val session = open()
+        listOf("a", "b", "c").forEach { session.addStroke(stroke(it)) }
+
+        session.eraseStrokes(setOf(StrokeId("a"), StrokeId("c"), StrokeId("gone already")))
+        assertEquals(listOf(stroke("b")), session.strokes)
+
+        assertTrue(session.undo())
+        assertEquals("erased strokes come back in their places", listOf("a", "b", "c").map(::stroke), session.strokes)
+        assertTrue(session.undo())
+        assertEquals(listOf(stroke("a"), stroke("b")), session.strokes)
+    }
+
+    @Test
+    fun `undo and redo step back and forward through adds and erases`() {
+        val session = open()
+        assertFalse(session.canUndo)
+        session.addStroke(stroke("a"))
+        session.addStroke(stroke("b"))
+        session.eraseStrokes(setOf(StrokeId("a")))
+
+        repeat(3) { assertTrue(session.undo()) }
+        assertEquals(emptyList<Stroke>(), session.strokes)
+        assertFalse("nothing left to undo", session.undo())
+        assertTrue(session.canRedo)
+
+        repeat(3) { assertTrue(session.redo()) }
+        assertEquals(listOf(stroke("b")), session.strokes)
+        assertFalse("nothing left to redo", session.redo())
+        assertFalse(session.canRedo)
+    }
+
+    @Test
+    fun `a new change after an undo drops what could have been redone`() {
+        val session = open()
+        session.addStroke(stroke("a"))
+        session.undo()
+
+        session.addStroke(stroke("b"))
+
+        assertFalse(session.canRedo)
+        assertEquals(listOf(stroke("b")), session.strokes)
+    }
+
+    @Test
+    fun `erasing nothing is not an undo step`() {
+        val session = open()
+        session.addStroke(stroke("a"))
+
+        session.eraseStrokes(setOf(StrokeId("not here")))
+        session.undo()
+
+        assertEquals(emptyList<Stroke>(), session.strokes)
+    }
+
+    @Test
+    fun `erases, undos and redos are saved like any other change`() {
+        val session = open()
+        session.addStroke(stroke("a"))
+        session.addStroke(stroke("b"))
+        clock.advance(DocumentSession.SAVE_DELAY_MS)
+
+        session.eraseStrokes(setOf(StrokeId("a")))
+        assertEquals(SaveStatus.PENDING, session.status)
+        clock.advance(DocumentSession.SAVE_DELAY_MS)
+        assertEquals(listOf(stroke("b")), open().strokes)
+
+        session.undo()
+        clock.advance(DocumentSession.SAVE_DELAY_MS)
+        assertEquals(listOf(stroke("a"), stroke("b")), open().strokes)
+
+        session.redo()
+        session.saveNow()
+        assertEquals(listOf(stroke("b")), open().strokes)
+    }
+
+    @Test
+    fun `a read-only Document can't be erased, and has nothing to undo`() {
+        Files.writeString(inkFile, "{")
+        val session = open()
+
+        assertThrows(IllegalStateException::class.java) { session.eraseStrokes(setOf(StrokeId("a"))) }
+        assertFalse(session.undo())
+    }
+
     private val versionsFolder: Path get() = pdf.resolveSibling(".versions")
 
     private fun versions(): List<String> =

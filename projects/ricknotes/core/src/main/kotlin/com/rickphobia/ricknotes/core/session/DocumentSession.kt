@@ -1,6 +1,7 @@
 package com.rickphobia.ricknotes.core.session
 
 import com.rickphobia.ricknotes.core.ink.Stroke
+import com.rickphobia.ricknotes.core.ink.StrokeId
 import com.rickphobia.ricknotes.core.inkfile.InkFile
 import com.rickphobia.ricknotes.core.inkfile.InkFileCodec
 import com.rickphobia.ricknotes.core.inkfile.InkFileDamaged
@@ -82,7 +83,7 @@ class DocumentSession private constructor(
     private val writing = Any()
     private val pageCount = pdfPageCount
     private val pages: List<InkPage> = loaded.pages + InkFile.pdfPages(pdfPageCount).filter { it !in loaded.pages }
-    private val strokeList = loaded.strokes.toMutableList()
+    private val history = StrokeHistory(loaded.strokes)
     private var revision = 0L
     private var savedRevision = 0L
     private var pendingSave: Scheduled? = null
@@ -91,19 +92,42 @@ class DocumentSession private constructor(
     // Starts at open, whether or not there was an Ink file to take a Version of. Guarded by [writing].
     private var lastVersionMs = clock.nowMs()
 
-    val strokes: List<Stroke> get() = synchronized(lock) { strokeList.toList() }
+    val strokes: List<Stroke> get() = synchronized(lock) { history.strokes }
 
     val status: SaveStatus get() = synchronized(lock) { currentStatus }
 
+    val canUndo: Boolean get() = synchronized(lock) { history.canUndo }
+
+    val canRedo: Boolean get() = synchronized(lock) { history.canRedo }
+
     fun addStroke(stroke: Stroke) {
         check(!readOnly) { "${store.fileName} is open read-only" }
-        synchronized(lock) {
-            strokeList.add(stroke)
-            revision++
-            scheduleSave(SAVE_DELAY_MS)
-            if (currentStatus != SaveStatus.FAILED) setStatus(SaveStatus.PENDING)
-        }
+        edit { history.add(stroke) }
     }
+
+    /** Removes the strokes with these IDs, as one undo step; IDs of strokes that aren't here are ignored. */
+    fun eraseStrokes(ids: Set<StrokeId>) {
+        check(!readOnly) { "${store.fileName} is open read-only" }
+        edit { history.erase(ids) }
+    }
+
+    /** Takes back the last change, or returns false if there is none. Saved like any change. */
+    fun undo(): Boolean = edit { history.undo() }
+
+    /** Makes the last undone change again, or returns false if there is none. Saved like any change. */
+    fun redo(): Boolean = edit { history.redo() }
+
+    // Makes a change to the strokes and, if [change] says it changed anything, schedules a save.
+    private fun edit(change: () -> Boolean): Boolean =
+        synchronized(lock) {
+            change().also { changed ->
+                if (changed) {
+                    revision++
+                    scheduleSave(SAVE_DELAY_MS)
+                    if (currentStatus != SaveStatus.FAILED) setStatus(SaveStatus.PENDING)
+                }
+            }
+        }
 
     /** Saves any changes now, for when the app goes to the background or the Document closes. */
     fun saveNow() {
@@ -119,10 +143,16 @@ class DocumentSession private constructor(
         synchronized(writing) {
             val changes =
                 synchronized(lock) {
-                    (InkFile(pageCount, pages, strokeList.toList()) to revision).takeIf { revision != savedRevision }
+                    (InkFile(pageCount, pages, history.strokes) to revision).takeIf { revision != savedRevision }
                 }
             changes?.let { (file, savingRevision) ->
-                if (clock.nowMs() - lastVersionMs >= VERSION_INTERVAL_MS) takeVersion()
+                val now = clock.nowMs()
+                // A failed Version is retried at the next save.
+                if (now - lastVersionMs >= VERSION_INTERVAL_MS &&
+                    takeVersion(versions, store.fileName, now, listener)
+                ) {
+                    lastVersionMs = now
+                }
                 write(file, savingRevision)
             }
         }
@@ -156,12 +186,6 @@ class DocumentSession private constructor(
             }
             listener.saved(store.fileName, bytes.size, clock.nowMs() - started)
         }
-    }
-
-    // Call with [writing] held. A failure is retried at the next save.
-    private fun takeVersion() {
-        val now = clock.nowMs()
-        if (takeVersion(versions, store.fileName, now, listener)) lastVersionMs = now
     }
 
     // Call with [lock] held.

@@ -36,6 +36,9 @@
   <string name="pen_red">Red pen</string>
   <string name="pen_green">Green pen</string>
   <string name="highlighter">Highlighter</string>
+  <string name="eraser">Eraser</string>
+  <string name="undo">Undo</string>
+  <string name="redo">Redo</string>
   <string name="favourite_pens">Favourite pens</string>
   <string name="favourite_pens_help">Tapping the pen in use moves on to the next of these, in this order.</string>
   <string name="move_up">Move up</string>
