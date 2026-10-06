@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -14,6 +14,9 @@ from court_booker.random_source import RandomSource
 from court_booker.schedule.schedule import ScheduleRules, run_time, venue_today
 
 logger = logging.getLogger(__name__)
+
+# A run that starts this long after its run time (the server was down) is shown as late.
+LATE_AFTER = timedelta(minutes=5)
 
 
 class BookingRequestStatus(StrEnum):
@@ -55,6 +58,12 @@ class BookingRequest:
     status: BookingRequestStatus
     # Chosen once at creation, in UTC.
     run_at: datetime
+    # When the scheduler claimed it, in UTC; None until it runs.
+    started_at: datetime | None = None
+
+    @property
+    def ran_late(self) -> bool:
+        return self.started_at is not None and self.started_at - self.run_at > LATE_AFTER
 
     @property
     def slots(self) -> tuple[time, ...]:

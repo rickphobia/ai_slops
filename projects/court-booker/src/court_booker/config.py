@@ -47,6 +47,8 @@ class Settings:
     picktime_page_timeout: timedelta
     # Every booking attempt saves a screenshot of the page here.
     screenshot_dir: Path
+    # Booking Requests, their results and screenshots are deleted this long after their date.
+    retention: timedelta
     booking_run: RunRules
     scheduler_interval: timedelta
     # /healthz fails when the scheduler hasn't ticked or made progress for this long.
@@ -125,6 +127,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         screenshot_dir=Path(
             _non_blank(environ, "COURT_BOOKER_SCREENSHOT_DIR", default="data/screenshots")
         ),
+        retention=timedelta(days=_positive_int(environ, "COURT_BOOKER_RETENTION_DAYS", default=30)),
         booking_run=RunRules(
             pause_min=timedelta(seconds=pause_min),
             pause_max=timedelta(seconds=pause_max),

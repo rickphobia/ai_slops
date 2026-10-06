@@ -115,9 +115,9 @@ def test_every_slot_is_tried_in_time_order_with_a_pause_between(
     # Each attempt takes the fake site 8 s.
     assert request_cards(client) == [
         "Fri 9 Oct 2026 Status: Done "
-        "08:00: Booked tried Wed 7 Oct 2026, 00:01:30 "
-        "14:00: Booked tried Wed 7 Oct 2026, 00:01:50 "
-        "20:00: Booked tried Wed 7 Oct 2026, 00:02:11"
+        "08:00: Booked tried Wed 7 Oct 2026, 00:01:30 screenshot "
+        "14:00: Booked tried Wed 7 Oct 2026, 00:01:50 screenshot "
+        "20:00: Booked tried Wed 7 Oct 2026, 00:02:11 screenshot"
     ]
 
 
