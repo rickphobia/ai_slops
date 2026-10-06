@@ -40,6 +40,12 @@ class Settings:
     # The Slot start times the Court has, earliest first.
     slots: tuple[time, ...]
     schedule: ScheduleRules
+    # The public Picktime booking page, and the Court's name as that page lists it.
+    picktime_url: str
+    court_name: str
+    picktime_page_timeout: timedelta
+    # Every booking attempt saves a screenshot of the page here.
+    screenshot_dir: Path
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -87,6 +93,18 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
                     environ, "COURT_BOOKER_OPEN_DATE_DELAY_SECONDS", default=60
                 )
             ),
+        ),
+        picktime_url=_http_url(
+            environ,
+            "COURT_BOOKER_PICKTIME_URL",
+            default="https://www.picktime.com/f1bb4627-4b1b-483d-b746-4c34c8808d53",
+        ),
+        court_name=_non_blank(environ, "COURT_BOOKER_COURT_NAME", default="Badminton Hall 1"),
+        picktime_page_timeout=timedelta(
+            seconds=_positive_int(environ, "COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS", default=30)
+        ),
+        screenshot_dir=Path(
+            _non_blank(environ, "COURT_BOOKER_SCREENSHOT_DIR", default="data/screenshots")
         ),
     )
 
@@ -181,6 +199,13 @@ def _root_path(environ: Mapping[str, str], name: str, *, default: str) -> str:
     if not value.startswith("/"):
         raise ConfigError(f"{name} must start with '/', got {value!r}")
     return value.rstrip("/")
+
+
+def _http_url(environ: Mapping[str, str], name: str, *, default: str) -> str:
+    value = _non_blank(environ, name, default=default)
+    if not value.startswith(("https://", "http://")):
+        raise ConfigError(f"{name} must be an http(s) URL, got {value!r}")
+    return value
 
 
 def _password_hash(environ: Mapping[str, str], name: str) -> PasswordHash:

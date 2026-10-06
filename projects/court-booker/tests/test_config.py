@@ -32,6 +32,10 @@ def test_defaults_apply_when_only_the_secrets_are_set() -> None:
             jitter_max=timedelta(seconds=120),
             open_date_delay=timedelta(seconds=60),
         ),
+        picktime_url="https://www.picktime.com/f1bb4627-4b1b-483d-b746-4c34c8808d53",
+        court_name="Badminton Hall 1",
+        picktime_page_timeout=timedelta(seconds=30),
+        screenshot_dir=Path("data/screenshots"),
     )
 
 
@@ -53,6 +57,10 @@ def test_reads_every_setting_from_the_environment() -> None:
             COURT_BOOKER_RUN_JITTER_MIN_SECONDS="0",
             COURT_BOOKER_RUN_JITTER_MAX_SECONDS="30",
             COURT_BOOKER_OPEN_DATE_DELAY_SECONDS="5",
+            COURT_BOOKER_PICKTIME_URL="http://127.0.0.1:9999/booking",
+            COURT_BOOKER_COURT_NAME="Court 2",
+            COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS="45",
+            COURT_BOOKER_SCREENSHOT_DIR="/data/screenshots",
         )
     )
 
@@ -77,6 +85,10 @@ def test_reads_every_setting_from_the_environment() -> None:
             jitter_max=timedelta(seconds=30),
             open_date_delay=timedelta(seconds=5),
         ),
+        picktime_url="http://127.0.0.1:9999/booking",
+        court_name="Court 2",
+        picktime_page_timeout=timedelta(seconds=45),
+        screenshot_dir=Path("/data/screenshots"),
     )
 
 
@@ -131,6 +143,10 @@ def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
         ("COURT_BOOKER_RUN_JITTER_MIN_SECONDS", "-5"),
         ("COURT_BOOKER_RUN_JITTER_MAX_SECONDS", "soon"),
         ("COURT_BOOKER_OPEN_DATE_DELAY_SECONDS", "-1"),
+        ("COURT_BOOKER_PICKTIME_URL", "www.picktime.com/page"),
+        ("COURT_BOOKER_COURT_NAME", " "),
+        ("COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS", "0"),
+        ("COURT_BOOKER_SCREENSHOT_DIR", " "),
     ],
 )
 def test_a_bad_value_fails_naming_the_variable(variable: str, value: str) -> None:

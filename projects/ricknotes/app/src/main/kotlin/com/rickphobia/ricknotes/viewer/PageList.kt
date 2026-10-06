@@ -62,6 +62,7 @@ internal data class OpenDocument(
     val pageSizes: List<PageSize>,
     val path: String,
     val positions: ReadingPositions,
+    val ink: DocumentInk,
 )
 
 /**
@@ -77,7 +78,7 @@ internal fun PageList(document: OpenDocument) {
     val view = remember { mutableStateOf(ZoomView(restored.zoom, panX = 0f)) }
     var settled by remember { mutableStateOf<SettledView?>(null) }
     val scope = rememberCoroutineScope()
-    val ink = remember(document.path) { DocumentInk() }
+    val ink = document.ink
     val strokeRenderer = remember { CanvasStrokeRenderer.create() }
 
     BoxWithConstraints(

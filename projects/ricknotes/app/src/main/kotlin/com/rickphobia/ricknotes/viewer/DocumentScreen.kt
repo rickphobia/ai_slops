@@ -3,6 +3,7 @@ package com.rickphobia.ricknotes.viewer
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,9 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.rickphobia.ricknotes.R
+import com.rickphobia.ricknotes.core.session.SaveStatus
+import com.rickphobia.ricknotes.core.session.SessionWarning
 import com.rickphobia.ricknotes.files.PdfEntry
+import com.rickphobia.ricknotes.ink.DocumentInk
 import com.rickphobia.ricknotes.logging.AppLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private sealed interface Opening {
@@ -28,6 +35,7 @@ private sealed interface Opening {
 
     data class Ready(
         val pageSizes: List<PageSize>,
+        val ink: DocumentInk,
     ) : Opening
 
     data class Failed(
@@ -48,7 +56,8 @@ fun DocumentScreen(
     val opening by produceState<Opening>(Opening.InProgress, pages) {
         value =
             try {
-                Opening.Ready(pages.open())
+                val sizes = pages.open()
+                Opening.Ready(sizes, withContext(Dispatchers.IO) { DocumentInk.open(File(pdf.path), sizes.size) })
             } catch (e: DocumentOpenException) {
                 AppLog.w("opening a Document failed: ${e.message}", e)
                 Opening.Failed(e)
@@ -59,6 +68,16 @@ fun DocumentScreen(
         Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
             Text(text = pdf.name, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.weight(1f))
+            val ready = opening as? Opening.Ready
+            if (ready?.ink?.saveStatus == SaveStatus.FAILED) {
+                Text(
+                    text = stringResource(R.string.not_saved),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
         when (val current = opening) {
             Opening.InProgress -> {
@@ -74,8 +93,37 @@ fun DocumentScreen(
             }
 
             is Opening.Ready -> {
-                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions))
+                SaveWhenLeaving(current.ink)
+                current.ink.warnings.forEach { InkWarning(it) }
+                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions, current.ink))
             }
         }
     }
+}
+
+/** Saves the ink when the app goes to the background, and once more when the Document closes. */
+@Composable
+private fun SaveWhenLeaving(ink: DocumentInk) {
+    LifecycleStartEffect(ink) { onStopOrDispose { ink.saveInBackground() } }
+    DisposableEffect(ink) { onDispose { ink.close() } }
+}
+
+@Composable
+private fun InkWarning(warning: SessionWarning) {
+    val text =
+        when (warning) {
+            is SessionWarning.InkFileUnreadable -> {
+                stringResource(R.string.ink_file_unreadable, warning.error.fileName, warning.error.reason)
+            }
+
+            is SessionWarning.PdfPageCountChanged -> {
+                stringResource(R.string.pdf_page_count_changed, warning.recordedPages, warning.nowPages)
+            }
+        }
+    Text(
+        text = text,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 }

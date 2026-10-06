@@ -7,8 +7,6 @@ import android.view.View
 import androidx.ink.authoring.InProgressStrokeId
 import androidx.ink.authoring.InProgressStrokesFinishedListener
 import androidx.ink.authoring.InProgressStrokesView
-import androidx.ink.brush.Brush
-import androidx.ink.brush.StockBrushes
 import androidx.ink.strokes.StrokeInput
 import com.rickphobia.ricknotes.core.ink.DefaultPen
 import com.rickphobia.ricknotes.core.ink.PageId
@@ -30,10 +28,6 @@ import androidx.ink.strokes.Stroke as InkStroke
 // for a slow frame, short enough that a stroke whose page scrolled away doesn't linger on screen.
 private const val HANDOFF_TIMEOUT_MS = 250L
 
-// The smallest detail a stroke's outline keeps, in PDF points. A page is drawn 4 to 20 px per point
-// (1x to 5x), so this is under half a pixel even at 5x.
-private const val EPSILON_PT = 0.02f
-
 /** What the touch layer asks of the page list when fingers move it. */
 internal interface TouchNavigation {
     /** Fingers or the pen touched down: stop any fling. */
@@ -49,7 +43,8 @@ internal interface TouchNavigation {
 /**
  * Carries out what `core`'s touch interpreter makes of each touch on an open Document. The pen's
  * strokes are drawn by Jetpack Ink's low-latency [InProgressStrokesView] in page coordinates, and
- * handed to [ink] once finished, which draws them with their page from then on.
+ * handed to [ink] once finished, which draws them with their page from then on and saves them. The
+ * pen draws nothing on a read-only Document.
  */
 internal class DocumentTouch(
     private val inProgress: InProgressStrokesView,
@@ -59,13 +54,7 @@ internal class DocumentTouch(
     private val clockMs: () -> Long,
 ) : InProgressStrokesFinishedListener {
     private val interpreter = TouchInterpreter()
-    private val penBrush =
-        Brush.createWithColorIntArgb(
-            StockBrushes.pressurePen(),
-            DefaultPen.COLOUR_ARGB,
-            DefaultPen.WIDTH_PT,
-            EPSILON_PT,
-        )
+    private val penBrush = penBrush(DefaultPen.COLOUR_ARGB, DefaultPen.WIDTH_PT)
 
     // Strokes the pen is drawing, by pointer, and what each will need once Ink hands it back.
     private val drawing = mutableMapOf<Int, InProgressStrokeId>()
@@ -126,6 +115,10 @@ internal class DocumentTouch(
         action: TouchAction.StartStroke,
     ) {
         navigation.stop()
+        if (ink.readOnly) {
+            AppLog.d("pen down on a read-only Document; no stroke")
+            return
+        }
         val page = pageAt(placements(), ScreenPoint(action.x, action.y))
         if (page == null) {
             AppLog.d("pen down outside any page; no stroke")

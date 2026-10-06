@@ -10,7 +10,7 @@ Implement the ticket or spec the user names, usually `projects/<name>/docs/ticke
 
 1. Read the ticket, the project's spec in `projects/<name>/docs/`, `projects/<name>/GLOSSARY.md`, and any `CLAUDE.md` in the project. The root `CLAUDE.md` rules apply throughout.
 2. Check every ticket in **Blocked by** has status `done`. If any doesn't, stop and tell the user.
-3. If the prompt names a branch (`scripts/next-tickets.sh` does), create and use it. Otherwise work on the branch the session gave you (cloud sessions and `claude -w` worktrees come with one). If there isn't one, create `<project-name>/<NN>-<slug>` from `origin/main`. Don't switch branches in a checkout another local session may be using: on the Beelink, a parallel ticket runs in its own worktree (`claude -w <project>-<NN>`).
+3. If the prompt names a branch (`scripts/next-tickets.sh` does), use it. In a fresh worktree whose branch has no commits of its own (`git log origin/main..HEAD` is empty), rename that branch instead of making a new one: `git fetch origin && git branch -m <name> && git merge --ff-only origin/main`. Don't create a second branch and delete the worktree's one: `git branch -D` stops the session for approval. If you aren't in such a worktree, create the named branch from `origin/main`. Otherwise work on the branch the session gave you (cloud sessions and `claude -w` worktrees come with one). If there isn't one, create `<project-name>/<NN>-<slug>` from `origin/main`. Don't switch branches in a checkout another local session may be using: on the Beelink, a parallel ticket runs in its own worktree (`claude -w <project>-<NN>`).
 
 ## Build
 
