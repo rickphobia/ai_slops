@@ -41,3 +41,14 @@ _Avoid_: reservation, appointment
 **Dry run**:
 A booking attempt that fills in the real Picktime form for a Slot and stops before clicking Book, to check court-booker still works with the live page. It never makes a Booking.
 _Avoid_: test booking, rehearsal
+
+**Run time**:
+The moment a Booking Request is booked: a random moment just after its date's Release Time (or about a minute after creation, for a date already open). Chosen once, when the request is made.
+_Avoid_: trigger time
+
+**Booking Request status**:
+Waiting (not run yet; can be edited or cancelled), Booking… (running now), Done (every Slot has a result) or Cancelled.
+
+**Slot status**:
+Waiting, Booking… (being tried now), Booked (Picktime confirmed it), Taken (someone else has it; never retried) or Failed (with a reason in words, such as Picktime's own text or "date not open on Picktime yet").
+_Avoid_: success, error

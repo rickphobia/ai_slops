@@ -22,6 +22,7 @@ from court_booker.court_booking_site import (
     ReadyToBook,
     Rejected,
     SlotAttempt,
+    SlotOutcome,
     Taken,
 )
 from court_booker.profile.profile import Profile, ProfileStore, ProfileUnreadable
@@ -94,8 +95,7 @@ class BookingRun:
             if tried_one:
                 self._pause(heartbeat)
             tried_one = True
-            result = self._book_slot(request, slot, profile, heartbeat)
-            not_open = result.reason == NOT_OPEN_REASON
+            not_open = isinstance(self._book_slot(request, slot, profile, heartbeat), NotOpen)
         logger.info(
             "booking run finished",
             extra={
@@ -126,7 +126,8 @@ class BookingRun:
 
     def _book_slot(
         self, request: BookingRequest, slot: time, profile: Profile, heartbeat: Callable[[], None]
-    ) -> SlotResult:
+    ) -> SlotOutcome:
+        """Book one Slot, retrying network errors; record its result and return the outcome."""
         retries = 0
         while True:
             attempted_at = self._clock.now()
@@ -151,7 +152,7 @@ class BookingRun:
                 screenshot=attempt.screenshot,
             )
             self._record(request, result)
-            return result
+            return attempt.outcome
 
     def _attempt(
         self, request: BookingRequest, slot: time, profile: Profile, retries: int
