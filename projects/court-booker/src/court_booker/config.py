@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from cryptography.fernet import Fernet
 
 from court_booker.auth.passwords import InvalidPasswordHash, PasswordHash, parse_password_hash
+from court_booker.booking_run.booking_run import RunRules
 from court_booker.schedule.schedule import ScheduleRules
 
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
@@ -46,6 +47,10 @@ class Settings:
     picktime_page_timeout: timedelta
     # Every booking attempt saves a screenshot of the page here.
     screenshot_dir: Path
+    booking_run: RunRules
+    scheduler_interval: timedelta
+    # /healthz fails when the scheduler hasn't ticked or made progress for this long.
+    scheduler_stale_after: timedelta
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -56,6 +61,20 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         raise ConfigError(
             f"COURT_BOOKER_RUN_JITTER_MAX_SECONDS ({jitter_max}) must not be less than "
             f"COURT_BOOKER_RUN_JITTER_MIN_SECONDS ({jitter_min})"
+        )
+    pause_min = _non_negative_int(environ, "COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS", default=5)
+    pause_max = _non_negative_int(environ, "COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS", default=20)
+    if pause_max < pause_min:
+        raise ConfigError(
+            f"COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS ({pause_max}) must not be less than "
+            f"COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS ({pause_min})"
+        )
+    tick_seconds = _positive_int(environ, "COURT_BOOKER_SCHEDULER_TICK_SECONDS", default=5)
+    stale_seconds = _positive_int(environ, "COURT_BOOKER_SCHEDULER_STALE_SECONDS", default=600)
+    if stale_seconds <= tick_seconds:
+        raise ConfigError(
+            f"COURT_BOOKER_SCHEDULER_STALE_SECONDS ({stale_seconds}) must be more than "
+            f"COURT_BOOKER_SCHEDULER_TICK_SECONDS ({tick_seconds})"
         )
     return Settings(
         log_level=_log_level(environ, "COURT_BOOKER_LOG_LEVEL", default="INFO"),
@@ -106,6 +125,16 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         screenshot_dir=Path(
             _non_blank(environ, "COURT_BOOKER_SCREENSHOT_DIR", default="data/screenshots")
         ),
+        booking_run=RunRules(
+            pause_min=timedelta(seconds=pause_min),
+            pause_max=timedelta(seconds=pause_max),
+            max_retries=_non_negative_int(environ, "COURT_BOOKER_RETRY_COUNT", default=2),
+            retry_backoff=timedelta(
+                seconds=_non_negative_int(environ, "COURT_BOOKER_RETRY_BACKOFF_SECONDS", default=10)
+            ),
+        ),
+        scheduler_interval=timedelta(seconds=tick_seconds),
+        scheduler_stale_after=timedelta(seconds=stale_seconds),
     )
 
 

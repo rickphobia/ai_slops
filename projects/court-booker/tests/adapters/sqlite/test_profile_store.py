@@ -4,8 +4,8 @@ import pytest
 from cryptography.fernet import Fernet
 
 from court_booker.adapters.sqlite.database import SqliteDatabase
-from court_booker.adapters.sqlite.profile_store import ProfileUnreadable, SqliteProfileStore
-from court_booker.profile.profile import Profile
+from court_booker.adapters.sqlite.profile_store import SqliteProfileStore
+from court_booker.profile.profile import Profile, ProfileUnreadable
 from tests.support import PROFILE_KEY, FakeClock
 
 PROFILE = Profile(

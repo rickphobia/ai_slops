@@ -15,10 +15,20 @@
   {% if rows %}
     <ul class="requests">
       {% for row in rows %}
-        <li class="request status-{{ row.status | lower }}">
+        <li class="request status-{{ row.css }}">
           <h2>{{ row.date }}</h2>
-          <p>Slots: {{ row.slots }}</p>
-          <p>Status: <strong>{{ row.status }}</strong></p>
+          {% if row.slot_results %}
+            <p>Status: <strong>{{ row.status }}</strong></p>
+            {% for slot in row.slot_results %}
+              <p class="slot-result slot-{{ slot.css }}">
+                {{ slot.slot }}: <strong>{{ slot.status }}</strong>{% if slot.reason %} ({{ slot.reason }}){% endif %}
+                {% if slot.tried_at %}<small>tried {{ slot.tried_at }}</small>{% endif %}
+              </p>
+            {% endfor %}
+          {% else %}
+            <p>Slots: {{ row.slots }}</p>
+            <p>Status: <strong>{{ row.status }}</strong></p>
+          {% endif %}
           {% if row.waiting %}
             <p>Runs at {{ row.runs_at }} ({{ timezone }} time)</p>
             <div class="actions">

@@ -16,8 +16,14 @@ class Profile:
     mobile: str
 
 
+class ProfileUnreadable(Exception):
+    """The stored Profile can't be decrypted, most likely because the key changed."""
+
+
 class ProfileStore(Protocol):
-    def load(self) -> Profile | None: ...
+    def load(self) -> Profile | None:
+        """The saved Profile, None if there is none; ProfileUnreadable if it can't be read."""
+        ...
 
     def save(self, profile: Profile) -> None: ...
 

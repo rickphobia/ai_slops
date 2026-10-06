@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from court_booker.auth.passwords import parse_password_hash
+from court_booker.booking_run.booking_run import RunRules
 from court_booker.config import ConfigError, Settings, load_settings
 from court_booker.schedule.schedule import ScheduleRules
 from tests.support import OPERATOR_PASSWORD_HASH, PROFILE_KEY, SESSION_SECRET, required_env
@@ -36,6 +37,14 @@ def test_defaults_apply_when_only_the_secrets_are_set() -> None:
         court_name="Badminton Hall 1",
         picktime_page_timeout=timedelta(seconds=30),
         screenshot_dir=Path("data/screenshots"),
+        booking_run=RunRules(
+            pause_min=timedelta(seconds=5),
+            pause_max=timedelta(seconds=20),
+            max_retries=2,
+            retry_backoff=timedelta(seconds=10),
+        ),
+        scheduler_interval=timedelta(seconds=5),
+        scheduler_stale_after=timedelta(seconds=600),
     )
 
 
@@ -61,6 +70,12 @@ def test_reads_every_setting_from_the_environment() -> None:
             COURT_BOOKER_COURT_NAME="Court 2",
             COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS="45",
             COURT_BOOKER_SCREENSHOT_DIR="/data/screenshots",
+            COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS="0",
+            COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS="3",
+            COURT_BOOKER_RETRY_COUNT="0",
+            COURT_BOOKER_RETRY_BACKOFF_SECONDS="1",
+            COURT_BOOKER_SCHEDULER_TICK_SECONDS="2",
+            COURT_BOOKER_SCHEDULER_STALE_SECONDS="60",
         )
     )
 
@@ -89,6 +104,14 @@ def test_reads_every_setting_from_the_environment() -> None:
         court_name="Court 2",
         picktime_page_timeout=timedelta(seconds=45),
         screenshot_dir=Path("/data/screenshots"),
+        booking_run=RunRules(
+            pause_min=timedelta(0),
+            pause_max=timedelta(seconds=3),
+            max_retries=0,
+            retry_backoff=timedelta(seconds=1),
+        ),
+        scheduler_interval=timedelta(seconds=2),
+        scheduler_stale_after=timedelta(seconds=60),
     )
 
 
@@ -147,6 +170,12 @@ def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
         ("COURT_BOOKER_COURT_NAME", " "),
         ("COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS", "0"),
         ("COURT_BOOKER_SCREENSHOT_DIR", " "),
+        ("COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS", "-1"),
+        ("COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS", "a while"),
+        ("COURT_BOOKER_RETRY_COUNT", "-1"),
+        ("COURT_BOOKER_RETRY_BACKOFF_SECONDS", "-1"),
+        ("COURT_BOOKER_SCHEDULER_TICK_SECONDS", "0"),
+        ("COURT_BOOKER_SCHEDULER_STALE_SECONDS", "0"),
     ],
 )
 def test_a_bad_value_fails_naming_the_variable(variable: str, value: str) -> None:
@@ -173,5 +202,23 @@ def test_a_jitter_window_that_ends_before_it_starts_fails() -> None:
         load_settings(
             required_env(
                 COURT_BOOKER_RUN_JITTER_MIN_SECONDS="120", COURT_BOOKER_RUN_JITTER_MAX_SECONDS="60"
+            )
+        )
+
+
+def test_a_slot_pause_that_ends_before_it_starts_fails() -> None:
+    with pytest.raises(ConfigError, match="COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS"):
+        load_settings(
+            required_env(
+                COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS="30", COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS="10"
+            )
+        )
+
+
+def test_a_stale_limit_no_longer_than_the_tick_fails() -> None:
+    with pytest.raises(ConfigError, match="COURT_BOOKER_SCHEDULER_STALE_SECONDS"):
+        load_settings(
+            required_env(
+                COURT_BOOKER_SCHEDULER_TICK_SECONDS="60", COURT_BOOKER_SCHEDULER_STALE_SECONDS="60"
             )
         )

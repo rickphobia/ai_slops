@@ -3,20 +3,23 @@
 import sqlite3
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, time
+from pathlib import Path
 
 from court_booker.adapters.sqlite.database import SqliteDatabase
 from court_booker.booking_requests.booking_requests import (
     BookingRequest,
     BookingRequestStatus,
     DateTaken,
+    SlotResult,
+    SlotStatus,
     slot_text,
 )
 
 _WAITING = BookingRequestStatus.WAITING.value
-_SELECT_REQUESTS = """
-    SELECT r.id, r.play_date, r.status, r.run_at, group_concat(s.slot)
-    FROM booking_requests r LEFT JOIN slot_attempts s ON s.request_id = r.id
-"""
+_SELECT_REQUESTS = "SELECT id, play_date, status, run_at FROM booking_requests"
+_SELECT_SLOTS = (
+    "SELECT request_id, slot, status, reason, attempted_at, retries, screenshot FROM slot_attempts"
+)
 
 
 class SqliteBookingRequestRepository:
@@ -43,15 +46,12 @@ class SqliteBookingRequestRepository:
 
     def get(self, request_id: int) -> BookingRequest | None:
         with self._database.connection() as connection:
-            row = connection.execute(
-                f"{_SELECT_REQUESTS} WHERE r.id = ? GROUP BY r.id", (request_id,)
-            ).fetchone()
-        return _request_from(row) if row else None
+            requests = _load(connection, "WHERE id = ?", (request_id,))
+        return requests[0] if requests else None
 
     def all(self) -> list[BookingRequest]:
         with self._database.connection() as connection:
-            rows = connection.execute(f"{_SELECT_REQUESTS} GROUP BY r.id").fetchall()
-        return [_request_from(row) for row in rows]
+            return _load(connection, "", ())
 
     def replace_slots_if_waiting(self, request_id: int, slots: Sequence[time]) -> bool:
         with self._database.connection() as connection:
@@ -72,11 +72,61 @@ class SqliteBookingRequestRepository:
             )
         return cursor.rowcount == 1
 
+    def claim_next_due(self, now: datetime) -> BookingRequest | None:
+        with self._database.connection() as connection:
+            # The write lock makes the pick and the Waiting → Booking… change one step, so two
+            # ticks (or a tick and an edit) can never both get the same request.
+            connection.execute("BEGIN IMMEDIATE")
+            # Compared in Python: ISO text with and without microseconds doesn't sort as time.
+            rows = connection.execute(
+                "SELECT id, run_at FROM booking_requests WHERE status = ?", (_WAITING,)
+            ).fetchall()
+            due = sorted(
+                (datetime.fromisoformat(run_at), request_id)
+                for request_id, run_at in rows
+                if datetime.fromisoformat(run_at) <= now
+            )
+            if not due:
+                return None
+            request_id = due[0][1]
+            connection.execute(
+                "UPDATE booking_requests SET status = ?, started_at = ? WHERE id = ?",
+                (BookingRequestStatus.BOOKING.value, _utc_text(now), request_id),
+            )
+            return _load(connection, "WHERE id = ?", (request_id,))[0]
+
+    def record_slot(self, request_id: int, result: SlotResult) -> None:
+        with self._database.connection() as connection:
+            connection.execute(
+                "UPDATE slot_attempts SET status = ?, reason = ?, attempted_at = ?, "
+                "retries = ?, screenshot = ? WHERE request_id = ? AND slot = ?",
+                (
+                    result.status.value,
+                    result.reason,
+                    _utc_text(result.attempted_at) if result.attempted_at else None,
+                    result.retries,
+                    str(result.screenshot) if result.screenshot else None,
+                    request_id,
+                    slot_text(result.slot),
+                ),
+            )
+
+    def finish(self, request_id: int) -> None:
+        with self._database.connection() as connection:
+            connection.execute(
+                "UPDATE booking_requests SET status = ? WHERE id = ?",
+                (BookingRequestStatus.DONE.value, request_id),
+            )
+
+    def ping(self) -> None:
+        with self._database.connection() as connection:
+            connection.execute("SELECT 1 FROM booking_requests LIMIT 1").fetchall()
+
 
 def _insert_slots(connection: sqlite3.Connection, request_id: int, slots: Sequence[time]) -> None:
     connection.executemany(
         "INSERT INTO slot_attempts (request_id, slot, status) VALUES (?, ?, ?)",
-        [(request_id, slot_text(slot), _WAITING) for slot in slots],
+        [(request_id, slot_text(slot), SlotStatus.WAITING.value) for slot in slots],
     )
 
 
@@ -87,14 +137,42 @@ def _is_waiting(connection: sqlite3.Connection, request_id: int) -> bool:
     return row is not None and row[0] == _WAITING
 
 
-def _request_from(row: tuple[int, str, str, str, str | None]) -> BookingRequest:
-    request_id, play_date, status, run_at, slots = row
-    return BookingRequest(
-        id=request_id,
-        play_date=date.fromisoformat(play_date),
-        slots=tuple(sorted(time.fromisoformat(slot) for slot in (slots or "").split(",") if slot)),
-        status=BookingRequestStatus(status),
-        run_at=datetime.fromisoformat(run_at),
+def _load(
+    connection: sqlite3.Connection, where: str, parameters: tuple[object, ...]
+) -> list[BookingRequest]:
+    requests = connection.execute(f"{_SELECT_REQUESTS} {where}", parameters).fetchall()
+    ids = [row[0] for row in requests]
+    placeholders = ",".join("?" * len(ids))
+    slot_rows = connection.execute(
+        f"{_SELECT_SLOTS} WHERE request_id IN ({placeholders})", ids
+    ).fetchall()
+    results: dict[int, list[SlotResult]] = {request_id: [] for request_id in ids}
+    for request_id, *slot_row in slot_rows:
+        results[request_id].append(_slot_result_from(slot_row))
+    return [
+        BookingRequest(
+            id=request_id,
+            play_date=date.fromisoformat(play_date),
+            slot_results=tuple(sorted(results[request_id], key=lambda result: result.slot)),
+            status=BookingRequestStatus(status),
+            run_at=datetime.fromisoformat(run_at),
+        )
+        for request_id, play_date, status, run_at in requests
+    ]
+
+
+def _slot_result_from(row: list[object]) -> SlotResult:
+    slot, status, reason, attempted_at, retries, screenshot = row
+    assert isinstance(slot, str) and isinstance(status, str) and isinstance(retries, int)
+    return SlotResult(
+        slot=time.fromisoformat(slot),
+        status=SlotStatus(status),
+        reason=reason if isinstance(reason, str) else None,
+        attempted_at=datetime.fromisoformat(attempted_at)
+        if isinstance(attempted_at, str)
+        else None,
+        retries=retries,
+        screenshot=Path(screenshot) if isinstance(screenshot, str) else None,
     )
 
 
