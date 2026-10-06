@@ -4,14 +4,14 @@
 
 **Blocked by:** 09 (Save and reopen)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** core-session
 
 **Effort:** low
 
-- [ ] A Version is taken on open when an Ink file exists, before any change (tested)
-- [ ] At most one Version per 15 minutes of writing (tested with a fake clock)
-- [ ] Only the newest 10 Versions per Document are kept (tested)
-- [ ] Versions are written with the same safe write as the Ink file
-- [ ] `.versions` name pattern written in the README for the sync app to skip
+- [x] A Version is taken on open when an Ink file exists, before any change (tested)
+- [x] At most one Version per 15 minutes of writing (tested with a fake clock)
+- [x] Only the newest 10 Versions per Document are kept (tested)
+- [x] Versions are written with the same safe write as the Ink file
+- [x] `.versions` name pattern written in the README for the sync app to skip
