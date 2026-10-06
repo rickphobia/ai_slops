@@ -33,6 +33,9 @@ jobs:
           enable-cache: true
           cache-dependency-glob: projects/court-booker/uv.lock
       - run: uv sync --locked
+      # The browser adapter's tests drive headless Chromium: fetch the build the pinned
+      # playwright package expects, plus its system libraries.
+      - run: uv run playwright install --with-deps --only-shell chromium
       - run: uv run ruff check
       - run: uv run ruff format --check
       - run: uv run mypy

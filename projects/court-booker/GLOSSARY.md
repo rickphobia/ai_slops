@@ -37,3 +37,7 @@ _Avoid_: opening time, 12am
 **Booking**:
 A reservation that Picktime has confirmed for the Profile.
 _Avoid_: reservation, appointment
+
+**Dry run**:
+A booking attempt that fills in the real Picktime form for a Slot and stops before clicking Book, to check court-booker still works with the live page. It never makes a Booking.
+_Avoid_: test booking, rehearsal

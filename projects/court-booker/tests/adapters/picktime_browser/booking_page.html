@@ -1,0 +1,169 @@
+<!doctype html>
+<!--
+  A small stand-in for the Picktime booking page, for the browser adapter's tests.
+
+  The markup copies the live page's classes, attributes, labels and messages as read on
+  2026-10-06; the script is ours, not Picktime's. The texts after Book other than the
+  confirmation are guesses: they only show on a real failed booking, which we can't make on purpose.
+  Query parameters set up what the page shows:
+    open    comma-separated dates (YYYYMMDD) that are open; the others in the strip are disabled
+    slots   comma-separated start times (HHMM) still free on each open date; empty shows no Slots
+    result  what Book answers: confirmed, taken or rejected
+    message the error text for result=rejected
+    covered yes puts an overlay on top of the form, so Book can't be clicked
+  On Book it POSTs the form values to /submissions so the test can check what was sent.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Book an Appointment with 1120 Park Avenue | Picktime</title>
+    <style>
+      .disable { opacity: 0.3; }
+      .hide { display: none; }
+      .booking-list li, .date-item, .booking-page-timings-btn { cursor: pointer; margin: 4px; }
+      .dates-array { display: flex; }
+    </style>
+  </head>
+  <body>
+    <div id="booking-content">
+      <div class="booking-body clearfix" id="view"></div>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const openDates = (params.get("open") || "").split(",").filter(Boolean);
+      const freeSlots = (params.get("slots") ?? "0800,1000,1200,1400,1600,1800,2000")
+        .split(",")
+        .filter(Boolean);
+      const result = params.get("result") || "confirmed";
+      const view = document.getElementById("view");
+      let chosen = "";
+
+      function showResources() {
+        view.innerHTML = `
+          <h2>Choose a Resource:</h2>
+          <div class="booking-list-box"><h3>Badminton Hall</h3>
+            <ul class="booking-list resource-list">
+              <li data-id="hall"><div class="bl bl-center"><div>Badminton Hall 1 (Badminton)</div>
+                <div class="bl-meta-deta"><span>2 hrs</span></div></div></li>
+              <li data-id="table"><div class="bl bl-center"><div>Ping Pong Table CP 1</div>
+                <div class="bl-meta-deta"><span>2 hrs</span></div></div></li>
+            </ul></div>`;
+        view.querySelector('[data-id="hall"]').onclick = showDates;
+        view.querySelector('[data-id="table"]').onclick = () => alert("wrong resource");
+      }
+
+      function showDates() {
+        // The strip shows a fixed run of dates around the open ones, like the live page.
+        const first = openDates[0] || "20261006";
+        const start = new Date(`${first.slice(0, 4)}-${first.slice(4, 6)}-${first.slice(6)}T00:00:00Z`);
+        let strip = "";
+        for (let day = -2; day < 9; day++) {
+          const date = new Date(start.getTime() + day * 86400000);
+          const ymd = date.toISOString().slice(0, 10).replaceAll("-", "");
+          const disabled = openDates.includes(ymd) ? "" : " disable";
+          strip += `<div class="date-item data-date-item${disabled}" data-date="${ymd}">
+            <div><span>${date.getUTCDate()}</span></div></div>`;
+        }
+        view.innerHTML = `<div class="dates-container"><div class="dates-array">${strip}</div></div>
+          <div class="row timeslots"></div>`;
+        view.querySelectorAll(".data-date-item").forEach((item) => {
+          item.onclick = () =>
+            item.classList.contains("disable")
+              ? showAlert("This date is not open for booking")
+              : showSlots(item.dataset.date);
+        });
+      }
+
+      function showSlots(ymd) {
+        const box = view.querySelector(".timeslots");
+        // Slots arrive after a moment, as they do from Picktime's /book/slots call.
+        box.innerHTML = "";
+        setTimeout(() => {
+          if (freeSlots.length === 0) {
+            box.innerHTML = `<div class="no-slots"><span>No time slots are available for this
+              date. Please select another date above to check availability.</span></div>`;
+            return;
+          }
+          box.innerHTML = freeSlots
+            .map(
+              (hhmm) => `<div class="col-xs-6 col-sm-3"><button
+                class="btn btn-default booking-page-timings-btn " startdate="${ymd}${hhmm}"
+                >${hhmm.slice(0, 2)}:${hhmm.slice(2)}</button></div>`,
+            )
+            .join("");
+          box.querySelectorAll("button").forEach((button) => {
+            button.onclick = () => showForm(button.getAttribute("startdate"));
+          });
+        }, 150);
+      }
+
+      function showForm(startdate) {
+        chosen = startdate;
+        view.innerHTML = `
+          <h2>Enter your Information:</h2>
+          <div class="information-box col-sm-8 row margin-bottom "><form autocomplete="off">
+            <div class="form-group"><label class="pt-label">First Name<span class="req_field">*</span></label>
+              <input autocomplete="off" class="form-control firstname" type="text" value=""></div>
+            <div class="form-group"><label class="pt-label">Email Id<span class="req_field">*</span></label>
+              <input autocomplete="off" class="form-control custemail" type="text" value=""></div>
+            <div class="form-group"><label class="pt-label">Unit Number<span class="req_field">*</span></label>
+              <input autocomplete="off" class="form-control other_of0" data-key="of0" type="text" value=""></div>
+            <div class="form-group"><label class="pt-label">Mobile<span class="req_field">*</span></label>
+              <input autocomplete="off" class="form-control other_of1" data-key="of1" type="text" value=""></div>
+            <div class="form-group"><label class="pt-label">Booking Notes</label>
+              <textarea class="form-control bookingcomments" rows="3"></textarea></div>
+            <div class="margin-top text-center"><button class="btn btn-primary margin-bottom booknow"
+              >Book Appointment</button></div>
+          </form></div>`;
+        view.querySelector(".booknow").onclick = (event) => {
+          event.preventDefault();
+          book();
+        };
+        if (params.get("covered") === "yes") {
+          // Like the live page's fixed ad bar landing on top of the Book button.
+          document.body.insertAdjacentHTML(
+            "beforeend",
+            '<div class="ad-bar" style="position: fixed; inset: 0; background: #eee;"></div>',
+          );
+        }
+      }
+
+      async function book() {
+        const value = (selector) => view.querySelector(selector).value;
+        await fetch("/submissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            startdate: chosen,
+            first_name: value(".firstname"),
+            email: value(".custemail"),
+            unit_number: value(".other_of0"),
+            mobile: value(".other_of1"),
+            notes: value(".bookingcomments"),
+          }),
+        });
+        if (result === "confirmed") {
+          view.innerHTML = `<div class="booking-confirm-head"><i class="icon-completed"></i>
+            <h2>Your booking has been confirmed.</h2></div>`;
+        } else if (result === "taken") {
+          showAlert("The selected time slot is no longer available");
+        } else {
+          showAlert(params.get("message") || "Only one booking per unit per day is allowed");
+        }
+      }
+
+      // Shaped like SweetAlert 1, which the live page uses for every error.
+      function showAlert(text) {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<div class="sweet-overlay" style="display: block;"></div>
+           <div class="sweet-alert showSweetAlert visible" style="display: block;">
+             <h2>Oops!</h2><p style="display: block;">${text}</p>
+             <div class="sa-button-container"><button class="confirm">OK</button></div></div>`,
+        );
+      }
+
+      showResources();
+    </script>
+  </body>
+</html>
