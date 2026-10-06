@@ -1,15 +1,21 @@
 """Builds the FastAPI app from validated Settings and the adapters it uses."""
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from starlette.responses import Response
 
 from court_booker.auth.login import LoginFailures, OperatorLogin
 from court_booker.auth.session_cookies import CsrfTokens, SessionSigner
+from court_booker.booking_requests.booking_requests import (
+    BookingRequestNotFound,
+    BookingRequestRepository,
+    BookingRequests,
+)
 from court_booker.clock import Clock
 from court_booker.config import Settings
 from court_booker.profile.profile import ProfileStore
-from court_booker.web import home_page, login_pages, profile_page
+from court_booker.random_source import RandomSource
+from court_booker.web import booking_request_pages, login_pages, profile_page
 from court_booker.web.access import Access, LoginRequired, check_csrf, path_for, require_operator
 
 
@@ -18,7 +24,9 @@ def create_app(
     *,
     login_failures: LoginFailures,
     profile_store: ProfileStore,
+    booking_request_repository: BookingRequestRepository,
     clock: Clock,
+    random_source: RandomSource,
 ) -> FastAPI:
     # root_path makes routes match both behind nginx (/ai-projects/court-booker/healthz) and
     # directly (/healthz), and makes generated links carry the prefix.
@@ -51,10 +59,22 @@ def create_app(
     )
 
     app.state.profile_store = profile_store
+    app.state.booking_requests = BookingRequests(
+        repository=booking_request_repository,
+        profiles=profile_store,
+        clock=clock,
+        random=random_source,
+        slots=settings.slots,
+        schedule=settings.schedule,
+    )
 
     @app.exception_handler(LoginRequired)
     def send_to_login(request: Request, _: LoginRequired) -> Response:
         return RedirectResponse(path_for(request, "login"), status_code=303)
+
+    @app.exception_handler(BookingRequestNotFound)
+    def not_found(_: Request, error: BookingRequestNotFound) -> Response:
+        return PlainTextResponse(str(error), status_code=404)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
@@ -62,6 +82,6 @@ def create_app(
 
     app.include_router(login_pages.router)
     # Everything else needs the Operator; new pages go on routers included this way.
-    app.include_router(home_page.router, dependencies=[Depends(require_operator)])
+    app.include_router(booking_request_pages.router, dependencies=[Depends(require_operator)])
     app.include_router(profile_page.router, dependencies=[Depends(require_operator)])
     return app

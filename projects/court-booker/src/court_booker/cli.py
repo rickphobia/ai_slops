@@ -11,6 +11,7 @@ from typing import TextIO
 import uvicorn
 
 from court_booker.adapters.picktime_browser.picktime_site import PicktimeBrowserSite
+from court_booker.adapters.sqlite.booking_request_store import SqliteBookingRequestRepository
 from court_booker.adapters.sqlite.database import DatabaseError, SqliteDatabase
 from court_booker.adapters.sqlite.login_failures import SqliteLoginFailures
 from court_booker.adapters.sqlite.profile_store import ProfileUnreadable, SqliteProfileStore
@@ -20,6 +21,7 @@ from court_booker.config import ConfigError, Settings, load_settings
 from court_booker.court_booking_site import CourtBookingSite, ReadyToBook
 from court_booker.json_logging import configure_logging
 from court_booker.profile.profile import ProfileStore
+from court_booker.random_source import SystemRandomSource
 from court_booker.web.app import create_app
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,9 @@ def serve(settings: Settings) -> int:
         settings,
         login_failures=SqliteLoginFailures(database),
         profile_store=SqliteProfileStore(database, settings.profile_key, clock),
+        booking_request_repository=SqliteBookingRequestRepository(database),
         clock=clock,
+        random_source=SystemRandomSource(),
     )
     logger.info(
         "starting web server",
@@ -83,7 +87,7 @@ def run_dry_run(settings: Settings, day: date, slot: time) -> int:
     site = PicktimeBrowserSite(
         page_url=settings.picktime_url,
         court_name=settings.court_name,
-        timezone=settings.venue_timezone,
+        timezone=settings.schedule.venue_timezone.key,
         page_timeout=settings.picktime_page_timeout,
         screenshot_dir=settings.screenshot_dir,
         clock=clock,

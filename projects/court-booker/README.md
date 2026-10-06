@@ -4,7 +4,7 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 
 ## Status
 
-`in progress`: walking skeleton, Operator login, the encrypted Profile, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, lets the Operator log in and save the Profile, and `dry-run` fills the live Picktime form. Booking Requests and booking at Release Time come in the next tickets (`docs/tickets/`).
+`in progress`: walking skeleton, Operator login, the encrypted Profile, Booking Requests, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, lets the Operator log in, save the Profile, and create, edit and cancel Booking Requests, each showing when it will run; `dry-run` fills the live Picktime form. Nothing is booked at Release Time yet: the scheduler comes in the next tickets (`docs/tickets/`).
 
 ## Requirements
 
@@ -87,9 +87,14 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_SECURE_COOKIES` | no | `true` | Send cookies over https only. Set `false` only for local http |
 | `COURT_BOOKER_LOGIN_MAX_FAILURES` | no | `5` | Wrong passwords that trigger the lockout |
 | `COURT_BOOKER_LOGIN_LOCKOUT_MINUTES` | no | `15` | The window failures are counted in, and how long the lock lasts; see "How it works" |
+| `COURT_BOOKER_VENUE_TIMEZONE` | no | `Asia/Kuala_Lumpur` | IANA timezone of the venue: Release Times are midnight here, run times are shown in it, and the browser runs in it (the page shows Slot times in local time) |
+| `COURT_BOOKER_SLOTS` | no | `08:00,10:00,12:00,14:00,16:00,18:00,20:00` | The Court's Slots, as comma-separated `HH:MM` start times; the only ones the Operator can tick |
+| `COURT_BOOKER_BOOKING_WINDOW_DAYS` | no | `2` | How many days ahead Picktime opens a date. A date's Release Time is venue midnight this many days before it |
+| `COURT_BOOKER_RUN_JITTER_MIN_SECONDS` | no | `60` | A Booking Request runs a random moment between the min and max seconds after Release Time |
+| `COURT_BOOKER_RUN_JITTER_MAX_SECONDS` | no | `120` | Must not be less than the min |
+| `COURT_BOOKER_OPEN_DATE_DELAY_SECONDS` | no | `60` | A request for a date already open (past its Release Time) runs this long after it is created |
 | `COURT_BOOKER_PICKTIME_URL` | no | the 1120 Park Avenue booking page | The public Picktime booking page (http or https) |
 | `COURT_BOOKER_COURT_NAME` | no | `Badminton Hall 1` | The Court as that page lists it (matched as part of the entry's text) |
-| `COURT_BOOKER_VENUE_TIMEZONE` | no | `Asia/Kuala_Lumpur` | IANA timezone the browser runs in; the page shows Slot times in the browser's timezone |
 | `COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS` | no | `30` | How long one step on the page may take before the attempt is a network error |
 | `COURT_BOOKER_SCREENSHOT_DIR` | no | `data/screenshots` (`/app/data/screenshots` in the image) | Where each attempt's screenshot is saved; created if missing |
 
@@ -177,6 +182,8 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 - **Profile** (`profile/`, `adapters/sqlite/profile_store.py`, `web/profile_page.py`): the `/profile` page shows and saves friend B's first name, email, unit number and mobile. `parse_profile` checks every field (all required, an email shape, mobile digits only) and the page shows a message under each bad one. The Profile is stored as one row holding a Fernet token of its JSON, encrypted with `COURT_BOOKER_PROFILE_KEY` (decision 0003); the key is never in the database. Logs name the fields that failed, never their values.
 - **Picktime** (`court_booking_site.py`, `adapters/picktime_browser/`): `CourtBookingSite.book(date, slot, profile, dry_run=...)` books one Slot and returns a `SlotAttempt`: the outcome (`Booked`, `Taken`, `NotOpen`, `NetworkError` with the step, `Rejected` with Picktime's text, or `ReadyToBook` for a dry run), the screenshot path and the duration. The Playwright adapter starts a fresh headless Chromium for each attempt, with a normal desktop Chrome user agent and the venue's timezone. It opens the page, picks the Court, then the date (missing or greyed out means `NotOpen`), then the Slot. If the date has no Slots it's `NotOpen`; if it has Slots but not this one, `Taken`. It fills the fields by their labels (First Name, Email Id, Unit Number, Mobile), clicks Book, and reads the confirmation (`Booked`) or Picktime's "Oops!" dialog (`Taken` when it says the Slot is no longer available, otherwise `Rejected`). Any Playwright error or timeout is a `NetworkError` naming the step it happened in. The selectors come from the live page as read on 2026-10-06; the error texts after Book are guesses until a real booking fails.
 
+- **Booking Requests** (`booking_requests/`, `schedule/`, `adapters/sqlite/booking_request_store.py`, `web/booking_request_pages.py`): the home page lists them, today and later first (soonest at the top), then past dates. `/requests/new` takes a date and one or more ticked Slots. `BookingRequests` checks the rules and raises a typed error with the message the page shows: a Profile must exist, the date can't be in the past (judged in venue time), at least one Slot, only configured Slots, and one live request per date (a unique index on non-Cancelled rows, so a cancelled date can be requested again). The run time is chosen once, at creation, by `schedule.run_time`: the date's Release Time plus a random jitter, or a short delay from now when the date is already open. It is stored in UTC and shown in venue time; editing the Slots keeps it, and the date can't be edited (cancel and create a new one instead). Edit and cancel work only while the request is Waiting (and editing stops once the date has passed); the status check and the change are one database step, so the scheduler (a later ticket) can't claim a request half-way through an edit. Logs carry the request id, date, Slots and run time, never Profile data.
+
 The full design (scheduler) is in `docs/spec.md`.
 
 ## Folder layout
@@ -186,12 +193,15 @@ src/court_booker/
   config.py          # settings from env vars, validated at startup
   json_logging.py    # JSON-lines log format on stdout
   clock.py           # the current time, faked in tests
+  random_source.py   # random choices, fixed in tests
   court_booking_site.py  # the interface for booking one Slot, and its outcomes
   cli.py             # entrypoint: `court-booker serve`, `hash-password` and `dry-run`
   auth/              # password hashes, session cookies and CSRF tokens, login lockout
   profile/           # the Profile value and its validation rules
+  booking_requests/  # Booking Request rules: create, edit Slots, cancel, list order
+  schedule/          # Release Time and run time, pure functions
   adapters/picktime_browser/  # books a Slot through the real Picktime page (Playwright)
-  adapters/sqlite/   # the database file, migrations, stored login failures, encrypted Profile
+  adapters/sqlite/   # the database file, migrations, login failures, encrypted Profile, Booking Requests
   web/app.py         # FastAPI app wiring and /healthz
   web/access.py      # session and CSRF checks, page rendering
   web/*_page(s).py   # pages, with their templates in web/templates/
@@ -216,6 +226,7 @@ docs/                # spec, tickets, decisions
 - Logged in but sent straight back to the login page: over plain http, set `COURT_BOOKER_SECURE_COOKIES=false`; otherwise check you used the prefixed URL.
 - Locked out: wait the lockout minutes, or, on the server, clear it with `sqlite3 <database file> 'DELETE FROM login_failures'`.
 - The Profile page fails with `ProfileUnreadable` in the logs: `COURT_BOOKER_PROFILE_KEY` isn't the key the Profile was saved with. Restore the old key, or delete the row (`sqlite3 <database file> 'DELETE FROM profile'`) and enter the Profile again.
+- A Booking Request shows an unexpected run time: check `COURT_BOOKER_VENUE_TIMEZONE`, `COURT_BOOKER_BOOKING_WINDOW_DAYS` and the jitter settings. A changed setting applies only to requests created after it; existing ones keep the run time stored at creation. The `booking request created` log line has the `run_at` (UTC) that was chosen.
 - A form answers `403 The form expired`: its CSRF token no longer matches the browser's cookie (for example after cookies were cleared). Reload the page and submit again.
 - Picktime attempts log one line per step (`picktime: open page`, `pick court`, `pick date`, `pick slot`, `fill form`, `submit`, `read result`, each with `date`, `slot` and `step`), then `picktime attempt finished` with the outcome, duration and screenshot path. Profile values are never logged. A failure logs `picktime step failed: <step>: <Playwright's message>`; open the screenshot to see what the page showed.
 - Every attempt ends in `NetworkError` at `pick court`, `pick date` or `fill form`: Picktime has probably changed its page. Run `dry-run`, look at the screenshot, and compare the page with the selectors in `adapters/picktime_browser/picktime_site.py`.

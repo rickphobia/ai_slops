@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if editing else "New" }} Booking Request · court-booker{% endblock %}
+{% block content %}
+  <header>
+    <h1>{{ "Edit" if editing else "New" }} Booking Request</h1>
+    <a href="{{ request.url_for('home').path }}">Home</a>
+  </header>
+  {% if error %}
+    <p class="error" role="alert">{{ error }}
+      {% if needs_profile %}<a href="{{ request.url_for('profile').path }}">Go to the Profile</a>{% endif %}
+    </p>
+  {% endif %}
+  <form method="post" action="{{ action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if editing %}
+      {# The date is fixed: its run time was chosen for it at creation. #}
+      <p><strong>{{ date_label }}</strong>. The run time stays as it is.</p>
+    {% else %}
+      <label for="play_date">Date</label>
+      <input id="play_date" name="play_date" type="date" value="{{ date_value }}" min="{{ min_date }}" required>
+    {% endif %}
+    <fieldset class="slots">
+      <legend>Slots (start times, two hours each)</legend>
+      {% for slot in slots %}
+        <label><input type="checkbox" name="slots" value="{{ slot.value }}"{% if slot.checked %} checked{% endif %}> {{ slot.value }}</label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit">{{ "Save" if editing else "Create" }}</button>
+  </form>
+{% endblock %}

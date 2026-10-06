@@ -90,7 +90,7 @@ def test_the_right_password_logs_in_with_a_strict_session_cookie(client: TestCli
     assert f"Max-Age={30 * 24 * 3600}" in cookie
     home = client.get(f"{PREFIX}/", follow_redirects=False)
     assert home.status_code == 200
-    assert "logged in" in home.text
+    assert "Log out" in home.text
 
 
 def test_a_wrong_password_shows_an_error_and_stays_logged_out(client: TestClient) -> None:

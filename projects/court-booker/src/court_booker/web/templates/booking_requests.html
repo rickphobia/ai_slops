@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+  <header>
+    <h1>Booking Requests</h1>
+    <form method="post" action="{{ request.url_for('logout').path }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="quiet">Log out</button>
+    </form>
+  </header>
+  <nav class="actions">
+    <a class="button" href="{{ request.url_for('new_booking_request').path }}">New Booking Request</a>
+    <a href="{{ request.url_for('profile').path }}">Profile</a>
+  </nav>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if rows %}
+    <ul class="requests">
+      {% for row in rows %}
+        <li class="request status-{{ row.status | lower }}">
+          <h2>{{ row.date }}</h2>
+          <p>Slots: {{ row.slots }}</p>
+          <p>Status: <strong>{{ row.status }}</strong></p>
+          {% if row.waiting %}
+            <p>Runs at {{ row.runs_at }} ({{ timezone }} time)</p>
+            <div class="actions">
+              <a href="{{ request.url_for('edit_booking_request', request_id=row.id).path }}">Edit</a>
+              <form method="post" action="{{ request.url_for('cancel_booking_request', request_id=row.id).path }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="quiet">Cancel</button>
+              </form>
+            </div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No Booking Requests yet.</p>
+  {% endif %}
+{% endblock %}

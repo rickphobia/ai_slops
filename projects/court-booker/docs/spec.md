@@ -157,7 +157,7 @@ At the date's **Release Time**, court-booker waits a random moment between 00:01
 - **web**: FastAPI routes rendering Jinja templates (no JavaScript build), mobile-first CSS, plain HTML forms. Pages:
   - login
   - Booking Requests list (the home page)
-  - new and edit Booking Request (date picker plus a checkbox per Slot)
+  - new and edit Booking Request (date picker on new only, plus a checkbox per Slot; to change the date, cancel and create a new one)
   - Profile
   - screenshot view (served only to a logged-in Operator)
   - `/healthz` (unauthenticated; reports database reachable and last scheduler tick age, with no data)
@@ -166,7 +166,7 @@ At the date's **Release Time**, court-booker waits a random moment between 00:01
 ### Data
 
 - `profile`: one row, holding the Fernet token and an updated-at time.
-- `booking_requests`: id, date (unique), status (Waiting, Booking…, Done, Cancelled), run time, created-at, started-at, ran-late flag.
+- `booking_requests`: id, date (unique among requests that are not Cancelled, so a cancelled date can be requested again), status (Waiting, Booking…, Done, Cancelled), run time, created-at, started-at, ran-late flag.
 - `slot_attempts`: request id, Slot start time, status (Waiting, Booking…, Booked, Taken, Failed), reason, screenshot path, attempted-at, retry count.
 - `login_failures`: timestamp, for lockout.
 - Times are stored in UTC and shown in venue time.
