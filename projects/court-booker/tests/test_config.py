@@ -37,6 +37,7 @@ def test_defaults_apply_when_only_the_secrets_are_set() -> None:
         court_name="Badminton Hall 1",
         picktime_page_timeout=timedelta(seconds=30),
         screenshot_dir=Path("data/screenshots"),
+        retention=timedelta(days=30),
         booking_run=RunRules(
             pause_min=timedelta(seconds=5),
             pause_max=timedelta(seconds=20),
@@ -70,6 +71,7 @@ def test_reads_every_setting_from_the_environment() -> None:
             COURT_BOOKER_COURT_NAME="Court 2",
             COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS="45",
             COURT_BOOKER_SCREENSHOT_DIR="/data/screenshots",
+            COURT_BOOKER_RETENTION_DAYS="7",
             COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS="0",
             COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS="3",
             COURT_BOOKER_RETRY_COUNT="0",
@@ -104,6 +106,7 @@ def test_reads_every_setting_from_the_environment() -> None:
         court_name="Court 2",
         picktime_page_timeout=timedelta(seconds=45),
         screenshot_dir=Path("/data/screenshots"),
+        retention=timedelta(days=7),
         booking_run=RunRules(
             pause_min=timedelta(0),
             pause_max=timedelta(seconds=3),
@@ -170,6 +173,7 @@ def test_a_missing_secret_fails_naming_the_variable(variable: str) -> None:
         ("COURT_BOOKER_COURT_NAME", " "),
         ("COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS", "0"),
         ("COURT_BOOKER_SCREENSHOT_DIR", " "),
+        ("COURT_BOOKER_RETENTION_DAYS", "0"),
         ("COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS", "-1"),
         ("COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS", "a while"),
         ("COURT_BOOKER_RETRY_COUNT", "-1"),

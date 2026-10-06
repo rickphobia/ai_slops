@@ -69,7 +69,7 @@ class FakeSite:
     """A CourtBookingSite that answers from a script per Slot and records every call.
 
     A Slot with no script left is Booked. `during_book`, if set, runs inside each call, to act
-    while a run is in progress.
+    while a run is in progress. With `screenshot_dir` set, each call writes its screenshot there.
     """
 
     clock: FakeClock
@@ -77,6 +77,7 @@ class FakeSite:
     calls: list[BookCall] = field(default_factory=list)
     attempt_duration: timedelta = timedelta(seconds=8)
     during_book: Callable[[], None] | None = None
+    screenshot_dir: Path | None = None
 
     def book(self, day: date, slot: time, profile: Profile, *, dry_run: bool) -> SlotAttempt:
         self.calls.append(BookCall(day, slot, profile, dry_run, self.clock.now()))
@@ -85,9 +86,14 @@ class FakeSite:
         outcomes = self.script.get(slot, [])
         outcome = outcomes.pop(0) if outcomes else Booked()
         self.clock.advance(self.attempt_duration)
+        name = f"{day}-{slot:%H%M}-{len(self.calls)}.png"
+        screenshot = (self.screenshot_dir or Path("/screens")) / name
+        if self.screenshot_dir:
+            self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+            screenshot.write_bytes(b"\x89PNG " + name.encode())
         return SlotAttempt(
             outcome=outcome,
-            screenshot=Path(f"/screens/{day}-{slot:%H%M}-{len(self.calls)}.png"),
+            screenshot=screenshot,
             duration=self.attempt_duration,
         )
 

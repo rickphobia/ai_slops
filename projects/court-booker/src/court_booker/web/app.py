@@ -54,11 +54,14 @@ def create_app(
             rules=settings.booking_run,
         ),
         clock=clock,
+        schedule=settings.schedule,
+        retention=settings.retention,
         stale_after=settings.scheduler_stale_after,
     )
 
     @asynccontextmanager
     async def run_scheduler(_: FastAPI) -> AsyncIterator[None]:
+        scheduler.recover_interrupted()
         loop = SchedulerLoop(scheduler, settings.scheduler_interval)
         loop.start()
         yield
@@ -96,6 +99,7 @@ def create_app(
     )
 
     app.state.scheduler = scheduler
+    app.state.screenshot_dir = settings.screenshot_dir
     app.state.profile_store = profile_store
     app.state.booking_requests = BookingRequests(
         repository=booking_request_store,

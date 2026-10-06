@@ -19,10 +19,12 @@
           <h2>{{ row.date }}</h2>
           {% if row.slot_results %}
             <p>Status: <strong>{{ row.status }}</strong></p>
+            {% if row.ran_late_at %}<p class="late">Ran late: ran at {{ row.ran_late_at }} ({{ timezone }} time)</p>{% endif %}
             {% for slot in row.slot_results %}
               <p class="slot-result slot-{{ slot.css }}">
                 {{ slot.slot }}: <strong>{{ slot.status }}</strong>{% if slot.reason %} ({{ slot.reason }}){% endif %}
                 {% if slot.tried_at %}<small>tried {{ slot.tried_at }}</small>{% endif %}
+                {% if slot.screenshot %}<a href="{{ slot.screenshot }}">screenshot</a>{% endif %}
               </p>
             {% endfor %}
           {% else %}

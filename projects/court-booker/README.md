@@ -97,6 +97,7 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_COURT_NAME` | no | `Badminton Hall 1` | The Court as that page lists it (matched as part of the entry's text) |
 | `COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS` | no | `30` | How long one step on the page may take before the attempt is a network error |
 | `COURT_BOOKER_SCREENSHOT_DIR` | no | `data/screenshots` (`/app/data/screenshots` in the image) | Where each attempt's screenshot is saved; created if missing |
+| `COURT_BOOKER_RETENTION_DAYS` | no | `30` | Booking Requests, Slot results and screenshots are deleted this many days after their date |
 | `COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS` | no | `5` | A run waits a random time between the min and max seconds between two Slots |
 | `COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS` | no | `20` | Must not be less than the min |
 | `COURT_BOOKER_RETRY_COUNT` | no | `2` | How many times a Slot attempt that hit a network error is retried |
@@ -192,9 +193,15 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 - **Booking at Release Time** (`scheduler/`, `booking_run/`): when the app starts, a background thread runs one scheduler tick at once and then one every `COURT_BOOKER_SCHEDULER_TICK_SECONDS`. A tick claims the earliest due Waiting request, moving it to Booking… in one locked database step (so no request is ever run twice, and edit and cancel are refused from then on), runs it, marks it Done, and repeats until nothing is due. A run decrypts the Profile then (so Profile edits reach waiting requests) and tries each Slot in time order, with a random pause between them. Each Slot's status is saved as soon as it's known:
   - **Booked**: Picktime confirmed it.
   - **Taken**: someone else has it. Never retried.
-  - **Failed**, with a reason: a network error still failing after `COURT_BOOKER_RETRY_COUNT` retries (waiting longer each time); Picktime's own refusal text (not retried); "date not open on Picktime yet" (that Slot and every later one, without asking Picktime again: the Booking Window setting is probably wrong); or a Profile that can't be read.
+  - **Failed**, with a reason: a network error still failing after `COURT_BOOKER_RETRY_COUNT` retries (waiting longer each time); Picktime's own refusal text (not retried); "date not open on Picktime yet" (that Slot and every later one, without asking Picktime again: the Booking Window setting is probably wrong); or a Profile that can't be read; "missed" or "interrupted, check Picktime" (below).
 
-  One Slot's result never stops the others. Once a request has started, the list shows each Slot's status and when it was tried.
+  One Slot's result never stops the others. Once a request has started, the list shows each Slot's status, when it was tried, and a link to its screenshot.
+- **Recovery and cleanup** (`scheduler/`): what the statuses mean after downtime.
+  - **Ran late**: a request claimed more than 5 minutes after its run time (the server was down) still runs; the list says "Ran late" with the time it actually ran.
+  - **Missed**: a Waiting request whose date has passed (venue time) becomes Done with every Slot Failed "missed". It is never tried.
+  - **Interrupted**: at startup, a request still in Booking… was cut short by a crash or restart. It is never re-run (a Slot may already be booked); it becomes Done and every Slot without an outcome is Failed "interrupted, check Picktime".
+  - Every tick deletes Booking Requests, their Slot results and screenshot files dated more than `COURT_BOOKER_RETENTION_DAYS` before today.
+- **Screenshots** (`web/booking_request_pages.py`): `/requests/<id>/slots/<HH:MM>/screenshot` serves a tried Slot's screenshot to the logged-in Operator only. It looks the path up in the database (the URL never names a file) and serves it only if it lies inside `COURT_BOOKER_SCREENSHOT_DIR`.
 
 The full design is in `docs/spec.md`.
 

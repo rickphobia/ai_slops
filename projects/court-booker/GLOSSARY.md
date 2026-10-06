@@ -50,5 +50,5 @@ _Avoid_: trigger time
 Waiting (not run yet; can be edited or cancelled), Booking… (running now), Done (every Slot has a result) or Cancelled.
 
 **Slot status**:
-Waiting, Booking… (being tried now), Booked (Picktime confirmed it), Taken (someone else has it; never retried) or Failed (with a reason in words, such as Picktime's own text or "date not open on Picktime yet").
+Waiting, Booking… (being tried now), Booked (Picktime confirmed it), Taken (someone else has it; never retried) or Failed (with a reason in words, such as Picktime's own text, "date not open on Picktime yet", "missed" when the server was down past the date, or "interrupted, check Picktime" when a restart cut the run short).
 _Avoid_: success, error

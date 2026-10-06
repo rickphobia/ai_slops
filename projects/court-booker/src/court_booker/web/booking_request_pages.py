@@ -1,13 +1,14 @@
-"""The Booking Requests list (the home page) and the pages to create, edit and cancel one."""
+"""The Booking Requests list (the home page), the pages to change one, and Slot screenshots."""
 
 import logging
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import date, datetime, time
+from pathlib import Path
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from starlette.responses import Response
 
 from court_booker.booking_requests.booking_requests import (
@@ -100,6 +101,24 @@ def cancel(request: Request, request_id: int) -> Response:
     return RedirectResponse(path_for(request, "home"), status_code=303)
 
 
+@router.get("/requests/{request_id}/slots/{slot}/screenshot", name="slot_screenshot")
+def screenshot(request: Request, request_id: int, slot: time) -> Response:
+    booking_request = _booking_requests(request).get(request_id)
+    path = next(
+        (result.screenshot for result in booking_request.slot_results if result.slot == slot),
+        None,
+    )
+    screenshot_dir: Path = request.app.state.screenshot_dir
+    # Only a file the database names, and only inside the screenshot directory: a bad row
+    # must not turn this into a way to read any file on the server.
+    if path is None or not path.resolve().is_relative_to(screenshot_dir.resolve()):
+        return PlainTextResponse("This Slot has no screenshot.", status_code=404)
+    if not path.is_file():
+        logger.warning("screenshot file missing", extra={**log_context(request), "path": str(path)})
+        return PlainTextResponse("This Slot's screenshot file is gone.", status_code=404)
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "private"})
+
+
 def _log_refusal(request: Request, message: str, error: BookingRequestError) -> None:
     logger.info(message, extra={**log_context(request), "reason": type(error).__name__})
 
@@ -118,8 +137,13 @@ def _render_list(
             "css": item.status.name.lower(),
             "waiting": item.status is BookingRequestStatus.WAITING,
             "runs_at": _moment_text(item.run_at, venue_timezone),
+            "ran_late_at": _moment_text(item.started_at, venue_timezone)
+            if item.ran_late and item.started_at
+            else None,
             # Every Slot is Waiting until the request runs, so only a run shows them one by one.
-            "slot_results": [_slot_row(result, venue_timezone) for result in item.slot_results]
+            "slot_results": [
+                _slot_row(request, item.id, result, venue_timezone) for result in item.slot_results
+            ]
             if item.status in (BookingRequestStatus.BOOKING, BookingRequestStatus.DONE)
             else [],
         }
@@ -167,8 +191,15 @@ def _render_form(
     )
 
 
-def _slot_row(result: SlotResult, venue_timezone: ZoneInfo) -> dict[str, str | None]:
+def _slot_row(
+    request: Request, request_id: int, result: SlotResult, venue_timezone: ZoneInfo
+) -> dict[str, str | None]:
     return {
+        "screenshot": request.url_for(
+            "slot_screenshot", request_id=request_id, slot=slot_text(result.slot)
+        ).path
+        if result.screenshot
+        else None,
         "slot": slot_text(result.slot),
         "status": result.status.value,
         "css": result.status.name.lower(),

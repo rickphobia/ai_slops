@@ -16,7 +16,7 @@ from court_booker.booking_requests.booking_requests import (
 )
 
 _WAITING = BookingRequestStatus.WAITING.value
-_SELECT_REQUESTS = "SELECT id, play_date, status, run_at FROM booking_requests"
+_SELECT_REQUESTS = "SELECT id, play_date, status, run_at, started_at FROM booking_requests"
 _SELECT_SLOTS = (
     "SELECT request_id, slot, status, reason, attempted_at, retries, screenshot FROM slot_attempts"
 )
@@ -118,6 +118,46 @@ class SqliteBookingRequestRepository:
                 (BookingRequestStatus.DONE.value, request_id),
             )
 
+    def fail_missed(self, today: date, reason: str) -> list[int]:
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            # play_date is ISO text, so it sorts as a date.
+            rows = connection.execute(
+                "SELECT id FROM booking_requests WHERE status = ? AND play_date < ?",
+                (_WAITING, today.isoformat()),
+            ).fetchall()
+            return _fail_unfinished(connection, [row[0] for row in rows], reason)
+
+    def fail_interrupted(self, reason: str) -> list[int]:
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            rows = connection.execute(
+                "SELECT id FROM booking_requests WHERE status = ?",
+                (BookingRequestStatus.BOOKING.value,),
+            ).fetchall()
+            return _fail_unfinished(connection, [row[0] for row in rows], reason)
+
+    def delete_dated_before(self, cutoff: date) -> list[Path]:
+        with self._database.connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            ids = [
+                row[0]
+                for row in connection.execute(
+                    "SELECT id FROM booking_requests WHERE play_date < ?", (cutoff.isoformat(),)
+                ).fetchall()
+            ]
+            placeholders = ",".join("?" * len(ids))
+            screenshots = connection.execute(
+                f"SELECT screenshot FROM slot_attempts WHERE request_id IN ({placeholders}) "
+                "AND screenshot IS NOT NULL",
+                ids,
+            ).fetchall()
+            connection.execute(
+                f"DELETE FROM slot_attempts WHERE request_id IN ({placeholders})", ids
+            )
+            connection.execute(f"DELETE FROM booking_requests WHERE id IN ({placeholders})", ids)
+        return [Path(row[0]) for row in screenshots]
+
     def ping(self) -> None:
         with self._database.connection() as connection:
             connection.execute("SELECT 1 FROM booking_requests LIMIT 1").fetchall()
@@ -128,6 +168,29 @@ def _insert_slots(connection: sqlite3.Connection, request_id: int, slots: Sequen
         "INSERT INTO slot_attempts (request_id, slot, status) VALUES (?, ?, ?)",
         [(request_id, slot_text(slot), SlotStatus.WAITING.value) for slot in slots],
     )
+
+
+def _fail_unfinished(
+    connection: sqlite3.Connection, request_ids: list[int], reason: str
+) -> list[int]:
+    """Mark the requests Done, failing every Slot that has no outcome yet with `reason`."""
+    placeholders = ",".join("?" * len(request_ids))
+    connection.execute(
+        f"UPDATE slot_attempts SET status = ?, reason = ? WHERE request_id IN ({placeholders}) "
+        "AND status IN (?, ?)",
+        (
+            SlotStatus.FAILED.value,
+            reason,
+            *request_ids,
+            SlotStatus.WAITING.value,
+            SlotStatus.BOOKING.value,
+        ),
+    )
+    connection.execute(
+        f"UPDATE booking_requests SET status = ? WHERE id IN ({placeholders})",
+        (BookingRequestStatus.DONE.value, *request_ids),
+    )
+    return request_ids
 
 
 def _is_waiting(connection: sqlite3.Connection, request_id: int) -> bool:
@@ -156,8 +219,9 @@ def _load(
             slot_results=tuple(sorted(results[request_id], key=lambda result: result.slot)),
             status=BookingRequestStatus(status),
             run_at=datetime.fromisoformat(run_at),
+            started_at=datetime.fromisoformat(started_at) if started_at else None,
         )
-        for request_id, play_date, status, run_at in requests
+        for request_id, play_date, status, run_at, started_at in requests
     ]
 
 
