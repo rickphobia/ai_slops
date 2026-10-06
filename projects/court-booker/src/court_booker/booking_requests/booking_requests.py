@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import StrEnum
+from pathlib import Path
 from typing import Protocol
 
 from court_booker.clock import Clock
@@ -17,7 +18,32 @@ logger = logging.getLogger(__name__)
 
 class BookingRequestStatus(StrEnum):
     WAITING = "Waiting"
+    BOOKING = "Booking…"
+    DONE = "Done"
     CANCELLED = "Cancelled"
+
+
+class SlotStatus(StrEnum):
+    WAITING = "Waiting"
+    BOOKING = "Booking…"
+    BOOKED = "Booked"
+    TAKEN = "Taken"
+    FAILED = "Failed"
+
+
+@dataclass(frozen=True)
+class SlotResult:
+    """Where one Slot of a Booking Request stands, and how its last attempt went."""
+
+    slot: time
+    status: SlotStatus = SlotStatus.WAITING
+    # Why it Failed, in words for the Operator.
+    reason: str | None = None
+    # When the last attempt started, in UTC.
+    attempted_at: datetime | None = None
+    # Network-error retries made after the first try.
+    retries: int = 0
+    screenshot: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -25,10 +51,14 @@ class BookingRequest:
     id: int
     play_date: date
     # Earliest first.
-    slots: tuple[time, ...]
+    slot_results: tuple[SlotResult, ...]
     status: BookingRequestStatus
     # Chosen once at creation, in UTC.
     run_at: datetime
+
+    @property
+    def slots(self) -> tuple[time, ...]:
+        return tuple(result.slot for result in self.slot_results)
 
 
 def slot_text(slot: time) -> str:

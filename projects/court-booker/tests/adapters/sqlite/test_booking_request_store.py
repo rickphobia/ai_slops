@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
 import pytest
@@ -9,6 +9,8 @@ from court_booker.booking_requests.booking_requests import (
     BookingRequest,
     BookingRequestStatus,
     DateTaken,
+    SlotResult,
+    SlotStatus,
 )
 
 PLAY_DATE = date(2026, 10, 9)
@@ -29,7 +31,7 @@ def test_a_request_loads_back_as_stored(repository: SqliteBookingRequestReposito
     assert repository.get(request_id) == BookingRequest(
         id=request_id,
         play_date=PLAY_DATE,
-        slots=(time(8), time(20)),
+        slot_results=(SlotResult(time(8)), SlotResult(time(20))),
         status=BookingRequestStatus.WAITING,
         run_at=RUN_AT,
     )
@@ -73,3 +75,46 @@ def test_slots_change_and_cancel_only_while_waiting(
     assert stored.slots == (time(10), time(12))
     assert stored.status is BookingRequestStatus.CANCELLED
     assert stored.run_at == RUN_AT
+
+
+def test_claiming_takes_the_earliest_due_request_once(
+    repository: SqliteBookingRequestRepository,
+) -> None:
+    later = repository.add(date(2026, 10, 10), [time(8)], RUN_AT + timedelta(days=1), CREATED_AT)
+    earlier = repository.add(PLAY_DATE, [time(8)], RUN_AT, CREATED_AT)
+    after_both = RUN_AT + timedelta(days=2)
+
+    assert repository.claim_next_due(RUN_AT - timedelta(microseconds=1)) is None
+    first = repository.claim_next_due(after_both)
+    second = repository.claim_next_due(after_both)
+
+    assert first is not None and first.id == earlier
+    assert first.status is BookingRequestStatus.BOOKING
+    assert second is not None and second.id == later
+    assert repository.claim_next_due(after_both) is None
+    # A claimed request is no longer Waiting, so it can't be edited or cancelled either.
+    assert not repository.replace_slots_if_waiting(earlier, [time(10)])
+    assert not repository.cancel_if_waiting(earlier)
+
+
+def test_a_slot_result_and_the_finish_are_stored(
+    repository: SqliteBookingRequestRepository,
+) -> None:
+    request_id = repository.add(PLAY_DATE, [time(8), time(10)], RUN_AT, CREATED_AT)
+    repository.claim_next_due(RUN_AT)
+    failed = SlotResult(
+        time(10),
+        SlotStatus.FAILED,
+        reason="Only one booking per unit per day",
+        attempted_at=RUN_AT,
+        retries=2,
+        screenshot=Path("/data/screenshots/one.png"),
+    )
+
+    repository.record_slot(request_id, failed)
+    repository.finish(request_id)
+
+    stored = repository.get(request_id)
+    assert stored is not None
+    assert stored.status is BookingRequestStatus.DONE
+    assert stored.slot_results == (SlotResult(time(8)), failed)

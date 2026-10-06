@@ -14,13 +14,13 @@ from court_booker.adapters.picktime_browser.picktime_site import PicktimeBrowser
 from court_booker.adapters.sqlite.booking_request_store import SqliteBookingRequestRepository
 from court_booker.adapters.sqlite.database import DatabaseError, SqliteDatabase
 from court_booker.adapters.sqlite.login_failures import SqliteLoginFailures
-from court_booker.adapters.sqlite.profile_store import ProfileUnreadable, SqliteProfileStore
+from court_booker.adapters.sqlite.profile_store import SqliteProfileStore
 from court_booker.auth.passwords import hash_password
 from court_booker.clock import SystemClock
 from court_booker.config import ConfigError, Settings, load_settings
 from court_booker.court_booking_site import CourtBookingSite, ReadyToBook
 from court_booker.json_logging import configure_logging
-from court_booker.profile.profile import ProfileStore
+from court_booker.profile.profile import ProfileStore, ProfileUnreadable
 from court_booker.random_source import SystemRandomSource
 from court_booker.web.app import create_app
 
@@ -39,8 +39,10 @@ def serve(settings: Settings) -> int:
         settings,
         login_failures=SqliteLoginFailures(database),
         profile_store=SqliteProfileStore(database, settings.profile_key, clock),
-        booking_request_repository=SqliteBookingRequestRepository(database),
+        booking_request_store=SqliteBookingRequestRepository(database),
+        court_booking_site=_picktime_site(settings, clock),
         clock=clock,
+        sleeper=clock,
         random_source=SystemRandomSource(),
     )
     logger.info(
@@ -84,7 +86,13 @@ def run_dry_run(settings: Settings, day: date, slot: time) -> int:
         logger.error("database unusable: %s", error)
         return 2
     clock = SystemClock()
-    site = PicktimeBrowserSite(
+    profile_store = SqliteProfileStore(database, settings.profile_key, clock)
+    site = _picktime_site(settings, clock)
+    return dry_run(day, slot, profile_store, site, sys.stdout, sys.stderr)
+
+
+def _picktime_site(settings: Settings, clock: SystemClock) -> PicktimeBrowserSite:
+    return PicktimeBrowserSite(
         page_url=settings.picktime_url,
         court_name=settings.court_name,
         timezone=settings.schedule.venue_timezone.key,
@@ -92,8 +100,6 @@ def run_dry_run(settings: Settings, day: date, slot: time) -> int:
         screenshot_dir=settings.screenshot_dir,
         clock=clock,
     )
-    profile_store = SqliteProfileStore(database, settings.profile_key, clock)
-    return dry_run(day, slot, profile_store, site, sys.stdout, sys.stderr)
 
 
 def _iso_date(value: str) -> date:

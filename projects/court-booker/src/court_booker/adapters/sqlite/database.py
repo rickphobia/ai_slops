@@ -44,6 +44,15 @@ MIGRATIONS: tuple[str, ...] = (
         PRIMARY KEY (request_id, slot)
     );
     """,
+    """
+    -- booking_requests.status gains Booking… and Done; slot_attempts.status gains Booking…,
+    -- Booked, Taken and Failed.
+    ALTER TABLE booking_requests ADD COLUMN started_at TEXT;  -- UTC, ISO 8601; when claimed
+    ALTER TABLE slot_attempts ADD COLUMN reason TEXT;  -- why it Failed, for the Operator
+    ALTER TABLE slot_attempts ADD COLUMN attempted_at TEXT;  -- UTC, ISO 8601
+    ALTER TABLE slot_attempts ADD COLUMN retries INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE slot_attempts ADD COLUMN screenshot TEXT;  -- file path
+    """,
 )
 
 

@@ -1,6 +1,7 @@
-"""The current time, behind an interface so tests can move it forward."""
+"""The current time and waiting, behind interfaces so tests can move time forward."""
 
-from datetime import UTC, datetime
+import time
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 
@@ -10,6 +11,15 @@ class Clock(Protocol):
         ...
 
 
+class Sleeper(Protocol):
+    def sleep(self, duration: timedelta) -> None:
+        """Block for `duration`."""
+        ...
+
+
 class SystemClock:
     def now(self) -> datetime:
         return datetime.now(UTC)
+
+    def sleep(self, duration: timedelta) -> None:
+        time.sleep(duration.total_seconds())

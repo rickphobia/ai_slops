@@ -17,6 +17,7 @@ from court_booker.booking_requests.booking_requests import (
     BookingRequestStatus,
     NotWaiting,
     ProfileMissing,
+    SlotResult,
     slot_text,
 )
 from court_booker.web.access import access_of, log_context, path_for
@@ -114,8 +115,13 @@ def _render_list(
             "date": _day_text(item.play_date),
             "slots": ", ".join(slot_text(slot) for slot in item.slots),
             "status": item.status.value,
+            "css": item.status.name.lower(),
             "waiting": item.status is BookingRequestStatus.WAITING,
             "runs_at": _moment_text(item.run_at, venue_timezone),
+            # Every Slot is Waiting until the request runs, so only a run shows them one by one.
+            "slot_results": [_slot_row(result, venue_timezone) for result in item.slot_results]
+            if item.status in (BookingRequestStatus.BOOKING, BookingRequestStatus.DONE)
+            else [],
         }
         for item in booking_requests.in_schedule_order()
     ]
@@ -159,6 +165,18 @@ def _render_form(
         },
         status_code=422 if error else 200,
     )
+
+
+def _slot_row(result: SlotResult, venue_timezone: ZoneInfo) -> dict[str, str | None]:
+    return {
+        "slot": slot_text(result.slot),
+        "status": result.status.value,
+        "css": result.status.name.lower(),
+        "reason": result.reason,
+        "tried_at": _moment_text(result.attempted_at, venue_timezone)
+        if result.attempted_at
+        else None,
+    }
 
 
 def _day_text(day: date) -> str:

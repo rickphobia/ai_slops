@@ -4,7 +4,7 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 
 ## Status
 
-`in progress`: walking skeleton, Operator login, the encrypted Profile, Booking Requests, and the Picktime browser adapter with `dry-run`. The app starts, validates its settings, logs JSON, answers `/healthz`, lets the Operator log in, save the Profile, and create, edit and cancel Booking Requests, each showing when it will run; `dry-run` fills the live Picktime form. Nothing is booked at Release Time yet: the scheduler comes in the next tickets (`docs/tickets/`).
+`in progress`: walking skeleton, Operator login, the encrypted Profile, Booking Requests, the Picktime browser adapter with `dry-run`, and booking at Release Time. The Operator saves the Profile and creates Booking Requests; a background scheduler books each one's Slots on Picktime at its run time, and the list shows each Slot as Booked, Taken or Failed. Recovery after downtime, the 30-day cleanup and the screenshot view come next (`docs/tickets/07-recovery-cleanup-screenshots.md`).
 
 ## Requirements
 
@@ -31,10 +31,10 @@ Put the hash in `COURT_BOOKER_OPERATOR_PASSWORD_HASH`, the secret in `COURT_BOOK
 
 ```bash
 uv run --env-file .env court-booker serve
-curl http://127.0.0.1:8000/ai-projects/court-booker/healthz   # {"status":"ok"}
+curl http://127.0.0.1:8000/ai-projects/court-booker/healthz   # {"status":"ok","database":"ok","last_tick_seconds_ago":2}
 ```
 
-Then open <http://127.0.0.1:8000/ai-projects/court-booker/> and log in. Use the prefixed URL: cookies are scoped to the prefix, so logging in without it (`/login`) won't stick, though the routes answer there. Locally `.env.example` sets `COURT_BOOKER_SECURE_COOKIES=false`, because the browser won't send a Secure cookie over plain http.
+Then open <http://127.0.0.1:8000/ai-projects/court-booker/> and log in. **`serve` books for real:** a Booking Request that comes due while it runs is booked on the live Picktime page with the saved Profile. Locally, cancel your test requests before their run time. Use the prefixed URL: cookies are scoped to the prefix, so logging in without it (`/login`) won't stick, though the routes answer there. Locally `.env.example` sets `COURT_BOOKER_SECURE_COOKIES=false`, because the browser won't send a Secure cookie over plain http.
 
 ## Test
 
@@ -97,6 +97,12 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_COURT_NAME` | no | `Badminton Hall 1` | The Court as that page lists it (matched as part of the entry's text) |
 | `COURT_BOOKER_PICKTIME_TIMEOUT_SECONDS` | no | `30` | How long one step on the page may take before the attempt is a network error |
 | `COURT_BOOKER_SCREENSHOT_DIR` | no | `data/screenshots` (`/app/data/screenshots` in the image) | Where each attempt's screenshot is saved; created if missing |
+| `COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS` | no | `5` | A run waits a random time between the min and max seconds between two Slots |
+| `COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS` | no | `20` | Must not be less than the min |
+| `COURT_BOOKER_RETRY_COUNT` | no | `2` | How many times a Slot attempt that hit a network error is retried |
+| `COURT_BOOKER_RETRY_BACKOFF_SECONDS` | no | `10` | The wait before the first retry; each later wait doubles it |
+| `COURT_BOOKER_SCHEDULER_TICK_SECONDS` | no | `5` | How often the scheduler looks for due Booking Requests; a run starts at most this late |
+| `COURT_BOOKER_SCHEDULER_STALE_SECONDS` | no | `600` | `/healthz` fails when the scheduler hasn't ticked or made progress for this long. Must be more than the tick |
 
 ## Deploy
 
@@ -173,7 +179,7 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 
 - `court-booker serve` (`cli.py`) loads the settings, sets up JSON logging and starts uvicorn with the app from `web/app.py`.
 - The FastAPI app uses the path prefix as its `root_path`, so it works behind nginx forwarding `/ai-projects/court-booker/...` unchanged.
-- `/healthz` needs no login and returns `{"status": "ok"}`, with no data.
+- `/healthz` needs no login. It returns `{"status": "ok", "database": "ok", "last_tick_seconds_ago": 3}` with 200, or `"status": "failing"` with 503 when the database can't be read or the scheduler has been quiet for `COURT_BOOKER_SCHEDULER_STALE_SECONDS`. A long run counts as activity: it beats after every attempt and every wait. It shows no Booking Request or Profile data.
 - At startup `serve` opens the SQLite file and applies any schema migrations it hasn't had (`adapters/sqlite/database.py`, tracked with `PRAGMA user_version`). A file from a newer release is refused rather than guessed at.
 - **Login** (`auth/`, `web/login_pages.py`): the password is checked against the scrypt hash. Success sets a signed session cookie (HttpOnly, SameSite=Strict, Secure, scoped to the prefix) holding only its issue time; the signature also covers the password hash, so changing the password logs every session out. Logout deletes the cookie. Sessions aren't stored on the server, so a cookie copied off a device stays valid until it expires; to cut off every session at once, change `COURT_BOOKER_SESSION_SECRET` and restart.
 - **Who sees what:** `/login` and `/healthz` are public; every other page sits on a router guarded by `require_operator` and redirects a logged-out visitor to `/login`. New pages go on such a router (see `web/app.py`).
@@ -182,9 +188,15 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 - **Profile** (`profile/`, `adapters/sqlite/profile_store.py`, `web/profile_page.py`): the `/profile` page shows and saves friend B's first name, email, unit number and mobile. `parse_profile` checks every field (all required, an email shape, mobile digits only) and the page shows a message under each bad one. The Profile is stored as one row holding a Fernet token of its JSON, encrypted with `COURT_BOOKER_PROFILE_KEY` (decision 0003); the key is never in the database. Logs name the fields that failed, never their values.
 - **Picktime** (`court_booking_site.py`, `adapters/picktime_browser/`): `CourtBookingSite.book(date, slot, profile, dry_run=...)` books one Slot and returns a `SlotAttempt`: the outcome (`Booked`, `Taken`, `NotOpen`, `NetworkError` with the step, `Rejected` with Picktime's text, or `ReadyToBook` for a dry run), the screenshot path and the duration. The Playwright adapter starts a fresh headless Chromium for each attempt, with a normal desktop Chrome user agent and the venue's timezone. It opens the page, picks the Court, then the date (missing or greyed out means `NotOpen`), then the Slot. If the date has no Slots it's `NotOpen`; if it has Slots but not this one, `Taken`. It fills the fields by their labels (First Name, Email Id, Unit Number, Mobile), clicks Book, and reads the confirmation (`Booked`) or Picktime's "Oops!" dialog (`Taken` when it says the Slot is no longer available, otherwise `Rejected`). Any Playwright error or timeout is a `NetworkError` naming the step it happened in. The selectors come from the live page as read on 2026-10-06; the error texts after Book are guesses until a real booking fails.
 
-- **Booking Requests** (`booking_requests/`, `schedule/`, `adapters/sqlite/booking_request_store.py`, `web/booking_request_pages.py`): the home page lists them, today and later first (soonest at the top), then past dates. `/requests/new` takes a date and one or more ticked Slots. `BookingRequests` checks the rules and raises a typed error with the message the page shows: a Profile must exist, the date can't be in the past (judged in venue time), at least one Slot, only configured Slots, and one live request per date (a unique index on non-Cancelled rows, so a cancelled date can be requested again). The run time is chosen once, at creation, by `schedule.run_time`: the date's Release Time plus a random jitter, or a short delay from now when the date is already open. It is stored in UTC and shown in venue time; editing the Slots keeps it, and the date can't be edited (cancel and create a new one instead). Edit and cancel work only while the request is Waiting (and editing stops once the date has passed); the status check and the change are one database step, so the scheduler (a later ticket) can't claim a request half-way through an edit. Logs carry the request id, date, Slots and run time, never Profile data.
+- **Booking Requests** (`booking_requests/`, `schedule/`, `adapters/sqlite/booking_request_store.py`, `web/booking_request_pages.py`): the home page lists them, today and later first (soonest at the top), then past dates. `/requests/new` takes a date and one or more ticked Slots. `BookingRequests` checks the rules and raises a typed error with the message the page shows: a Profile must exist, the date can't be in the past (judged in venue time), at least one Slot, only configured Slots, and one live request per date (a unique index on non-Cancelled rows, so a cancelled date can be requested again). The run time is chosen once, at creation, by `schedule.run_time`: the date's Release Time plus a random jitter, or a short delay from now when the date is already open. It is stored in UTC and shown in venue time; editing the Slots keeps it, and the date can't be edited (cancel and create a new one instead). Edit and cancel work only while the request is Waiting (and editing stops once the date has passed); the status check and the change are one database step, so the scheduler can't claim a request half-way through an edit. Logs carry the request id, date, Slots and run time, never Profile data.
+- **Booking at Release Time** (`scheduler/`, `booking_run/`): when the app starts, a background thread runs one scheduler tick at once and then one every `COURT_BOOKER_SCHEDULER_TICK_SECONDS`. A tick claims the earliest due Waiting request, moving it to Booking… in one locked database step (so no request is ever run twice, and edit and cancel are refused from then on), runs it, marks it Done, and repeats until nothing is due. A run decrypts the Profile then (so Profile edits reach waiting requests) and tries each Slot in time order, with a random pause between them. Each Slot's status is saved as soon as it's known:
+  - **Booked**: Picktime confirmed it.
+  - **Taken**: someone else has it. Never retried.
+  - **Failed**, with a reason: a network error still failing after `COURT_BOOKER_RETRY_COUNT` retries (waiting longer each time); Picktime's own refusal text (not retried); "date not open on Picktime yet" (that Slot and every later one, without asking Picktime again: the Booking Window setting is probably wrong); or a Profile that can't be read.
 
-The full design (scheduler) is in `docs/spec.md`.
+  One Slot's result never stops the others. Once a request has started, the list shows each Slot's status and when it was tried.
+
+The full design is in `docs/spec.md`.
 
 ## Folder layout
 
@@ -199,6 +211,8 @@ src/court_booker/
   auth/              # password hashes, session cookies and CSRF tokens, login lockout
   profile/           # the Profile value and its validation rules
   booking_requests/  # Booking Request rules: create, edit Slots, cancel, list order
+  booking_run/       # runs one claimed request: each Slot in order, retries, outcomes
+  scheduler/         # the tick (claim due requests, run them), its health, the background loop
   schedule/          # Release Time and run time, pure functions
   adapters/picktime_browser/  # books a Slot through the real Picktime page (Playwright)
   adapters/sqlite/   # the database file, migrations, login failures, encrypted Profile, Booking Requests
@@ -230,6 +244,8 @@ docs/                # spec, tickets, decisions
 - A form answers `403 The form expired`: its CSRF token no longer matches the browser's cookie (for example after cookies were cleared). Reload the page and submit again.
 - Picktime attempts log one line per step (`picktime: open page`, `pick court`, `pick date`, `pick slot`, `fill form`, `submit`, `read result`, each with `date`, `slot` and `step`), then `picktime attempt finished` with the outcome, duration and screenshot path. Profile values are never logged. A failure logs `picktime step failed: <step>: <Playwright's message>`; open the screenshot to see what the page showed.
 - Every attempt ends in `NetworkError` at `pick court`, `pick date` or `fill form`: Picktime has probably changed its page. Run `dry-run`, look at the screenshot, and compare the page with the selectors in `adapters/picktime_browser/picktime_site.py`.
+- A night's run, from the logs: `booking request claimed`, `booking run started`, then per attempt `slot attempt finished` (with `request_id`, `play_date`, `slot`, `outcome`, `retry`, `step`, `detail`, `duration_seconds`) and per Slot `slot result: <status>` with the `reason`, then `booking run finished`. A tick that fails logs `scheduler tick failed` with the traceback; the loop keeps going.
+- `/healthz` answers 503 with `"database": "unreachable"`: the SQLite file is missing or unreadable (check the data volume). With `"database": "ok"` and a large `last_tick_seconds_ago`: the scheduler thread is stuck; its last log lines show where, and a restart starts a new one.
 - `Executable doesn't exist` from Playwright: run `uv run playwright install --only-shell chromium` (locally) or rebuild the image.
 
 ## Decisions

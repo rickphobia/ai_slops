@@ -8,11 +8,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from court_booker.adapters.sqlite.database import SqliteDatabase
 from court_booker.clock import Clock
-from court_booker.profile.profile import Profile
-
-
-class ProfileUnreadable(Exception):
-    """The stored Profile can't be decrypted, most likely because the key changed."""
+from court_booker.profile.profile import Profile, ProfileUnreadable
 
 
 class SqliteProfileStore:
