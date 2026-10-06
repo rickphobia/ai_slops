@@ -20,6 +20,9 @@ import com.rickphobia.ricknotes.diagnostics.PenTestScreen
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.home.HomeScreen
 import com.rickphobia.ricknotes.logging.AppLog
+import com.rickphobia.ricknotes.settings.FavouritePensEditor
+import com.rickphobia.ricknotes.settings.FavouritePensSetting
+import com.rickphobia.ricknotes.settings.SettingsActions
 import com.rickphobia.ricknotes.settings.SettingsScreen
 import com.rickphobia.ricknotes.studyfolder.AllFilesAccessScreen
 import com.rickphobia.ricknotes.studyfolder.PickFolderScreen
@@ -66,6 +69,25 @@ private fun startScreen(source: SettingsSource): Screen =
         Screen.PickFolder(problemText(e))
     }
 
+/** Saves the picked Study folder at [path] and goes home, or says why it can't be used. */
+private fun afterPickingFolder(
+    path: String?,
+    store: SettingsStore,
+): Screen =
+    if (path == null) {
+        AppLog.w("picked folder is not on the tablet's own storage")
+        Screen.PickFolder("Pick a folder on the tablet's own storage, not an SD card or USB drive.")
+    } else {
+        try {
+            SettingsLoader.saveStudyFolder(store, path)
+            AppLog.i("study folder chosen")
+            Screen.Home(path)
+        } catch (e: InvalidSettingException) {
+            AppLog.w("picked folder unusable: ${e.message}")
+            Screen.PickFolder(problemText(e))
+        }
+    }
+
 /** What the screens ask Android to do, provided by `MainActivity`. */
 class SystemActions(
     val openAllFilesAccessSetting: () -> Unit,
@@ -81,25 +103,12 @@ fun <S> RickNotesApp(
     system: SystemActions,
 ) where S : SettingsSource, S : SettingsStore {
     var screen by remember(hasAllFilesAccess) { mutableStateOf(startScreen(storage.settings)) }
+    val favouritePens = remember { FavouritePensSetting(storage.settings) }
 
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@rememberLauncherForActivityResult
-            val path = system.pickedFolderPath(uri)
-            screen =
-                if (path == null) {
-                    AppLog.w("picked folder is not on the tablet's own storage")
-                    Screen.PickFolder("Pick a folder on the tablet's own storage, not an SD card or USB drive.")
-                } else {
-                    try {
-                        SettingsLoader.saveStudyFolder(storage.settings, path)
-                        AppLog.i("study folder chosen")
-                        Screen.Home(path)
-                    } catch (e: InvalidSettingException) {
-                        AppLog.w("picked folder unusable: ${e.message}")
-                        Screen.PickFolder(problemText(e))
-                    }
-                }
+            screen = afterPickingFolder(system.pickedFolderPath(uri), storage.settings)
         }
     val pickFolder = { picker.launch(null) }
 
@@ -126,10 +135,14 @@ fun <S> RickNotesApp(
                 is Screen.Settings -> {
                     SettingsScreen(
                         studyFolder = current.studyFolder,
-                        onChangeFolder = pickFolder,
-                        onOpenPenTest = { screen = Screen.PenTest(current.studyFolder) },
-                        onShareLog = system.shareLog,
-                        onBack = { screen = Screen.Home(current.studyFolder) },
+                        favouritePens = { FavouritePensEditor(favouritePens.pens, favouritePens::change) },
+                        actions =
+                            SettingsActions(
+                                changeFolder = pickFolder,
+                                openPenTest = { screen = Screen.PenTest(current.studyFolder) },
+                                shareLog = system.shareLog,
+                                back = { screen = Screen.Home(current.studyFolder) },
+                            ),
                     )
                 }
 
@@ -138,7 +151,10 @@ fun <S> RickNotesApp(
                 }
 
                 is Screen.Document -> {
-                    DocumentScreen(current.pdf, storage.readingPositions) { screen = Screen.Home(current.studyFolder) }
+                    DocumentScreen(current.pdf, storage.readingPositions, favouritePens.pens) {
+                        screen =
+                            Screen.Home(current.studyFolder)
+                    }
                 }
             }
         }

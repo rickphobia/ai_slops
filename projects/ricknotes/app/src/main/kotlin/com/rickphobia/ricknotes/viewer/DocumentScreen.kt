@@ -13,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -21,11 +22,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.rickphobia.ricknotes.R
+import com.rickphobia.ricknotes.core.ink.FavouritePens
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.ink.DocumentInk
 import com.rickphobia.ricknotes.logging.AppLog
+import com.rickphobia.ricknotes.toolbar.PenToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -43,14 +47,20 @@ private sealed interface Opening {
     ) : Opening
 }
 
-/** One Document, scrolling continuously from page to page, reopened where it was left in [positions]. */
+/**
+ * One Document, scrolling continuously from page to page, reopened where it was left in [positions].
+ * Tapping the pen in use in the toolbar moves on through [favouritePens].
+ */
 @Composable
 fun DocumentScreen(
     pdf: PdfEntry,
     positions: ReadingPositions,
+    favouritePens: FavouritePens,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    // Each Document opens with the first Favourite pen.
+    val tool = remember(pdf.path) { mutableStateOf<InkTool>(InkTool.Pen(favouritePens.colours.first())) }
     val pages = remember(pdf.path) { PdfPages(File(pdf.path)) }
     DisposableEffect(pages) { onDispose { pages.close() } }
     val opening by produceState<Opening>(Opening.InProgress, pages) {
@@ -69,6 +79,7 @@ fun DocumentScreen(
             TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
             Text(text = pdf.name, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.weight(1f))
+            PenToolbar(tool, favouritePens)
             val ready = opening as? Opening.Ready
             if (ready?.ink?.saveStatus == SaveStatus.FAILED) {
                 Text(
@@ -95,7 +106,7 @@ fun DocumentScreen(
             is Opening.Ready -> {
                 SaveWhenLeaving(current.ink)
                 current.ink.warnings.forEach { InkWarning(it) }
-                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions, current.ink))
+                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions, current.ink, tool::value))
             }
         }
     }

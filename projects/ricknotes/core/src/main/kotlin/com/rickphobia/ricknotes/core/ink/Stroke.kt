@@ -53,11 +53,3 @@ data class Stroke(
         require(widthPt > 0f) { "stroke ${id.value} has width $widthPt" }
     }
 }
-
-/** The one pen there is until ticket 11 adds the others. */
-object DefaultPen {
-    const val COLOUR_ARGB: Int = 0xFF000000.toInt()
-
-    // About 0.5 mm: a fine ballpoint, readable at 1x without crowding small handwriting.
-    const val WIDTH_PT: Float = 1.5f
-}

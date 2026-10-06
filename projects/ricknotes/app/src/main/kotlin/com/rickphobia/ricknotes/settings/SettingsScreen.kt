@@ -17,28 +17,28 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rickphobia.ricknotes.R
 
-/** Long-pressing the title opens the hidden pen test screen. */
+/** Long-pressing the title opens the hidden pen test screen. [favouritePens] is the Favourite pens editor. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     studyFolder: String,
-    onChangeFolder: () -> Unit,
-    onOpenPenTest: () -> Unit,
-    onShareLog: () -> Unit,
-    onBack: () -> Unit,
+    favouritePens: @Composable () -> Unit,
+    actions: SettingsActions,
 ) {
+    val onBack = actions.back
     BackHandler(onBack = onBack)
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
         Text(
             text = stringResource(R.string.settings),
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onOpenPenTest),
+            modifier = Modifier.combinedClickable(onClick = {}, onLongClick = actions.openPenTest),
         )
         Text(text = stringResource(R.string.study_folder), style = MaterialTheme.typography.titleMedium)
         Text(text = studyFolder, style = MaterialTheme.typography.bodyLarge)
-        OutlinedButton(onClick = onChangeFolder) { Text(stringResource(R.string.change_folder)) }
+        OutlinedButton(onClick = actions.changeFolder) { Text(stringResource(R.string.change_folder)) }
+        favouritePens()
         Text(text = stringResource(R.string.problems), style = MaterialTheme.typography.titleMedium)
-        OutlinedButton(onClick = onShareLog) { Text(stringResource(R.string.share_log)) }
+        OutlinedButton(onClick = actions.shareLog) { Text(stringResource(R.string.share_log)) }
     }
 }

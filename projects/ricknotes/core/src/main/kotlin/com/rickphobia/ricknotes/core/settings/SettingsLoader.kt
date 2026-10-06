@@ -1,5 +1,7 @@
 package com.rickphobia.ricknotes.core.settings
 
+import com.rickphobia.ricknotes.core.ink.FavouritePens
+import com.rickphobia.ricknotes.core.ink.PenColour
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -7,6 +9,7 @@ import java.nio.file.Path
 /** The one place settings are read, validated and saved. */
 object SettingsLoader {
     const val STUDY_FOLDER_KEY = "study_folder"
+    const val FAVOURITE_PENS_KEY = "favourite_pens"
 
     /** @throws InvalidSettingException if a stored value can't be used. */
     fun load(source: SettingsSource): Settings =
@@ -20,6 +23,37 @@ object SettingsLoader {
         path: String,
     ) {
         store.write(STUDY_FOLDER_KEY, validateStudyFolder(path))
+    }
+
+    /**
+     * The stored Favourite pens, or the default list if none were saved.
+     * @throws InvalidSettingException if the stored list can't be used.
+     */
+    fun loadFavouritePens(source: SettingsSource): FavouritePens =
+        source.read(FAVOURITE_PENS_KEY)?.let(::parseFavouritePens) ?: FavouritePens.DEFAULT
+
+    /** Saves [pens] as the Favourite pens, stored as colour names in order ("black,red"). */
+    fun saveFavouritePens(
+        store: SettingsStore,
+        pens: FavouritePens,
+    ) {
+        store.write(FAVOURITE_PENS_KEY, pens.colours.joinToString(",") { it.name.lowercase() })
+    }
+
+    private fun parseFavouritePens(value: String): FavouritePens {
+        val colours =
+            value.split(",").filter { it.isNotBlank() }.map { name ->
+                PenColour.entries.firstOrNull { it.name.lowercase() == name.trim() }
+                    ?: throw InvalidSettingException(FAVOURITE_PENS_KEY, value, "names an unknown colour \"$name\"")
+            }
+        val problem =
+            when {
+                colours.isEmpty() -> "is empty"
+                colours.distinct().size != colours.size -> "lists a colour twice"
+                else -> null
+            }
+        if (problem != null) throw InvalidSettingException(FAVOURITE_PENS_KEY, value, problem)
+        return FavouritePens(colours)
     }
 
     // Checked on every start too: the folder can be renamed, deleted or lose its permission

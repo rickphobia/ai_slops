@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
+import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.ink.DocumentInk
@@ -63,6 +64,7 @@ internal data class OpenDocument(
     val path: String,
     val positions: ReadingPositions,
     val ink: DocumentInk,
+    val currentTool: () -> InkTool,
 )
 
 /**
@@ -120,7 +122,7 @@ internal fun PageList(document: OpenDocument) {
                 ) { PageInk(ink.on(PageId.ofPdfPage(index)), size.widthPt.toFloat(), strokeRenderer) }
             }
         }
-        TouchLayer(ink, document.pageSizes, PageListView(view, listState, screen, gapPx))
+        TouchLayer(ink, document.pageSizes, PageListView(view, listState, screen, gapPx), document.currentTool)
         PageNavigator(
             pageIndex = current,
             pageCount = pageCount,
@@ -151,6 +153,7 @@ private fun TouchLayer(
     ink: DocumentInk,
     pageSizes: List<PageSize>,
     list: PageListView,
+    currentTool: () -> InkTool,
 ) {
     val scope = rememberCoroutineScope()
     val flingBehavior = ScrollableDefaults.flingBehavior()
@@ -162,6 +165,7 @@ private fun TouchLayer(
         ink = ink,
         placements = { list.placements(pageSizes) },
         navigation = navigation,
+        currentTool = currentTool,
     )
 }
 
