@@ -109,7 +109,7 @@ Every setting is an environment variable, read and validated once at startup by 
 
 The app runs as a Docker container on the Beelink, on the shared `homelab_default` network, behind the host nginx (`portfolio-nginx`) at `https://rickphobia.com/ai-projects/court-booker/`. GitHub can't reach the home network, so the server pulls: you run one script there.
 
-`deploy/update-site.sh` fetches `main` into `~/homelab/dev/ai_slops`, builds the image `court-booker:<commit>`, starts a new container with the env file and the data folder mounted at `/data`, and waits up to 60 seconds for `/healthz`. Only then does it give the new container the network name `court-booker` (which nginx proxies to) and remove the old one. If any step fails, the script exits non-zero, names the step, and the old container keeps serving. If `main` hasn't moved and its container is running, it does nothing.
+`deploy/update-site.sh` fetches `main` into `~/homelab/dev/ai_slops`, builds the image `court-booker:<commit>`, starts a new container with the env file and the data folder mounted at `/app/data` (where the image keeps the database and screenshots), and waits up to 60 seconds for `/healthz`. Only then does it give the new container the network name `court-booker` (which nginx proxies to) and remove the old one. If any step fails, the script exits non-zero, names the step, and the old container keeps serving. If `main` hasn't moved and its container is running, it does nothing.
 
 ### One-time setup (on the Beelink)
 
