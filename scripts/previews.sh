@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Keeps a preview of every open PR running on this machine, ready to try before merging: once a
 # PR's ci-gate is green, its build is served at https://<machine>.<tailnet>.ts.net:<9000 + PR>/
-# to your Tailscale devices (see scripts/try-pr.sh). A new
-# push gets a fresh build once it is green again; a merged or closed PR's preview is stopped.
+# to your Tailscale devices (see scripts/try-pr.sh), and that link is written into the PR body's
+# `▶ Try this version:` line. A new push gets a fresh build once it is green again; a merged or
+# closed PR's preview is stopped.
 # Each preview is a systemd user service, try-pr-<N>, running scripts/try-pr.sh. No Claude.
 #
 # Usage: scripts/previews.sh <command>
@@ -29,7 +30,7 @@ die() {
 }
 
 usage() {
-  sed -n '7,12p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '9,14p' "$0" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -41,6 +42,41 @@ unit_sha() { ctl show -p Description --value "try-pr-$1.service" | awk '$1 == "t
 stopped_sha() { cat "$state/stopped-$1" 2>/dev/null || true; }
 preview_numbers() {
   ctl list-units --all --plain --no-legend 'try-pr-*.service' | sed -n -E 's/^try-pr-([0-9]+)\.service.*/\1/p'
+}
+
+# This machine's Tailscale HTTPS name (e.g. box.tailnet.ts.net), or nothing.
+preview_host() {
+  tailscale status --json 2>/dev/null | jq -r '(.CertDomains // [])[0] // empty' || true
+}
+
+# Reads a PR body on stdin and prints it with `▶ Try this version: <url>` as its preview line: it
+# replaces the first line starting with "▶ " (the session's placeholder or an older link), or goes
+# after a first "Ticket:" line, or at the top.
+body_with_link() { # body_with_link <url>
+  awk -v link="▶ Try this version: $1" '
+    { lines[NR] = $0 }
+    END {
+      for (i = 1; i <= NR; i++) if (index(lines[i], "▶ ") == 1) { lines[i] = link; replaced = 1; break }
+      start = 1
+      if (!replaced) {
+        if (NR >= 1 && index(lines[1], "Ticket: ") == 1) { print lines[1]; start = 2 }
+        print link
+        if (start == 1) print ""
+      }
+      for (i = start; i <= NR; i++) print lines[i]
+    }'
+}
+
+# Puts the preview link in PR N's body, unless it is already there.
+link_preview() { # link_preview <N> <url>
+  local body
+  body=$(gh pr view "$1" --json body --jq .body)
+  [[ $body == *"▶ Try this version: $2"* ]] && return 0
+  if body_with_link "$2" <<<"$body" | gh pr edit "$1" --body-file - >/dev/null; then
+    echo "PR #$1: preview link added to the PR body"
+  else
+    echo "PR #$1: could not add the preview link to the PR body" >&2
+  fi
 }
 
 stop_unit() {
@@ -90,8 +126,11 @@ cmd_sync() {
   local -a web
   mapfile -t web < <("$state/try-pr.sh" --projects)
   local -A open=()
-  local n sha gate project title state_now
-  while IFS=$'\t' read -r n sha gate project title; do
+  local -a prs
+  mapfile -t prs < <(open_prs)
+  local n sha gate project title state_now row host
+  for row in "${prs[@]}"; do
+    IFS=$'\t' read -r n sha gate project title <<<"$row"
     open[$n]=1
     [[ $gate == SUCCESS && " ${web[*]} " == *" $project "* ]] || continue
     [[ $(stopped_sha "$n") == "$sha" ]] && continue
@@ -100,7 +139,18 @@ cmd_sync() {
       continue
     fi
     start_preview "$n" "$sha"
-  done < <(open_prs)
+  done
+
+  # A preview built for the PR's latest push and answering gets its link into the PR body.
+  host=$(preview_host)
+  if [[ -n $host ]]; then
+    for row in "${prs[@]}"; do
+      IFS=$'\t' read -r n sha gate project title <<<"$row"
+      [[ $(unit_state "$n") == active && $(unit_sha "$n") == "$sha" ]] || continue
+      curl -s -o /dev/null --max-time 2 "http://localhost:$(port_of "$n")/" || continue
+      link_preview "$n" "https://$host:$(port_of "$n")/"
+    done
+  fi
 
   for n in $(preview_numbers); do
     if [[ -z ${open[$n]:-} ]]; then
@@ -114,7 +164,7 @@ cmd_sync() {
 cmd_list() {
   cd "$repo"
   local host n sha gate project title port preview
-  host=$(tailscale status --json 2>/dev/null | jq -r '(.CertDomains // [])[0] // empty' || true)
+  host=$(preview_host)
   local -a web
   mapfile -t web < <("$state/try-pr.sh" --projects 2>/dev/null || true)
   while IFS=$'\t' read -r n sha gate project title; do
@@ -201,12 +251,17 @@ cmd_uninstall() {
   echo "Uninstalled: timer off, previews stopped."
 }
 
-case ${1:-} in
-  install) cmd_install ;;
-  uninstall) cmd_uninstall ;;
-  sync) cmd_sync ;;
-  list) cmd_list ;;
-  stop) cmd_stop "${2:-}" ;;
-  -h | --help) usage 0 ;;
-  *) usage 1 ;;
-esac
+main() {
+  case ${1:-} in
+    install) cmd_install ;;
+    uninstall) cmd_uninstall ;;
+    sync) cmd_sync ;;
+    list) cmd_list ;;
+    stop) cmd_stop "${2:-}" ;;
+    -h | --help) usage 0 ;;
+    *) usage 1 ;;
+  esac
+}
+
+# Sourced by scripts/tests/previews.test.sh to test the functions without running a command.
+[[ ${BASH_SOURCE[0]} != "$0" ]] || main "$@"
