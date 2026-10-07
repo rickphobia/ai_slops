@@ -4,7 +4,7 @@ An endless 3D farm game in the style of Hay Day, played in the browser, that sat
 
 ## Status
 
-`in progress`: tickets 01–04 and 06. The game opens on the title screen; Start goes to the field. Tap an empty plot to plant cotton, watch it grow through its stages (placeholder shapes), tap it to see the time left, and tap it when ripe to pick it. The App sits over the field: a Quota bar, the Shift's time left, Labour Points and the Mascot's announcements. Each 10-minute Shift ends with a Quota check (confetti when met) and the next Shift starts at once with a higher Quota. The server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No Study Sessions, Exhaustion or saving yet; the tickets in `docs/tickets/` add them.
+`in progress`: tickets 01–06. The game opens on the title screen; Start goes to the field. Tap an empty plot to plant cotton, watch it grow through its stages (seedling, flowering, green bolls, open cotton), tap it to see the time left, and tap it when ripe to pick it. The field is dusty and fenced, under harsh light and haze, with the Worker standing beside it. The App sits over the field: a Quota bar, the Shift's time left, Labour Points and the Mascot's announcements. Each 10-minute Shift ends with a Quota check (confetti when met) and the next Shift starts at once with a higher Quota. The server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No Study Sessions, Exhaustion or saving yet; the tickets in `docs/tickets/` add them.
 
 ## Requirements
 
@@ -123,12 +123,14 @@ All the game's numbers live in one tuning table, `data/tuning.tres`, described f
 
 ## How it works
 
+- `assets/` holds the CC0 models and textures (Kenney's Nature Kit, Quaternius's Modular Men, a Poly Haven ground texture). `assets/CREDITS.md` lists every file; add a row there when adding one. The field code replaces the plant and fence models' colours with its muted palette; the Worker keeps the model's own colours.
+
 - `src/adapters/title/` is the first scene: the game's name, the content note (exact wording from the spec's content rules), Start and the Sources page. Start opens `src/main.tscn`.
 - `src/content/sources_register.gd` is the one list of sources the game draws on; the Sources page is built from it, and a test checks every entry is complete with a unique id. Add a source there before the game uses a claim or a piece of state vocabulary from it.
 - `src/content/app_text.gd` holds The App's words: the text for each message key the rules emit (with `{named}` slots for its values), the overlay's labels, and the doublespeak terms, each tied to a source id. A line that uses a term or makes a claim lists its source ids. `tests/content/test_app_text.gd` fails if a key the rules can emit (`Farm.MESSAGE_KEYS`) has no text, a cited id isn't in the register, or a line uses a term without citing its source. A new message key goes in `Farm.MESSAGE_KEYS` and here. The test can only catch a listed term or a bad id: a line that makes a factual claim without using a term must list its source ids by hand, so check that in review. Note where in the source each term is documented, next to it in `DOUBLESPEAK`.
 - `src/main.tscn` / `src/main.gd` is the thin entrypoint: it logs the build version, loads and checks the tuning table, creates the Farm rules, advances them every frame, turns a tapped plot into plant, pick or "show time left", and passes the rules' App messages (as text from the App text table) and Shift to The App overlay.
 - `src/config/` holds the tuning table and the build version (read from `version.txt`, which the build scripts write before an export; without it the build is a `dev build`).
-- `src/adapters/` holds everything that talks to Godot or the outside world: the game log, the title screen, the field scene (`field/`: plots, placeholder crop shapes, tap and click picking through the camera, the time-left label), The App overlay (`app_overlay/`: Quota bar, Shift timer, Labour Points, the Mascot and its speech bubble, confetti; it catches no taps) and the "turn your phone sideways" cover shown in portrait.
+- `src/adapters/` holds everything that talks to Godot or the outside world: the game log, the title screen, the field scene (`field/`: plots, fence, the Worker, the cotton plant at each stage in `crop_looks.gd`, tap and click picking through the camera, the time-left label), The App overlay (`app_overlay/`: Quota bar, Shift timer, Labour Points, the Mascot and its speech bubble, confetti; it catches no taps) and the "turn your phone sideways" cover shown in portrait.
 - `src/rules/` holds the Farm rules: `Farm` with the commands `plant` and `pick` (each returns a `CommandResult`: whether it happened, and a reason key if not), `advance(seconds)` for online play, read-only `PlotView`s (stage and time left), the `ShiftView` (number, Quota, picked, time left) and Labour Points. Online play counts the Shift down; at its end the Quota is checked and the next Shift starts with the Quota raised by a fixed step. Picks count from zero each Shift, so a surplus carries no credit. What The App should say comes out of `take_messages()` as `AppMessage`s: a key plus values, never text. Plain GDScript objects with no scene tree, clock or file access, tested through their public interface with the fast tuning table in `tests/rules/fast_tuning.gd`.
 
 ## Folder layout
@@ -143,6 +145,7 @@ src/
   content/             sources register, App text
   rules/               Farm rules: plots, plant, pick, growth, Shift and Quota, Labour Points, App messages
   adapters/            game log, title screen, field scene, The App overlay, rotate prompt; later save store, clock
+assets/                CC0 models and textures; CREDITS.md names each one's author, licence and link
 tests/                 GUT tests, mirroring src/
 addons/gut/            the GUT test addon (vendored, 9.7.1)
 scripts/               setup-godot.sh, check.sh, godot-pin.env

@@ -1,21 +1,34 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://src/adapters/field/field.gd" id="1_field"]
+[ext_resource type="Texture2D" path="res://assets/polyhaven/dry_ground_01_diff_1k.jpg" id="2_dust"]
+[ext_resource type="PackedScene" path="res://assets/quaternius-modular-men/farmer.glb" id="3_worker"]
 
 [sub_resource type="StandardMaterial3D" id="Material_dust"]
-albedo_color = Color(0.54, 0.47, 0.36, 1)
+albedo_color = Color(0.56, 0.53, 0.49, 1)
+albedo_texture = ExtResource("2_dust")
 roughness = 1.0
+uv1_scale = Vector3(12, 9, 1)
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_field"]
 material = SubResource("Material_dust")
-size = Vector2(40, 30)
+size = Vector2(60, 45)
 
 [sub_resource type="Environment" id="Environment_haze"]
 background_mode = 1
-background_color = Color(0.72, 0.69, 0.6, 1)
+background_color = Color(0.66, 0.62, 0.54, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.6, 0.58, 0.52, 1)
-ambient_light_energy = 0.6
+ambient_light_color = Color(0.58, 0.55, 0.5, 1)
+ambient_light_energy = 0.45
+tonemap_mode = 2
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.66, 0.62, 0.54, 1)
+fog_density = 1.0
+fog_depth_begin = 9.0
+fog_depth_end = 30.0
+adjustment_enabled = true
+adjustment_saturation = 0.75
 
 [node name="Field" type="Node3D"]
 script = ExtResource("1_field")
@@ -24,8 +37,12 @@ script = ExtResource("1_field")
 mesh = SubResource("PlaneMesh_field")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 6, 0)
-light_energy = 1.4
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 6, 0)
+light_color = Color(1, 0.94, 0.82, 1)
+light_energy = 1.8
+shadow_enabled = true
+directional_shadow_mode = 0
+directional_shadow_max_distance = 30.0
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 6, 6.5)
@@ -33,6 +50,9 @@ current = true
 
 [node name="Haze" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_haze")
+
+[node name="Worker" parent="." instance=ExtResource("3_worker")]
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -5.2, 0, 2.2)
 
 [node name="TimeLeft" type="Label3D" parent="."]
 billboard = 1
