@@ -62,6 +62,16 @@ func test_a_quota_that_does_not_rise_is_reported() -> void:
 	assert_string_contains(problems[0], "quota_rise")
 
 
+func test_a_study_session_cap_below_the_first_length_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.study_session_cap_seconds = tuning.study_session_seconds - 1.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "study_session_cap_seconds")
+
+
 func test_every_missing_field_is_reported_at_once() -> void:
 	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size())
 

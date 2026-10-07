@@ -18,6 +18,7 @@ const DOUBLESPEAK: Dictionary[String, String] = {
 const QUOTA_BAR := "Quota {picked} / {quota}"
 const SHIFT_TIMER := "Shift {shift}  ·  {time} left"
 const LABOUR_POINTS := "{points} Labour Points"
+const STUDY_SESSION_TIMER := "Study Session  ·  {time} left"
 
 
 ## Text for every message key the rules can emit (Farm.MESSAGE_KEYS).
@@ -38,8 +39,29 @@ static func lines() -> Dictionary[StringName, AppLine]:
 				+ " much more you can give next Shift!"
 			)
 		),
+		# The Quota-missed lines grow colder with each miss in a row.
 		Farm.QUOTA_MISSED:
-		AppLine.new("Shift {shift}: {picked} of {quota}. The Quota was not met. This is recorded."),
+		AppLine.new(
+			(
+				"Oh dear! Shift {shift}: {picked} of {quota}. The Quota was not met. Everyone"
+				+ " can improve with a little help!"
+			)
+		),
+		Farm.QUOTA_MISSED_AGAIN:
+		AppLine.new(
+			"Shift {shift}: {picked} of {quota}. The Quota was missed again. This is recorded."
+		),
+		Farm.QUOTA_MISSED_REPEATEDLY:
+		AppLine.new("Shift {shift}: {picked} of {quota}. Your attitude has been noted."),
+		Farm.STUDY_SESSION_STARTED:
+		AppLine.new(
+			(
+				"Good news! You have been chosen for a {minutes}-minute Study Session. Learning"
+				+ " helps us all work with a grateful heart!"
+			)
+		),
+		Farm.STUDY_SESSION_ENDED:
+		AppLine.new("Study Session complete. Return to the field and show what you have learned!"),
 	}
 
 

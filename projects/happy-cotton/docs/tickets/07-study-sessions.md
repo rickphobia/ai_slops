@@ -4,15 +4,15 @@
 
 **Blocked by:** 06 (The App: Shift and Quota)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules, config/tuning, content/app-text, adapters/app-overlay
 
 **Effort:** medium
 
-- [ ] A missed Quota starts a Study Session; plant and pick are refused during it with the reason
-- [ ] The Study Session counts down with advance; its length starts at the tuning value (5 minutes) and doubles for each one in a row up to a cap; a met Quota resets the count
-- [ ] App messages for Study Session start and end, and colder Quota messages after repeated misses
-- [ ] GUT tests cover start, blocked actions, countdown, escalation, the cap and the reset
-- [ ] Study Session screen: a plain room, a loudspeaker and the time left; nothing graphic
-- [ ] Study Sessions are logged at info level with their length and the escalation count
+- [x] A missed Quota starts a Study Session; plant and pick are refused during it with the reason
+- [x] The Study Session counts down with advance; its length starts at the tuning value (5 minutes) and doubles for each one in a row up to a cap; a met Quota resets the count
+- [x] App messages for Study Session start and end, and colder Quota messages after repeated misses
+- [x] GUT tests cover start, blocked actions, countdown, escalation, the cap and the reset
+- [x] Study Session screen: a plain room, a loudspeaker and the time left; nothing graphic
+- [x] Study Sessions are logged at info level with their length and the escalation count

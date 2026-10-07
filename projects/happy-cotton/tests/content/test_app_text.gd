@@ -2,7 +2,7 @@ extends GutTest
 ## The App text: every key the rules emit has words, every source it cites is in the
 ## register, and every doublespeak term is tied to its source (spec ground rule 1).
 
-const SAMPLE_VALUES := {"shift": 2, "picked": 7, "quota": 9}
+const SAMPLE_VALUES := {"shift": 2, "picked": 7, "quota": 9, "minutes": 5, "in_a_row": 2}
 
 
 func _register_ids() -> Array[String]:

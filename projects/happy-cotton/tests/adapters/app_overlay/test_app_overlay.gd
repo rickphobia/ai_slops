@@ -1,6 +1,6 @@
 extends GutTest
 ## The App overlay shows what it is given: the Quota, the Shift's time left, Labour Points and
-## the Mascot's words.
+## the Mascot's words, and the Study Session room.
 
 var _overlay: AppOverlay
 
@@ -45,3 +45,22 @@ func test_celebrating_does_not_fail_before_or_after_a_shift_is_shown() -> void:
 	_overlay.show_shift(ShiftView.new(1, 3, 4, 10.0), 0)
 
 	assert_has(_label_texts(), "Quota 4 / 3", "a surplus is shown, the bar just stays full")
+
+
+func test_there_is_no_study_room_on_the_field() -> void:
+	assert_false(_overlay.in_study_room())
+
+
+func test_a_study_session_shows_the_room_and_its_time_left() -> void:
+	_overlay.show_study_session(299.5)
+
+	assert_true(_overlay.in_study_room())
+	assert_has(_label_texts(), "Study Session  ·  5:00 left")
+
+
+func test_the_room_goes_away_when_the_study_session_ends() -> void:
+	_overlay.show_study_session(10.0)
+
+	_overlay.show_study_session(0.0)
+
+	assert_false(_overlay.in_study_room())

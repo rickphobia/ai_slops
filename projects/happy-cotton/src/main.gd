@@ -57,18 +57,15 @@ func _on_plot_tapped(index: int) -> void:
 	_field.show_plots(_farm.plots())
 
 
-## Passes the rules' App messages to the Mascot, celebrates a met Quota, and refreshes the bar.
+## Passes the rules' App messages to the Mascot, celebrates a met Quota, logs Quota checks and
+## Study Sessions, and refreshes the bar and the Study Session room.
 ## A Shift's end and the next Shift's start arrive together, so the Mascot says all of a
 ## frame's lines at once; otherwise the praise would be replaced before anyone could read it.
 func _show_app() -> void:
 	var lines: Array[String] = []
 	for message in _farm.take_messages():
-		var met := message.key == Farm.QUOTA_MET
-		if met or message.key == Farm.QUOTA_MISSED:
-			var fields := message.values
-			fields["met"] = met
-			GameLog.info("quota checked", fields)
-		if met:
+		_log_message(message)
+		if message.key == Farm.QUOTA_MET:
 			_app.celebrate()
 		var text := AppText.render(message)
 		if text.is_empty():
@@ -78,6 +75,19 @@ func _show_app() -> void:
 	if not lines.is_empty():
 		_app.say("\n".join(lines))
 	_app.show_shift(_farm.shift(), _farm.labour_points())
+	_app.show_study_session(_farm.study_session_seconds_left())
+
+
+func _log_message(message: AppMessage) -> void:
+	var met := message.key == Farm.QUOTA_MET
+	if met or message.key in Farm.MISSED_KEYS:
+		var fields := message.values
+		fields["met"] = met
+		GameLog.info("quota checked", fields)
+	elif message.key == Farm.STUDY_SESSION_STARTED:
+		GameLog.info("study session started", message.values)
+	elif message.key == Farm.STUDY_SESSION_ENDED:
+		GameLog.info("study session ended", message.values)
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:

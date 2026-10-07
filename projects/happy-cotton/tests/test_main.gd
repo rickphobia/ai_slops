@@ -86,3 +86,25 @@ func test_the_mascot_says_the_quota_result_and_the_next_shift_together() -> void
 
 	assert_string_contains(app.speech(), "The Quota was not met")
 	assert_string_contains(app.speech(), "Shift 2 begins!")
+
+
+func test_a_missed_quota_logs_the_study_session_and_shows_the_room() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+	var app: AppOverlay = main.get_node("AppOverlay")
+
+	main.call("_process", tuning.shift_seconds)
+
+	var seconds := tuning.study_session_seconds
+	var started := (
+		"[info] study session started seconds=%s minutes=%d in_a_row=1"
+		% [var_to_str(seconds), ceili(seconds / 60.0)]
+	)
+	assert_has(_lines, started)
+	assert_true(app.in_study_room())
+
+	main.call("_process", seconds)
+
+	assert_has(_lines, "[info] study session ended in_a_row=1")
+	assert_false(app.in_study_room())
