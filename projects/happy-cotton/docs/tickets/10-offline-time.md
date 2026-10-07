@@ -1,12 +1,12 @@
 # 10: Offline time and the away summary
 
-**What to build:** Closing the game or switching tabs pauses the Shift, but the world keeps going: crops keep growing, Exhaustion recovers a little (never below the floor), and a Study Session keeps counting down. Coming back shows a short "while you were away" summary. A wrong device clock never breaks the game (spec: stories 33, 49, 58, 60, 66–68; "Rules decisions": Shift, Clock safety).
+**What to build:** Closing the game or switching tabs pauses the Shift, but the world keeps going: crops keep growing, Exhaustion recovers a little (never below the floor), and a Study Session keeps counting down. Coming back shows a short "while you were away" summary. In debug mode (`?debug=1` in the URL, or `-- --debug` on desktop) a Skip time control lets the owner jump ahead without waiting. A wrong device clock never breaks the game (spec: stories 33, 49, 58, 60, 66–68, 87; "Rules decisions": Shift, Clock safety, "Modules": Debug mode).
 
 **Blocked by:** 09 (Save and continue)
 
 **Status:** ready
 
-**Touches:** rules, adapters/clock, content/app-text, adapters/app-overlay, entrypoint
+**Touches:** rules, adapters/clock, adapters/debug, content/app-text, adapters/app-overlay, entrypoint
 
 **Effort:** medium
 
@@ -16,3 +16,6 @@
 - [ ] GUT tests cover each of the above, including a Study Session that ends while away
 - [ ] Clock adapter works out offline time from the save's timestamp on start and from the hidden time when the tab becomes visible again; a hidden tab counts as offline
 - [ ] The overlay shows the away summary on return
+- [ ] Debug mode is on only with `?debug=1` in the page URL or `-- --debug` on the command line; without it no debug control is shown
+- [ ] In debug mode a Skip time control offers +1 hour and +8 hours; each runs exactly the same offline resume as coming back after that long (away summary included) and is logged at info level
+- [ ] README explains debug mode and Skip time

@@ -131,6 +131,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 84. As a developer, I want one command that runs format check, lint, type check and tests, so that I know the project is green before I commit.
 85. As a developer, I want CI to run that command and the web export on every push that touches the project, so that main never breaks.
 86. As a developer, I want the README to take me from clone to running, testing and exporting, so that I don't need to ask anyone.
+87. As the owner, I want a debug-only Skip time control, so that I can see growth, offline time, Withering and Negligence without waiting hours.
 
 ## Implementation Decisions
 
@@ -154,6 +155,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 - **Player settings (config).** Text size and reduced motion, saved separately from the game.
 - **Adapters:** the field scene (plots, the Worker, the grounded look, tap and click picking), The App overlay (Quota bar, Shift timer, Labour Points, Exhaustion, Mascot speech, the Privilege button, the Study Session screen, the away summary), the title screen with the content note and Sources page, the save store (one slot under Godot's user folder, which the web export keeps in browser storage), the wall clock (reports offline time on start and when the tab becomes visible again), and the game log.
 - **Entrypoint:** thin. It loads the config, loads or creates the save, wires the rules to the adapters, autosaves after every command, at the end of each Shift and when the tab is hidden, and runs the clock.
+- **Debug mode:** on only with `?debug=1` in the page URL or `-- --debug` on the command line. It adds a Skip time control (+1 hour, +8 hours) that feeds the chosen time through the same offline resume as a real absence, so it exercises the real rules rather than a shortcut. Players never see it.
 
 ### Rules decisions
 

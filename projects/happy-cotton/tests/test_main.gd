@@ -55,3 +55,34 @@ func test_tapping_a_growing_plot_is_refused_by_the_rules_as_not_ripe() -> void:
 	field.plot_tapped.emit(0)
 
 	assert_eq(_lines, ['[debug] pick refused plot=0 reason=&"not_ripe"'] as Array[String])
+
+
+func test_the_mascot_announces_the_first_shift_on_start() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var app: AppOverlay = main.get_node("AppOverlay")
+
+	assert_string_contains(app.speech(), "Shift 1 begins!")
+
+
+func test_the_end_of_a_shift_logs_the_quota_check_at_info_level() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+
+	main.call("_process", tuning.shift_seconds)
+
+	var quota := roundi(tuning.first_quota)
+	assert_has(_lines, "[info] quota checked shift=1 picked=0 quota=%d met=false" % quota)
+
+
+func test_the_mascot_says_the_quota_result_and_the_next_shift_together() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+	var app: AppOverlay = main.get_node("AppOverlay")
+
+	main.call("_process", tuning.shift_seconds)
+
+	assert_string_contains(app.speech(), "The Quota was not met")
+	assert_string_contains(app.speech(), "Shift 2 begins!")

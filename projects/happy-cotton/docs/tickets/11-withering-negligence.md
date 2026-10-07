@@ -16,3 +16,4 @@
 - [ ] Negligence App messages, and Withered crops in the away summary
 - [ ] GUT tests cover Withering at exactly the wither time and not before, no Withering during a Study Session, the clear command, docking and the longer Study Session
 - [ ] Withered plots look withered in the field and can be cleared by tap or click
+- [ ] With debug mode on, a ripe plot followed by Skip time +8 hours shows it Withered, the Negligence message and the longer Study Session (shown in the PR's evidence)

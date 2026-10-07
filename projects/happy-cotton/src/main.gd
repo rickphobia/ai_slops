@@ -1,6 +1,6 @@
 extends Node
 ## Entry scene: logs which build is running, loads and checks the tuning table, creates the
-## Farm rules and wires them to the field. Kept thin: no game rules here.
+## Farm rules and wires them to the field and The App. Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
 
@@ -8,6 +8,7 @@ var _tuning: Tuning
 var _farm: Farm
 
 @onready var _field: Field = $Field
+@onready var _app: AppOverlay = $AppOverlay
 
 
 func _ready() -> void:
@@ -25,6 +26,7 @@ func _ready() -> void:
 	_farm = Farm.new(_tuning, _field.plot_count())
 	_field.plot_tapped.connect(_on_plot_tapped)
 	_field.show_plots(_farm.plots())
+	_show_app()
 
 
 ## The tuning table that passed the startup check, or null if the game stopped.
@@ -39,6 +41,7 @@ func _process(delta: float) -> void:
 		return
 	_farm.advance(delta)
 	_field.show_plots(_farm.plots())
+	_show_app()
 
 
 ## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
@@ -52,6 +55,29 @@ func _on_plot_tapped(index: int) -> void:
 		if result.reason == Farm.NOT_RIPE:
 			_field.show_time_left(index, _farm.plot(index).seconds_left)
 	_field.show_plots(_farm.plots())
+
+
+## Passes the rules' App messages to the Mascot, celebrates a met Quota, and refreshes the bar.
+## A Shift's end and the next Shift's start arrive together, so the Mascot says all of a
+## frame's lines at once; otherwise the praise would be replaced before anyone could read it.
+func _show_app() -> void:
+	var lines: Array[String] = []
+	for message in _farm.take_messages():
+		var met := message.key == Farm.QUOTA_MET
+		if met or message.key == Farm.QUOTA_MISSED:
+			var fields := message.values
+			fields["met"] = met
+			GameLog.info("quota checked", fields)
+		if met:
+			_app.celebrate()
+		var text := AppText.render(message)
+		if text.is_empty():
+			GameLog.warning("app message has no text", {"key": message.key})
+		else:
+			lines.append(text)
+	if not lines.is_empty():
+		_app.say("\n".join(lines))
+	_app.show_shift(_farm.shift(), _farm.labour_points())
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:

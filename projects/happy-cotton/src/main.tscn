@@ -1,13 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://src/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://src/adapters/field/field.tscn" id="2_field"]
 [ext_resource type="Script" path="res://src/adapters/rotate_prompt.gd" id="3_rotate"]
+[ext_resource type="Script" path="res://src/adapters/app_overlay/app_overlay.gd" id="4_app"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
 
 [node name="Field" parent="." instance=ExtResource("2_field")]
+
+[node name="AppOverlay" type="CanvasLayer" parent="."]
+script = ExtResource("4_app")
 
 [node name="RotatePrompt" type="CanvasLayer" parent="."]
 script = ExtResource("3_rotate")
