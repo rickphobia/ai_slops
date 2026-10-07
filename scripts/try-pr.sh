@@ -27,15 +27,15 @@ usage() {
 }
 
 # The projects build_web knows. scripts/previews.sh reads this list through --projects.
-web_projects=(my-piggy pawn-swarm)
+web_projects=(happy-cotton my-piggy pawn-swarm)
 
 # Builds the project in the current folder and prints the folder to serve. Each web project's
 # build steps come from its README. $2 names the build ("PR #41 · 1ae5b74").
 build_web() {
   case $1 in
-    my-piggy)
+    happy-cotton | my-piggy)
       printf '%s\n' "$2" >version.txt # shown on the title screen
-      command -v godot >/dev/null || die "godot not found; run projects/my-piggy/scripts/setup-godot.sh"
+      command -v godot >/dev/null || die "godot not found; run projects/$1/scripts/setup-godot.sh"
       godot --headless --import >&2
       mkdir -p build/web
       godot --headless --export-release Web build/web/index.html >&2
