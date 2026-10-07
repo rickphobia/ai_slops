@@ -113,3 +113,21 @@ _Avoid_: negative balance, loan, overdraft
 **Upgrade**:
 Something the Worker buys in The App's store that makes him more productive, such as a better Generator or tools. Each one raises the Quota.
 _Avoid_: power-up, boost, improvement
+
+### Endings
+
+**Taken**:
+The ending where the Worker can't pay his Children's school fees and one of them ends up on the Generator.
+_Avoid_: bad ending, game over
+
+**Promotion**:
+The ending where the state rewards the Worker's Quotas and Reports by making him an Overseer.
+_Avoid_: good ending, win, level up
+
+**Revolt**:
+The ending where the Worker and his Co-workers stop the Generator together for one day, and the state replaces them all.
+_Avoid_: rebellion, uprising, victory
+
+**Endless**:
+What happens when no other ending does: the work goes on, and play never stops.
+_Avoid_: default ending, game over, normal ending
