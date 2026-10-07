@@ -63,6 +63,17 @@ func test_he_staggers_when_he_stops_to_breathe_then_stands_bent_over() -> void:
 	assert_eq(Array(_player.get_queue()), [WorkerMotion.BREATHING])
 
 
+func test_he_staggers_into_a_breath_that_began_while_he_walked_out() -> void:
+	_motion.show(_view(WorkerView.Activity.RUNNING, 1))
+	_motion.update(0.5)
+	_motion.show(_view(WorkerView.Activity.BREATHING))
+
+	_motion.update(WALK_THERE)
+
+	assert_eq(_player.current_animation, WorkerMotion.STAGGERING)
+	assert_eq(Array(_player.get_queue()), [WorkerMotion.BREATHING])
+
+
 func test_he_runs_again_after_his_breath() -> void:
 	_motion.show(_view(WorkerView.Activity.BREATHING))
 	_motion.update(WALK_THERE)

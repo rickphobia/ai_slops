@@ -21,7 +21,7 @@ const TAP_HALF_SIZE := Vector2(1.7, 0.9)
 const POLE_SPOT := Vector3(-1.0, 0.0, -0.9)
 const POLE_HEIGHT := 2.6
 ## How far the pipe to the plots reaches along +x, in metres.
-@export var pipe_length := 2.4
+const PIPE_LENGTH := 2.4
 
 var _lamp_material := StandardMaterial3D.new()
 var _lamp_light := OmniLight3D.new()
@@ -39,8 +39,8 @@ func _ready() -> void:
 	_add_box("Handrail", Vector3(0.06, 0.06, 0.96), Vector3(0.95, 1.2, 0.0), metal)
 	var pump := _material(PUMP_COLOUR)
 	_add_box("Pump", Vector3(0.5, 0.6, 0.6), Vector3(-1.35, 0.3, 0.0), pump)
-	var pipe_centre := Vector3(1.1 + pipe_length / 2.0, 0.04, -0.6)
-	_add_box("Pipe", Vector3(pipe_length, 0.08, 0.08), pipe_centre, pump)
+	var pipe_centre := Vector3(1.1 + PIPE_LENGTH / 2.0, 0.04, -0.6)
+	_add_box("Pipe", Vector3(PIPE_LENGTH, 0.08, 0.08), pipe_centre, pump)
 	_build_loudspeaker(metal)
 	set_lit(false)
 

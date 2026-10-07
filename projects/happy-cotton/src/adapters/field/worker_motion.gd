@@ -44,11 +44,11 @@ func _init(body: Node3D, player: AnimationPlayer, run_spot: Vector3, run_facing:
 func show(view: WorkerView) -> void:
 	if view.activity == _activity and view.laps_left == _laps_left:
 		return
-	var was := _activity
+	var was_breathing := _activity == WorkerView.Activity.BREATHING
 	_activity = view.activity
 	_laps_left = view.laps_left
 	if _arrived():
-		_settle(was)
+		_settle(not was_breathing)
 
 
 ## Walks him some seconds closer to where he should be.
@@ -59,14 +59,16 @@ func update(delta: float) -> void:
 	var step := WALK_SPEED * delta
 	if step >= to_target.length():
 		_body.position = _target()
-		_settle(_activity)
+		_settle(true)
 		return
 	_body.position += to_target.normalized() * step
 	_body.rotation.y = atan2(to_target.x, to_target.z)
 	_play(WALKING)
 
 
-func _settle(was: WorkerView.Activity) -> void:
+## Shows him doing what he should, where he is. `starting_breath` says a breath shown now
+## is a new one, so he staggers into it.
+func _settle(starting_breath: bool) -> void:
 	match _activity:
 		WorkerView.Activity.IN_FIELD:
 			_body.rotation.y = _home_facing
@@ -77,7 +79,8 @@ func _settle(was: WorkerView.Activity) -> void:
 			_play(RUNNING if _laps_left > 1 else WALKING)
 		WorkerView.Activity.BREATHING:
 			_body.rotation.y = _run_facing
-			if was == WorkerView.Activity.RUNNING and _player != null:
+			# He staggers into every breath, even one that began while he walked out.
+			if starting_breath and _player != null:
 				_player.play(STAGGERING)
 				_player.queue(BREATHING)
 			else:
