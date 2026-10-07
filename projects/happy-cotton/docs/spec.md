@@ -134,6 +134,9 @@ The title screen carries a plain content note and a Sources page. Every factual 
 87. As the owner, I want a debug-only Skip time control, so that I can see growth, offline time, Withering and Negligence without waiting hours.
 88. As a player, I want to drag to pan and pinch or scroll to zoom, within limits, so that I can look around the field the way I do in Hay Day.
 89. As a player, I want moving the view never to plant or pick, so that looking around doesn't waste my cotton or my Exhaustion.
+90. As a player, I want the Worker to Toil whenever there is no cotton to pick (hoeing the rows, and Drill when the loudspeaker calls), so that waiting for crops is never free time.
+91. As a player, I want Toil to add Exhaustion slowly, so that the only real rest is the rest hour I pay for.
+92. As a player, I want the Worker to stop Toiling and go back to the field as soon as cotton is ripe, so that I'm never kept from picking by an animation.
 
 ## Implementation Decisions
 
@@ -163,6 +166,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 - **Shift and Quota.** The Shift counts online time only. A hidden tab counts as offline. At the end of a Shift the Quota is checked: met resets the escalation and gives App praise; missed starts a Study Session and takes away the rest-hour Privilege for the next Shift. The next Shift starts right away with a higher Quota. Picks above the Quota carry no credit into the next Shift.
 - **Exhaustion.** Plant and pick add Exhaustion. Above a threshold, each action takes longer; above a higher one, a pick can drop part of its cotton. A rest hour lowers Exhaustion towards the floor, never below it. The floor rises at the end of every Shift and never falls. Offline time recovers Exhaustion slowly, never below the floor.
+- **Toil.** During online play, whenever no plot is ripe and the Worker is neither in a Study Session nor resting, the Worker is Toiling, and Toil adds Exhaustion at its own slow tuning rate. Offline time has no Toil. The rules expose whether the Worker is Toiling; which chore is shown (hoeing or Drill) is the field scene's choice. Drill is shown as laps and standing to attention, never as anyone being hurt ("military-style management", zenz-2020).
 - **Study Session.** It counts down on wall-clock time, online and offline. During it the Worker can't plant or pick, and nothing Withers. The Shift's clock waits while it runs (crops keep growing): otherwise a Study Session as long as a Shift would make the next Quota impossible, every miss would cause the next, and story 57's recovery could never happen. Each Study Session in a row lasts twice as long as the last, up to a cap; a met Quota resets the count. The App's Quota-missed message grows colder for the second miss in a row and again from the third.
 - **Withering and Negligence.** Ripe cotton Withers once it has been ripe for 8 hours, counted in total time outside Study Sessions. Each Withered plot is logged as Negligence: Labour Points are docked (never below zero) and a Study Session starts that is longer than one for a missed Quota. A Withered plot must be cleared before replanting.
 - **Clock safety.** If the wall clock reports negative offline time, the rules treat it as zero and the game log records a warning. Offline time is capped at a generous maximum so one bad timestamp can't Wither everything at once without reason.

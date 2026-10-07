@@ -78,6 +78,14 @@ _Avoid_: player level, XP, rank
 How worn down the Worker is. Work raises it, rest lowers it, but never below a floor that keeps creeping up.
 _Avoid_: stamina, energy, tiredness, fatigue
 
+**Toil**:
+The work the Worker is made to do whenever there is no cotton to pick: hoeing the rows, and Drill when the loudspeaker calls. It is never free time.
+_Avoid_: idle, chores, waiting, downtime, punishment (that is a Study Session)
+
+**Drill**:
+Laps and standing to attention, called by the loudspeaker, as part of Toil.
+_Avoid_: exercise, training, PE
+
 ### Small acts
 
 **Quiet Act**:
