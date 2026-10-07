@@ -4,18 +4,18 @@
 
 **Blocked by:** 01 (Walking skeleton)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** deploy, CI, README
 
 **Effort:** low
 
-- [ ] Deploy script pulls `main` into the server checkout, exports the web build in a pinned container with the pinned Godot version and templates, and swaps the result into the site folder; the previous build is kept for rollback
-- [ ] Any failed step exits non-zero, names the step and leaves the live site unchanged; it does nothing if `main` hasn't moved, unless forced
-- [ ] Rollback script restores the previous build
-- [ ] Deploy settings are environment variables listed in `.env.example` with their defaults
-- [ ] CI runs `shellcheck` on the deploy scripts
-- [ ] A loading indicator shows while the web build downloads, and a browser without WebGL 2 gets a clear message instead of a black screen
-- [ ] README "Deploy" section: first-time setup, update, rollback, and the nginx/`.wasm` check with a "not checked yet" line for the owner to fill in
+- [x] Deploy script pulls `main` into the server checkout, exports the web build in a pinned container with the pinned Godot version and templates, and swaps the result into the site folder; the previous build is kept for rollback
+- [x] Any failed step exits non-zero, names the step and leaves the live site unchanged; it does nothing if `main` hasn't moved, unless forced
+- [x] Rollback script restores the previous build
+- [x] Deploy settings are environment variables listed in `.env.example` with their defaults
+- [x] CI runs `shellcheck` on the deploy scripts
+- [x] A loading indicator shows while the web build downloads, and a browser without WebGL 2 gets a clear message instead of a black screen
+- [x] README "Deploy" section: first-time setup, update, rollback, and the nginx/`.wasm` check with a "not checked yet" line for the owner to fill in
 
 **Owner steps:** run the deploy script on the Beelink, check `https://rickphobia.com/ai-projects/happy-cotton/` returns 200, and record the result in the README.
