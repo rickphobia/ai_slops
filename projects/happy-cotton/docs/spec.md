@@ -10,7 +10,7 @@ Players need to be able to open a link on desktop or phone, understand within a 
 
 **Happy Cotton** is an endless, real-time 3D farm game in the style of Hay Day, built in Godot 4 and played in the browser (decision 0001). The player is an adult Uyghur Worker on a state Farm. Over a grim, grounded, stylised field sits The App: a bright, state-issued "Happy Cotton" overlay with a smiling cotton-boll Mascot, cheerful doublespeak and a Quota bar. The gap between the two is the satire.
 
-This first playable has one field. The Worker plants, waits (real time) and picks cotton with Hay Day tap controls. Each Shift (10 minutes of online play) ends with a Quota check. A missed Quota means a Study Session: the Worker is taken off the field for a stretch of real time, and each one in a row lasts longer. Picking earns a small number of Labour Points, which can buy one Privilege, a rest hour. Every action raises Exhaustion, and rest never brings it below a floor that creeps up Shift after Shift. When the game is closed the Shift pauses but the crops keep growing, and ripe cotton left too long Withers; The App logs it as Negligence, which is punished more severely than a missed Quota. There is no ending.
+This first playable has one field. The Worker plants, runs on a Generator that waters the field (crops grow only while it turns), and picks cotton with Hay Day tap controls. Each Shift (10 minutes of online play) ends with a Quota check. A missed Quota means a Study Session: the Worker is taken off the field for a stretch of real time, and each one in a row lasts longer. Picking earns a small number of Labour Points, which can buy one Privilege, a rest hour. Every action raises Exhaustion, and rest never brings it below a floor that creeps up Shift after Shift. When the game is closed the Shift pauses but the crops grow slowly (the night shift), and ripe cotton left too long Withers; The App logs it as Negligence, which is punished more severely than a missed Quota. There is no ending.
 
 The title screen carries a plain content note and a Sources page. Every factual claim and every piece of state vocabulary in the game traces to a documented source.
 
@@ -41,7 +41,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 18. As a player, I want to tap a ripe plot to pick it, so that the cotton counts towards the Quota.
 19. As a player, I want picking to clear the plot so I can plant again, so that the loop keeps going.
 20. As a player using a mouse, I want clicks to work exactly like taps, so that desktop play feels the same.
-21. As a player, I want crops to keep growing in real time, so that the farm feels alive like Hay Day.
+21. As a player, I want crops to grow in real time while the Worker runs the Generator, so that the farm feels alive like Hay Day and growth visibly costs the Worker.
 
 ### The App
 
@@ -98,7 +98,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 ### Offline time, Withering and Negligence
 
-60. As a returning player, I want crops to have kept growing while I was away, so that coming back feels like Hay Day.
+60. As a returning player, I want crops to have grown slowly while I was away (the night shift), so that coming back still feels like Hay Day.
 61. As a returning player, I want ripe cotton left unpicked for 8 hours to Wither, so that leaving the field untended has a cost.
 62. As a returning player, I want Withered plots clearly shown, so that I see what happened.
 63. As a returning player, I want to clear a Withered plot before replanting it, so that the waste costs me an action.
@@ -134,12 +134,12 @@ The title screen carries a plain content note and a Sources page. Every factual 
 87. As the owner, I want a debug-only Skip time control, so that I can see growth, offline time, Withering and Negligence without waiting hours.
 88. As a player, I want to drag to pan and pinch or scroll to zoom, within limits, so that I can look around the field the way I do in Hay Day.
 89. As a player, I want moving the view never to plant or pick, so that looking around doesn't waste my cotton or my Exhaustion.
-90. As a player, I want the Worker to Toil whenever there is no cotton to pick (hoeing the rows, and Drill when the loudspeaker calls), so that waiting for crops is never free time.
-91. As a player, I want Toil to add Exhaustion slowly, so that the only real rest is the rest hour I pay for.
-92. As a player, I want the Worker to stop Toiling and go back to the field as soon as cotton is ripe, so that I'm never kept from picking by an animation.
-93. As a player, I want Drill to be the Worker running on a Generator that powers the loudspeaker and The App, so that I see the state's cheerful voice literally run on the Worker's body.
-94. As a player, I want the Worker to tire after a few laps (slow, stagger, stop to breathe), so that I see the body give out.
-95. As a player, I want the Overseer to blow a whistle and use a whip when the Worker stops, with its sounds, so that the coercion behind the cheerful surface is felt.
+90. As a player, I want to tap the Generator to send the Worker to run, and tap a plot to bring him back to the field, so that I choose when he Toils.
+91. As a player, I want crops to grow only while the Worker runs (the Generator pumps their water), so that every bit of growth costs his body.
+92. As a player, I want running to add Exhaustion, and resting to stop the Generator, so that I must choose between his rest and the Quota.
+93. As a player, I want the Generator to also power the loudspeaker and The App, so that I see the state's cheerful voice literally run on the Worker's body.
+94. As a player, I want the Worker to tire after a few laps, fewer as Exhaustion rises, and stop to breathe while the crops halt, so that I see the body give out.
+95. As a player, I want the Overseer to blow a whistle and then use the whip when the Worker stops, with its sounds, so that the coercion behind the cheerful surface is felt.
 96. As a player, I want a master volume and mute, so that I can play without sound.
 
 ## Implementation Decisions
@@ -153,7 +153,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 - **Farm rules (the main seam).** A plain GDScript object with no scene tree, clock or file access. It holds the plots, the Worker's Exhaustion and its floor, Labour Points, the current Shift and Quota, Study Session state and the escalation count. Its interface:
   - Commands: plant a plot, pick a plot, clear a Withered plot, buy a Privilege (rest hour). Each returns whether it happened and why not if it didn't (for example "Worker is in a Study Session", "not ripe", "not enough Labour Points").
-  - Time: advance by some seconds of online play; resume after some seconds offline. Online time advances the Shift, growth and the Study Session. Offline time advances growth, Withering, Exhaustion recovery and the Study Session, but not the Shift.
+  - Time: advance by some seconds of online play; resume after some seconds offline. Online time advances the Shift, the Study Session, and growth while the Worker runs the Generator. Offline time advances growth at the slower offline rate, Withering, Exhaustion recovery and the Study Session, but not the Shift.
   - Results: read-only views of plots (stage, time left, Withered), Quota progress, Shift time left, Labour Points, Exhaustion and floor, Study Session time left.
   - App messages: the rules emit App messages as data (a message key plus values), never text. Message keys cover Mascot tips, Quota met, Quota missed, Study Session start and end, Negligence logged and the away summary.
   - Save: produce a plain dictionary and restore from one, with a save format version number.
@@ -170,8 +170,8 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 - **Shift and Quota.** The Shift counts online time only. A hidden tab counts as offline. At the end of a Shift the Quota is checked: met resets the escalation and gives App praise; missed starts a Study Session and takes away the rest-hour Privilege for the next Shift. The next Shift starts right away with a higher Quota. Picks above the Quota carry no credit into the next Shift.
 - **Exhaustion.** Plant and pick add Exhaustion. Above a threshold, each action takes longer; above a higher one, a pick can drop part of its cotton. A rest hour lowers Exhaustion towards the floor, never below it. The floor rises at the end of every Shift and never falls. Offline time recovers Exhaustion slowly, never below the floor.
-- **Toil.** During online play, whenever no plot is ripe and the Worker is neither in a Study Session nor resting, the Worker is Toiling, and Toil adds Exhaustion at its own slow tuning rate. Offline time has no Toil. The rules expose whether the Worker is Toiling; which chore is shown (hoeing or Drill) is the field scene's choice. Drill is shown as laps and standing to attention, never as anyone being hurt ("military-style management", zenz-2020).
-- **Study Session.** It counts down on wall-clock time, online and offline. During it the Worker can't plant or pick, and nothing Withers. The Shift's clock waits while it runs (crops keep growing): otherwise a Study Session as long as a Shift would make the next Quota impossible, every miss would cause the next, and story 57's recovery could never happen. Each Study Session in a row lasts twice as long as the last, up to a cap; a met Quota resets the count. The App's Quota-missed message grows colder for the second miss in a row and again from the third.
+- **Generator and Toil.** The Worker is either in the field or on the Generator. Tapping the Generator sends him to run; tapping a plot brings him back to the field and does that plot's action. While the game is open, crops grow only while he runs. After a set number of laps (fewer as Exhaustion rises, once ticket 08 adds it) he stops to breathe and growth halts; after a few seconds the Overseer whistles, then whips, and he runs again. The rules emit the whistle and the whip as events for the scene and sound; the whip itself changes no numbers. Running adds Exhaustion (ticket 08). Resting and Study Sessions take him off the Generator, so crops halt. While the game is closed, crops grow at a slower offline rate (the night shift).
+- **Study Session.** It counts down on wall-clock time, online and offline. During it the Worker can't plant or pick, and nothing Withers. The Shift's clock waits while it runs (crops halt, as the Worker isn't running): otherwise a Study Session as long as a Shift would make the next Quota impossible, every miss would cause the next, and story 57's recovery could never happen. Each Study Session in a row lasts twice as long as the last, up to a cap; a met Quota resets the count. The App's Quota-missed message grows colder for the second miss in a row and again from the third.
 - **Withering and Negligence.** Ripe cotton Withers once it has been ripe for 8 hours, counted in total time outside Study Sessions. Each Withered plot is logged as Negligence: Labour Points are docked (never below zero) and a Study Session starts that is longer than one for a missed Quota. A Withered plot must be cleared before replanting.
 - **Clock safety.** If the wall clock reports negative offline time, the rules treat it as zero and the game log records a warning. Offline time is capped at a generous maximum so one bad timestamp can't Wither everything at once without reason.
 - **Save.** One slot, autosaved. A save that can't be read is kept aside, not overwritten; the player is told and offered "Start over". "Start over" asks for confirmation.

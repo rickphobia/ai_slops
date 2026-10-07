@@ -79,16 +79,12 @@ How worn down the Worker is. Work raises it, rest lowers it, but never below a f
 _Avoid_: stamina, energy, tiredness, fatigue
 
 **Toil**:
-The work the Worker is made to do whenever there is no cotton to pick: hoeing the rows, and Drill when the loudspeaker calls. It is never free time.
-_Avoid_: idle, chores, waiting, downtime, punishment (that is a Study Session)
-
-**Drill**:
-Running on the Generator when the loudspeaker calls, as part of Toil.
-_Avoid_: exercise, training, PE, laps
+The Worker running on the Generator: the work between planting and picking. It is never free time.
+_Avoid_: idle, chores, waiting, downtime, drill, punishment (that is a Study Session)
 
 **Generator**:
-The treadmill the Worker is made to run on to power the loudspeaker and The App.
-_Avoid_: treadmill, wheel, machine
+The treadmill the Worker runs on. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
+_Avoid_: treadmill, wheel, machine, pump
 
 ### Small acts
 
