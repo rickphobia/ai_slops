@@ -1,11 +1,13 @@
 extends Node
-## Entry scene: logs which build is running, loads and checks the tuning table, and shows the
-## placeholder field. Kept thin: no game rules here. Later tickets wire the Farm rules to the
-## adapters from here.
+## Entry scene: logs which build is running, loads and checks the tuning table, creates the
+## Farm rules and wires them to the field. Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
 
 var _tuning: Tuning
+var _farm: Farm
+
+@onready var _field: Field = $Field
 
 
 func _ready() -> void:
@@ -20,11 +22,43 @@ func _ready() -> void:
 		return
 	_tuning = tuning
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
+	_farm = Farm.new(_tuning, _field.plot_count())
+	_field.plot_tapped.connect(_on_plot_tapped)
+	_field.show_plots(_farm.plots())
 
 
 ## The tuning table that passed the startup check, or null if the game stopped.
 func tuning() -> Tuning:
 	return _tuning
+
+
+## Crops grow in real time while the game runs. A hidden browser tab stops frames, and Godot
+## caps one frame's delta (about 0.13 s), so the hidden time doesn't count as online play.
+func _process(delta: float) -> void:
+	if _farm == null:
+		return
+	_farm.advance(delta)
+	_field.show_plots(_farm.plots())
+
+
+## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
+## whether that happens; an unripe plot shows its time left instead.
+func _on_plot_tapped(index: int) -> void:
+	if _farm.plot(index).stage == PlotView.Stage.EMPTY:
+		_log_command("plant", index, _farm.plant(index))
+	else:
+		var result := _farm.pick(index)
+		_log_command("pick", index, result)
+		if result.reason == Farm.NOT_RIPE:
+			_field.show_time_left(index, _farm.plot(index).seconds_left)
+	_field.show_plots(_farm.plots())
+
+
+func _log_command(command: String, index: int, result: CommandResult) -> void:
+	if result.happened:
+		GameLog.debug(command, {"plot": index})
+	else:
+		GameLog.debug(command + " refused", {"plot": index, "reason": result.reason})
 
 
 ## Stops the game with the problems on screen and in the log. A headless run exits with a

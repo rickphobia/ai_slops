@@ -1,0 +1,22 @@
+class_name PlotView
+extends RefCounted
+## A read-only snapshot of one plot, for the field and The App to show. Changing the Farm
+## never changes a view already handed out; ask the Farm for a new one.
+
+enum Stage { EMPTY, SEEDLING, FLOWERING, BOLL, RIPE }
+
+var stage: Stage:
+	get:
+		return _stage
+## Seconds of play until the cotton is ripe; 0 when ripe or empty.
+var seconds_left: float:
+	get:
+		return _seconds_left
+
+var _stage: Stage
+var _seconds_left: float
+
+
+func _init(plot_stage: Stage, plot_seconds_left: float) -> void:
+	_stage = plot_stage
+	_seconds_left = plot_seconds_left
