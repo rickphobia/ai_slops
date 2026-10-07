@@ -31,7 +31,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 ### The field and the Worker
 
-11. As a player, I want to see the Worker standing in a cotton field from a fixed, angled camera, so that the game feels like a farm game I know.
+11. As a player, I want to see the Worker standing in a cotton field from an angled camera that never rotates, so that the game feels like a farm game I know.
 12. As a player, I want the world to look grim and grounded (dust, muted colour, harsh light, fences), so that the reality under The App is visible.
 13. As a player, I want the Worker to look like a person, not a caricature, so that I see them as someone with dignity.
 14. As a player, I want the field divided into plots I can tap, so that I know exactly where I can act.
@@ -132,6 +132,8 @@ The title screen carries a plain content note and a Sources page. Every factual 
 85. As a developer, I want CI to run that command and the web export on every push that touches the project, so that main never breaks.
 86. As a developer, I want the README to take me from clone to running, testing and exporting, so that I don't need to ask anyone.
 87. As the owner, I want a debug-only Skip time control, so that I can see growth, offline time, Withering and Negligence without waiting hours.
+88. As a player, I want to drag to pan and pinch or scroll to zoom, within limits, so that I can look around the field the way I do in Hay Day.
+89. As a player, I want moving the view never to plant or pick, so that looking around doesn't waste my cotton or my Exhaustion.
 
 ## Implementation Decisions
 
@@ -153,7 +155,7 @@ The title screen carries a plain content note and a Sources page. Every factual 
 - **App text (content).** A table that maps each message key to its English text and, for sourced lines and doublespeak terms, a source id. Text lives here, not in the rules or the scenes.
 - **Sources register (content).** The list shown on the Sources page: id, title, author or publisher, date, link, and a one-line note on what the game uses it for.
 - **Player settings (config).** Text size and reduced motion, saved separately from the game.
-- **Adapters:** the field scene (plots, the Worker, the grounded look, tap and click picking), The App overlay (Quota bar, Shift timer, Labour Points, Exhaustion, Mascot speech, the Privilege button, the Study Session screen, the away summary), the title screen with the content note and Sources page, the save store (one slot under Godot's user folder, which the web export keeps in browser storage), the wall clock (reports offline time on start and when the tab becomes visible again), and the game log.
+- **Adapters:** the field scene (plots, the Worker, the grounded look, tap and click picking, and a camera that pans and zooms within limits but never rotates; a tap counts on release only if the pointer didn't move), The App overlay (Quota bar, Shift timer, Labour Points, Exhaustion, Mascot speech, the Privilege button, the Study Session screen, the away summary), the title screen with the content note and Sources page, the save store (one slot under Godot's user folder, which the web export keeps in browser storage), the wall clock (reports offline time on start and when the tab becomes visible again), and the game log.
 - **Entrypoint:** thin. It loads the config, loads or creates the save, wires the rules to the adapters, autosaves after every command, at the end of each Shift and when the tab is hidden, and runs the clock.
 - **Debug mode:** on only with `?debug=1` in the page URL or `-- --debug` on the command line. It adds a Skip time control (+1 hour, +8 hours) that feeds the chosen time through the same offline resume as a real absence, so it exercises the real rules rather than a shortcut. Players never see it.
 
