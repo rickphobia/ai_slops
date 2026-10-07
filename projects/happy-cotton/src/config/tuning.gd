@@ -8,10 +8,24 @@ extends Resource
 ## Allowed range per field, inclusive: [lowest, highest].
 const LIMITS: Dictionary = {
 	"grow_seconds": [1.0, 86400.0],
+	"shift_seconds": [10.0, 86400.0],
+	"first_quota": [1.0, 10000.0],
+	"quota_rise": [1.0, 10000.0],
+	"labour_points_per_pick": [1.0, 10000.0],
 }
+## Fields that count things (picks, points), so they must be whole numbers.
+const WHOLE_NUMBERS: Array[String] = ["first_quota", "quota_rise", "labour_points_per_pick"]
 
 ## How long a planted plot takes to ripen, in seconds of real time.
 @export var grow_seconds: float = NAN
+## How long a Shift lasts, in seconds of online play.
+@export var shift_seconds: float = NAN
+## Cotton picks demanded in the first Shift.
+@export var first_quota: float = NAN
+## How many more picks each Shift demands than the last. At least 1: the Quota never falls.
+@export var quota_rise: float = NAN
+## Labour Points earned for each pick.
+@export var labour_points_per_pick: float = NAN
 
 
 static func load_file(path: String) -> Tuning:
@@ -35,4 +49,6 @@ func problems() -> Array[String]:
 			found.append(
 				"%s is %s, but it must be between %s and %s" % [field, value, lowest, highest]
 			)
+		elif field in WHOLE_NUMBERS and value != roundf(value):
+			found.append("%s is %s, but it must be a whole number" % [field, value])
 	return found

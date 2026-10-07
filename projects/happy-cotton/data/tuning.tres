@@ -5,3 +5,7 @@
 [resource]
 script = ExtResource("1_tuning")
 grow_seconds = 180.0
+shift_seconds = 600.0
+first_quota = 10.0
+quota_rise = 2.0
+labour_points_per_pick = 2.0
