@@ -4,21 +4,42 @@ extends RefCounted
 ## access: time only moves when advance() is called, so tests play hours in milliseconds.
 ## It also runs the Shift: online play counts it down, and at its end the Quota is checked and
 ## the next Shift starts at once with a higher Quota. What The App should say comes out as
-## AppMessages through take_messages(). Later tickets add Exhaustion and Study Sessions here.
+## AppMessages through take_messages(). A missed Quota starts a Study Session: the Worker can't
+## plant or pick until it ends, and the next Shift's clock waits for it. Later tickets add
+## Exhaustion here.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
 const NOT_RIPE := &"not_ripe"
 const NOTHING_PLANTED := &"nothing_planted"
+const IN_STUDY_SESSION := &"in_study_session"
 
 ## App message keys. A Shift began: values shift, quota.
 const SHIFT_STARTED := &"shift_started"
 ## The Quota was met (or beaten) at the end of a Shift: values shift, picked, quota.
 const QUOTA_MET := &"quota_met"
-## The Quota was missed at the end of a Shift: values shift, picked, quota.
+## The Quota was missed at the end of a Shift: values shift, picked, quota. The key grows
+## colder with each miss in a row: the first, the second, then every one after.
 const QUOTA_MISSED := &"quota_missed"
+const QUOTA_MISSED_AGAIN := &"quota_missed_again"
+const QUOTA_MISSED_REPEATEDLY := &"quota_missed_repeatedly"
+## A Study Session began: values seconds, minutes (rounded up), in_a_row (1 for the first
+## since the last met Quota).
+const STUDY_SESSION_STARTED := &"study_session_started"
+## A Study Session ended: values in_a_row.
+const STUDY_SESSION_ENDED := &"study_session_ended"
 ## Every key the rules can emit; the App text table must have text for each.
-const MESSAGE_KEYS: Array[StringName] = [SHIFT_STARTED, QUOTA_MET, QUOTA_MISSED]
+const MESSAGE_KEYS: Array[StringName] = [
+	SHIFT_STARTED,
+	QUOTA_MET,
+	QUOTA_MISSED,
+	QUOTA_MISSED_AGAIN,
+	QUOTA_MISSED_REPEATEDLY,
+	STUDY_SESSION_STARTED,
+	STUDY_SESSION_ENDED,
+]
+## The Quota-missed key for the first, second and every later miss in a row.
+const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
 
 ## The stages a crop passes through before it is ripe, each an equal share of the grow time.
 const GROWING: Array[PlotView.Stage] = [
@@ -38,6 +59,10 @@ var _shift_elapsed := 0.0
 ## Cotton picked this Shift. Starts from zero each Shift: a surplus carries no credit.
 var _picked := 0
 var _labour_points := 0
+## Seconds left in the current Study Session; 0 when the Worker is on the field.
+var _study_left := 0.0
+## Quotas missed since the last met one; it sets the next Study Session's length.
+var _misses_in_a_row := 0
 var _messages: Array[AppMessage] = []
 
 
@@ -49,6 +74,8 @@ func _init(tuning: Tuning, plot_count: int) -> void:
 
 
 func plant(index: int) -> CommandResult:
+	if in_study_session():
+		return CommandResult.refused(IN_STUDY_SESSION)
 	if not _exists(index):
 		return CommandResult.refused(NO_SUCH_PLOT)
 	if _grown[index] != EMPTY:
@@ -58,6 +85,8 @@ func plant(index: int) -> CommandResult:
 
 
 func pick(index: int) -> CommandResult:
+	if in_study_session():
+		return CommandResult.refused(IN_STUDY_SESSION)
 	if not _exists(index):
 		return CommandResult.refused(NO_SUCH_PLOT)
 	if _grown[index] == EMPTY:
@@ -71,18 +100,30 @@ func pick(index: int) -> CommandResult:
 
 
 ## Moves the Farm on by some seconds of online play. Time never runs backwards, so a
-## negative step does nothing.
+## negative step does nothing. Crops grow all the time; the clock that runs is the Study
+## Session's while the Worker is in one, and the Shift's otherwise.
 func advance(seconds: float) -> void:
-	if seconds <= 0.0:
-		return
-	for index in _grown.size():
-		if _grown[index] != EMPTY:
-			_grown[index] = minf(_grown[index] + seconds, _tuning.grow_seconds)
-	_shift_elapsed += seconds
-	# One long step can cover several Shifts; each one ends and is checked in turn.
-	while _shift_elapsed >= _tuning.shift_seconds:
-		_shift_elapsed -= _tuning.shift_seconds
-		_end_shift()
+	var remaining := seconds
+	# One long step can cover several Shifts and Study Sessions; each ends in turn.
+	while remaining > 0.0:
+		if in_study_session():
+			var served := minf(remaining, _study_left)
+			_grow(served)
+			remaining -= served
+			if served >= _study_left:
+				_end_study_session()
+			else:
+				_study_left -= served
+		else:
+			var shift_left := _tuning.shift_seconds - _shift_elapsed
+			var worked := minf(remaining, shift_left)
+			_grow(worked)
+			remaining -= worked
+			if worked >= shift_left:
+				_shift_elapsed = 0.0
+				_end_shift()
+			else:
+				_shift_elapsed += worked
 
 
 ## The plot at index; it must exist.
@@ -112,6 +153,15 @@ func labour_points() -> int:
 	return _labour_points
 
 
+func in_study_session() -> bool:
+	return _study_left > 0.0
+
+
+## Seconds until the Worker is back on the field; 0 when they are on it.
+func study_session_seconds_left() -> float:
+	return _study_left
+
+
 ## What The App should say since the last call, oldest first. Empties the queue.
 func take_messages() -> Array[AppMessage]:
 	var taken := _messages
@@ -130,11 +180,42 @@ func _start_shift() -> void:
 
 
 func _end_shift() -> void:
-	var met := _picked >= _quota()
 	var values := {"shift": _shift_number, "picked": _picked, "quota": _quota()}
-	_messages.append(AppMessage.new(QUOTA_MET if met else QUOTA_MISSED, values))
+	if _picked >= _quota():
+		_misses_in_a_row = 0
+		_messages.append(AppMessage.new(QUOTA_MET, values))
+	else:
+		_misses_in_a_row += 1
+		var key := MISSED_KEYS[mini(_misses_in_a_row, MISSED_KEYS.size()) - 1]
+		_messages.append(AppMessage.new(key, values))
+		_start_study_session()
 	_shift_number += 1
 	_start_shift()
+
+
+## Doubles for each miss in a row, up to the cap.
+func _start_study_session() -> void:
+	var doublings := _misses_in_a_row - 1
+	_study_left = minf(
+		_tuning.study_session_seconds * pow(2.0, doublings), _tuning.study_session_cap_seconds
+	)
+	var values := {
+		"seconds": _study_left,
+		"minutes": ceili(_study_left / 60.0),
+		"in_a_row": _misses_in_a_row,
+	}
+	_messages.append(AppMessage.new(STUDY_SESSION_STARTED, values))
+
+
+func _end_study_session() -> void:
+	_study_left = 0.0
+	_messages.append(AppMessage.new(STUDY_SESSION_ENDED, {"in_a_row": _misses_in_a_row}))
+
+
+func _grow(seconds: float) -> void:
+	for index in _grown.size():
+		if _grown[index] != EMPTY:
+			_grown[index] = minf(_grown[index] + seconds, _tuning.grow_seconds)
 
 
 func _exists(index: int) -> bool:

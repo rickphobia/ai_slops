@@ -12,6 +12,8 @@ const LIMITS: Dictionary = {
 	"first_quota": [1.0, 10000.0],
 	"quota_rise": [1.0, 10000.0],
 	"labour_points_per_pick": [1.0, 10000.0],
+	"study_session_seconds": [1.0, 86400.0],
+	"study_session_cap_seconds": [1.0, 604800.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = ["first_quota", "quota_rise", "labour_points_per_pick"]
@@ -26,6 +28,12 @@ const WHOLE_NUMBERS: Array[String] = ["first_quota", "quota_rise", "labour_point
 @export var quota_rise: float = NAN
 ## Labour Points earned for each pick.
 @export var labour_points_per_pick: float = NAN
+## How long the first Study Session after a met Quota lasts, in seconds of real time. Each
+## one in a row lasts twice as long as the last.
+@export var study_session_seconds: float = NAN
+## The longest a Study Session can last, however many come in a row. At least
+## study_session_seconds.
+@export var study_session_cap_seconds: float = NAN
 
 
 static func load_file(path: String) -> Tuning:
@@ -51,4 +59,7 @@ func problems() -> Array[String]:
 			)
 		elif field in WHOLE_NUMBERS and value != roundf(value):
 			found.append("%s is %s, but it must be a whole number" % [field, value])
+	if study_session_cap_seconds < study_session_seconds:
+		var cap_problem := "study_session_cap_seconds is %s, but it must be at least %s"
+		found.append(cap_problem % [study_session_cap_seconds, study_session_seconds])
 	return found

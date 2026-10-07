@@ -2,8 +2,10 @@ class_name AppOverlay
 extends CanvasLayer
 ## The App: the bright, state-issued overlay over the grim field. A top bar with the Quota bar,
 ## the Shift's time left and Labour Points; the Mascot with a speech bubble at the bottom; and
-## confetti for a met Quota. It shows what it is given and never decides anything. Nothing here
-## catches taps, so the field underneath still gets them.
+## confetti for a met Quota. During a Study Session the plain room covers the field, under the
+## bar and the Mascot. It shows what it is given and never decides anything. Nothing here
+## catches taps, so the field underneath still gets them (the rules refuse them in a Study
+## Session).
 
 const BAR_COLOUR := Color(1.0, 0.42, 0.62)
 const BUBBLE_COLOUR := Color(1.0, 0.98, 0.9)
@@ -28,6 +30,7 @@ var _points_label: Label
 var _speech: Label
 var _bubble: PanelContainer
 var _confetti: CPUParticles2D
+var _study_room: StudyRoom
 
 
 func _ready() -> void:
@@ -36,6 +39,9 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+	_study_room = StudyRoom.new()
+	_study_room.visible = false
+	root.add_child(_study_room)
 	root.add_child(_build_top_bar())
 	root.add_child(_build_mascot_corner())
 	_confetti = _build_confetti()
@@ -51,6 +57,18 @@ func show_shift(shift: ShiftView, labour_points: int) -> void:
 		{"shift": shift.number, "time": clock_text(shift.seconds_left)}
 	)
 	_points_label.text = AppText.LABOUR_POINTS.format({"points": labour_points})
+
+
+## Shows the Study Session room with the time left while there is any; hides it at 0.
+func show_study_session(seconds_left: float) -> void:
+	_study_room.visible = seconds_left > 0.0
+	_study_room.show_time_left(
+		AppText.STUDY_SESSION_TIMER.format({"time": clock_text(seconds_left)})
+	)
+
+
+func in_study_room() -> bool:
+	return _study_room.visible
 
 
 ## The Mascot says this until it has something else to say.

@@ -99,7 +99,10 @@ func test_a_missed_quota_is_reported_at_the_end_of_the_shift() -> void:
 	_farm.advance(FastTuning.SHIFT_SECONDS - FastTuning.GROW_SECONDS)
 
 	var messages := _farm.take_messages()
-	assert_eq(_keys(messages), [Farm.QUOTA_MISSED, Farm.SHIFT_STARTED] as Array[StringName])
+	var expected: Array[StringName] = [
+		Farm.QUOTA_MISSED, Farm.STUDY_SESSION_STARTED, Farm.SHIFT_STARTED
+	]
+	assert_eq(_keys(messages), expected)
 	assert_eq(messages[0].values, {"shift": 1, "picked": 2, "quota": 3})
 
 
@@ -113,11 +116,12 @@ func test_the_next_shift_starts_at_once_with_a_higher_quota() -> void:
 	assert_eq(shift.number, 2)
 	assert_eq(shift.quota, raised)
 	assert_eq(shift.seconds_left, FastTuning.SHIFT_SECONDS)
-	assert_eq(_farm.take_messages()[1].values, {"shift": 2, "quota": raised})
+	assert_eq(_farm.take_messages()[-1].values, {"shift": 2, "quota": raised})
 
 
 func test_time_past_the_end_of_a_shift_carries_into_the_next() -> void:
-	_farm.advance(FastTuning.SHIFT_SECONDS + 25.0)
+	_pick_cotton(3)
+	_farm.advance(FastTuning.SHIFT_SECONDS - FastTuning.GROW_SECONDS + 25.0)
 
 	assert_eq(_farm.shift().number, 2)
 	assert_eq(_farm.shift().seconds_left, FastTuning.SHIFT_SECONDS - 25.0)
@@ -126,15 +130,21 @@ func test_time_past_the_end_of_a_shift_carries_into_the_next() -> void:
 func test_one_long_step_ends_every_shift_it_covers() -> void:
 	_farm.take_messages()
 
-	_farm.advance(FastTuning.SHIFT_SECONDS * 3)
+	# Three missed Shifts and the Study Sessions after the first two (20 and 40 seconds).
+	_farm.advance(FastTuning.SHIFT_SECONDS * 3 + 60.0)
 
 	assert_eq(_farm.shift().number, 4)
 	var expected: Array[StringName] = [
 		Farm.QUOTA_MISSED,
+		Farm.STUDY_SESSION_STARTED,
 		Farm.SHIFT_STARTED,
-		Farm.QUOTA_MISSED,
+		Farm.STUDY_SESSION_ENDED,
+		Farm.QUOTA_MISSED_AGAIN,
+		Farm.STUDY_SESSION_STARTED,
 		Farm.SHIFT_STARTED,
-		Farm.QUOTA_MISSED,
+		Farm.STUDY_SESSION_ENDED,
+		Farm.QUOTA_MISSED_REPEATEDLY,
+		Farm.STUDY_SESSION_STARTED,
 		Farm.SHIFT_STARTED,
 	]
 	assert_eq(_keys(_farm.take_messages()), expected)
@@ -205,5 +215,13 @@ func test_a_shift_view_does_not_change_when_the_farm_does() -> void:
 
 
 func test_every_key_the_rules_emit_is_listed() -> void:
-	var emitted: Array[StringName] = [Farm.SHIFT_STARTED, Farm.QUOTA_MET, Farm.QUOTA_MISSED]
+	var emitted: Array[StringName] = [
+		Farm.SHIFT_STARTED,
+		Farm.QUOTA_MET,
+		Farm.QUOTA_MISSED,
+		Farm.QUOTA_MISSED_AGAIN,
+		Farm.QUOTA_MISSED_REPEATEDLY,
+		Farm.STUDY_SESSION_STARTED,
+		Farm.STUDY_SESSION_ENDED,
+	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)
