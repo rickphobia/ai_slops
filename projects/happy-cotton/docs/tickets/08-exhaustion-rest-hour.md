@@ -2,7 +2,7 @@
 
 **What to build:** Every plant and pick wears the Worker down. As Exhaustion rises the Worker slows, then starts dropping cotton, and the world drains of colour as they slump. The player can spend Labour Points on a rest hour, the first Privilege, but rest never brings Exhaustion below a floor that creeps up every Shift. A missed Quota takes the rest hour away for the next Shift (spec: stories 40–50; "Rules decisions": Exhaustion).
 
-**Blocked by:** 05 (Grounded field look), 07 (Study Sessions)
+**Blocked by:** 05 (Grounded field look), 11 (Withering and Negligence)
 
 **Status:** ready
 
@@ -18,3 +18,4 @@
 - [ ] The overlay shows Exhaustion and the rest hour button with its price
 - [ ] The field drains of colour and the Worker slumps as Exhaustion rises
 - [ ] All Exhaustion numbers and the rest hour price come from the tuning table
+- [ ] Offline time recovers Exhaustion at the tuning rate, never below the floor, and the away summary says how much it recovered (stories 49, 66)

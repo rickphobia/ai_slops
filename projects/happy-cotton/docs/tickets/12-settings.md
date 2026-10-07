@@ -2,7 +2,7 @@
 
 **What to build:** The player can make The App's text bigger and turn on reduced motion, which tones down the Exhaustion effects and the confetti. Both are remembered between visits (spec: stories 51, 73–75).
 
-**Blocked by:** 11 (Withering and Negligence)
+**Blocked by:** 09 (Save and continue)
 
 **Status:** ready
 
