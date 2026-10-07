@@ -27,7 +27,7 @@ projects/<name>/
 └── dependency + tool config (pyproject.toml, package.json, etc.)
 ```
 
-Web projects that go on the homelab also get `deploy/update-site.sh` and `deploy/rollback.sh`; copy the pattern from `projects/pawn-swarm/deploy/` and its README "Deploy" section.
+Web projects that go on the homelab also get `deploy/update-site.sh` and `deploy/rollback.sh`; copy the pattern from `projects/pawn-swarm/deploy/` and its README "Deploy" section. Also add the project to `web_projects` and `build_web` in `scripts/try-pr.sh`, or its PRs get no preview on the Beelink (see "Previews on the Beelink" in `docs/workflow.md`).
 
 ## Steps
 

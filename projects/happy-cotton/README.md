@@ -4,7 +4,7 @@ An endless 3D farm game in the style of Hay Day, played in the browser, that sat
 
 ## Status
 
-`in progress`: tickets 01–03. The game opens on the title screen with its Sources page; Start goes to a placeholder field. The server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No gameplay yet; the tickets in `docs/tickets/` add it.
+`in progress`: tickets 01–04. The game opens on the title screen; Start goes to the field. Tap an empty plot to plant cotton, watch it grow through its stages (placeholder shapes), tap it to see the time left, and tap it when ripe to pick it. The server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No Shift, Quota or saving yet; the tickets in `docs/tickets/` add them.
 
 ## Requirements
 
@@ -29,7 +29,7 @@ The GUT test addon (9.7.1) is vendored in `addons/gut/`, so there is nothing to 
 ## Run
 
 ```bash
-godot --path .          # play: the title screen, then a placeholder field
+godot --path .          # play: the title screen, then the field: click (or tap) a plot to plant, again to see time left, again when ripe to pick
 godot --path . --editor # open the project in the Godot editor
 ```
 
@@ -125,10 +125,10 @@ All the game's numbers live in one tuning table, `data/tuning.tres`, described f
 
 - `src/adapters/title/` is the first scene: the game's name, the content note (exact wording from the spec's content rules), Start and the Sources page. Start opens `src/main.tscn`.
 - `src/content/sources_register.gd` is the one list of sources the game draws on; the Sources page is built from it, and a test checks every entry is complete with a unique id. Add a source there before the game uses a claim or a piece of state vocabulary from it.
-- `src/main.tscn` / `src/main.gd` is the thin entrypoint: it logs the build version, loads and checks the tuning table, and shows the field. Later tickets wire the Farm rules to the adapters here.
+- `src/main.tscn` / `src/main.gd` is the thin entrypoint: it logs the build version, loads and checks the tuning table, creates the Farm rules, advances them every frame, and turns a tapped plot into plant, pick or "show time left".
 - `src/config/` holds the tuning table and the build version (read from `version.txt`, which the build scripts write before an export; without it the build is a `dev build`).
-- `src/adapters/` holds everything that talks to Godot or the outside world. Today that is the game log and the title screen.
-- The Farm rules (ticket 04 on) go in `src/rules/`: plain GDScript objects with no scene tree, clock or file access, tested through their public interface.
+- `src/adapters/` holds everything that talks to Godot or the outside world: the game log, the title screen, the field scene (`field/`: plots, placeholder crop shapes, tap and click picking through the camera, the time-left label) and the "turn your phone sideways" cover shown in portrait.
+- `src/rules/` holds the Farm rules: `Farm` with the commands `plant` and `pick` (each returns a `CommandResult`: whether it happened, and a reason key if not), `advance(seconds)` for online play, and read-only `PlotView`s (stage and time left). Plain GDScript objects with no scene tree, clock or file access, tested through their public interface with the fast tuning table in `tests/rules/fast_tuning.gd`.
 
 ## Folder layout
 
@@ -140,8 +140,8 @@ src/
   main.tscn, main.gd   entrypoint
   config/              tuning table, build version
   content/             sources register
-  rules/               Farm rules (from ticket 04)
-  adapters/            game log, title screen; later the field, The App overlay, save store, clock
+  rules/               Farm rules: plots, plant, pick, growth
+  adapters/            game log, title screen, field scene, rotate prompt; later The App overlay, save store, clock
 tests/                 GUT tests, mirroring src/
 addons/gut/            the GUT test addon (vendored, 9.7.1)
 scripts/               setup-godot.sh, check.sh, godot-pin.env
@@ -158,6 +158,10 @@ Log lines go to Godot's output (the terminal running `godot`, or the browser con
 [info] game started version="dev build"
 [info] tuning loaded path="res://data/tuning.tres"
 ```
+
+Plant and pick are logged at debug level, including refusals with their reason, for example `[debug] plant plot=3` or `[debug] pick refused plot=3 reason=&"not_ripe"`.
+
+Crops grow on frame time, and Godot caps one frame's step at about 0.13 s, so below roughly 8 frames a second (a software-rendered browser, a struggling phone) crops grow slower than the wall clock. A hidden tab stops frames, so it counts as offline (ticket 10 handles offline time).
 
 Warnings and errors go through `push_warning`/`push_error`, so they also show in the editor's Debugger panel. Tests capture lines by setting `GameLog.sink`; set `GameLog.minimum_level = GameLog.Level.DEBUG` to see debug lines.
 
