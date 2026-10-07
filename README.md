@@ -78,5 +78,6 @@ Follow [`docs/new-project.md`](docs/new-project.md). It is ticket 01 of the proj
 | [my-piggy](projects/my-piggy) | First-person horror game: a human head on a pig's body, hunted by family in one night | Godot 4 (GDScript), web export | in progress |
 | [ricknotes](projects/ricknotes) | Android tablet app for writing on study PDFs with a pen, with ink saved beside each PDF | Kotlin, Jetpack Compose, Android | in progress |
 | [court-booker](projects/court-booker) | Books a badminton court on Picktime at midnight when a date opens, for one Operator | Python, FastAPI, SQLite, Playwright, Docker | in progress |
+| [happy-cotton](projects/happy-cotton) | Browser farm game in the style of Hay Day that satirises forced labour in Xinjiang's cotton fields | Godot 4 (GDScript), web export | in progress |
 
 Status values: `idea`, `in progress`, `working`, `abandoned`.
