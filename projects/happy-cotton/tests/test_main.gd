@@ -1,6 +1,6 @@
 extends GutTest
 ## Smoke test of the entry scene: it loads, logs the build version and accepts the shipped
-## tuning table.
+## tuning table, and that a tap on the field reaches the Farm rules.
 
 const MAIN_SCENE := preload("res://src/main.tscn")
 
@@ -31,3 +31,27 @@ func test_the_entry_scene_starts_with_the_shipped_tuning_table() -> void:
 	var tuning: Tuning = main.call("tuning")
 	assert_not_null(tuning)
 	assert_false(_lines.any(func(line: String) -> bool: return line.begins_with("[error]")))
+
+
+func test_tapping_an_empty_plot_plants_it_and_logs_at_debug_level() -> void:
+	GameLog.minimum_level = GameLog.Level.DEBUG
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var field: Field = main.get_node("Field")
+
+	field.plot_tapped.emit(2)
+
+	assert_has(_lines, "[debug] plant plot=2")
+
+
+func test_tapping_a_growing_plot_neither_plants_nor_picks() -> void:
+	GameLog.minimum_level = GameLog.Level.DEBUG
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var field: Field = main.get_node("Field")
+	field.plot_tapped.emit(0)
+	_lines.clear()
+
+	field.plot_tapped.emit(0)
+
+	assert_eq(_lines, [] as Array[String])
