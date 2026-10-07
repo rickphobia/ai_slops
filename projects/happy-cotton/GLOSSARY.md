@@ -78,6 +78,14 @@ _Avoid_: player level, XP, rank
 How worn down the Worker is. Work raises it, rest lowers it, but never below a floor that keeps creeping up.
 _Avoid_: stamina, energy, tiredness, fatigue
 
+**Toil**:
+The Worker running on the Generator: the work between planting and picking. It is never free time.
+_Avoid_: idle, chores, waiting, downtime, drill, punishment (that is a Study Session)
+
+**Generator**:
+The treadmill the Worker runs on. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
+_Avoid_: treadmill, wheel, machine, pump
+
 ### Small acts
 
 **Quiet Act**:
