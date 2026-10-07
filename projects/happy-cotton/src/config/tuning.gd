@@ -14,9 +14,14 @@ const LIMITS: Dictionary = {
 	"labour_points_per_pick": [1.0, 10000.0],
 	"study_session_seconds": [1.0, 86400.0],
 	"study_session_cap_seconds": [1.0, 604800.0],
+	"lap_seconds": [0.5, 600.0],
+	"laps_before_breath": [1.0, 1000.0],
+	"breath_seconds": [0.5, 600.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
-const WHOLE_NUMBERS: Array[String] = ["first_quota", "quota_rise", "labour_points_per_pick"]
+const WHOLE_NUMBERS: Array[String] = [
+	"first_quota", "quota_rise", "labour_points_per_pick", "laps_before_breath"
+]
 
 ## How long a planted plot takes to ripen, in seconds of real time.
 @export var grow_seconds: float = NAN
@@ -34,6 +39,14 @@ const WHOLE_NUMBERS: Array[String] = ["first_quota", "quota_rise", "labour_point
 ## The longest a Study Session can last, however many come in a row. At least
 ## study_session_seconds.
 @export var study_session_cap_seconds: float = NAN
+## How long one lap on the Generator takes, in seconds of online play.
+@export var lap_seconds: float = NAN
+## How many laps the Worker runs on the Generator before he stops to breathe. Leaving the
+## Generator doesn't rest him: the laps since his last breath carry over.
+@export var laps_before_breath: float = NAN
+## How long he stands bent over on the Generator, breathing, before he runs again. Crops halt
+## meanwhile.
+@export var breath_seconds: float = NAN
 
 
 static func load_file(path: String) -> Tuning:

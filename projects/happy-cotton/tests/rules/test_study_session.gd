@@ -39,6 +39,7 @@ func _finish_shift_with(count: int) -> void:
 	var shift_left := _farm.shift().seconds_left
 	for index in count:
 		_farm.plant(index)
+	_farm.run_generator()
 	_farm.advance(FastTuning.GROW_SECONDS)
 	for index in count:
 		_farm.pick(index)
@@ -81,6 +82,7 @@ func test_planting_is_refused_during_a_study_session() -> void:
 
 func test_picking_ripe_cotton_is_refused_during_a_study_session() -> void:
 	_farm.plant(0)
+	_farm.run_generator()
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 
 	var result := _farm.pick(0)
@@ -121,16 +123,19 @@ func test_the_shift_clock_waits_while_the_worker_is_in_a_study_session() -> void
 	assert_eq(_farm.shift().seconds_left, FastTuning.SHIFT_SECONDS - 5.0)
 
 
-func test_crops_keep_growing_during_a_study_session() -> void:
-	# Planted 20 seconds before the Shift ends, so it ripens 10 seconds into the Study Session.
+func test_crops_halt_during_a_study_session_and_the_worker_picks_after_it() -> void:
+	# Planted 20 seconds before the Shift ends, so it has 10 seconds left when the Session starts.
 	_farm.advance(FastTuning.SHIFT_SECONDS - 20.0)
 	_farm.plant(0)
+	_farm.run_generator()
 	_farm.advance(20.0)
 	assert_eq(_farm.plot(0).stage, PlotView.Stage.BOLL)
 
 	_farm.advance(FastTuning.STUDY_SESSION_SECONDS)
 
-	assert_eq(_farm.plot(0).stage, PlotView.Stage.RIPE)
+	assert_eq(_farm.plot(0).stage, PlotView.Stage.BOLL, "no one ran the Generator")
+	_farm.run_generator()
+	_farm.advance(10.0)
 	assert_true(_farm.pick(0).happened)
 
 
