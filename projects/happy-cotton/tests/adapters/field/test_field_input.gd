@@ -1,6 +1,6 @@
 extends GutTest
-## Taps, drags, pinches and the mouse wheel on the field scene: only a tap reaches a plot,
-## and moving the view keeps the camera's angle.
+## Taps, drags, pinches and the mouse wheel on the field scene: only a tap reaches a plot or
+## the Generator, and moving the view keeps the camera's angle.
 
 const FIELD_SCENE := preload("res://src/adapters/field/field.tscn")
 const VIEW_SIZE := Vector2i(1280, 720)
@@ -10,10 +10,12 @@ var _viewport: SubViewport
 var _field: Field
 var _camera: Camera3D
 var _tapped: Array[int] = []
+var _generator_taps := 0
 
 
 func before_each() -> void:
 	_tapped = []
+	_generator_taps = 0
 	_viewport = SubViewport.new()
 	_viewport.size = VIEW_SIZE
 	add_child_autofree(_viewport)
@@ -21,12 +23,20 @@ func before_each() -> void:
 	_viewport.add_child(_field)
 	_camera = _field.get_node("Camera")
 	_field.plot_tapped.connect(func(index: int) -> void: _tapped.append(index))
+	_field.generator_tapped.connect(func() -> void: _generator_taps += 1)
 	await wait_process_frames(1)
 
 
 func _plot_on_screen(index: int) -> Vector2:
 	var grid := PlotGrid.new(_field.columns, _field.rows, _field.spacing, _field.plot_size)
 	return _camera.unproject_position(grid.centre_of(index))
+
+
+func _generator_on_screen() -> Vector2:
+	var generator: Node3D = _field.get_node("Generator")
+	var on_screen := _camera.unproject_position(generator.position)
+	assert_true(Rect2(Vector2.ZERO, VIEW_SIZE).has_point(on_screen), "the Generator is in view")
+	return on_screen
 
 
 func _mouse_button(button: MouseButton, position: Vector2, pressed: bool) -> void:
@@ -140,4 +150,46 @@ func test_a_click_on_a_button_over_the_field_stays_with_the_button() -> void:
 	_mouse_button(MOUSE_BUTTON_LEFT, plot, true)
 	_mouse_button(MOUSE_BUTTON_LEFT, plot, false)
 	assert_eq(presses.size(), 1, "the button got the click")
+	assert_eq(_tapped, [] as Array[int])
+
+
+func test_a_click_on_the_generator_taps_it_and_no_plot() -> void:
+	var generator := _generator_on_screen()
+	_mouse_button(MOUSE_BUTTON_LEFT, generator, true)
+	_mouse_button(MOUSE_BUTTON_LEFT, generator, false)
+	assert_eq(_generator_taps, 1)
+	assert_eq(_tapped, [] as Array[int])
+
+
+func test_a_finger_tap_on_the_generator_taps_it() -> void:
+	var generator := _generator_on_screen()
+	_touch(0, generator, true)
+	_touch(0, generator, false)
+	assert_eq(_generator_taps, 1)
+
+
+func test_a_drag_from_the_generator_pans_and_never_sends_him() -> void:
+	var start := _generator_on_screen()
+	var end := start + Vector2(150, 0)
+	_touch(0, start, true)
+	_touch_drag(0, end)
+	_touch(0, end, false)
+	assert_eq(_generator_taps, 0)
+
+
+func test_a_pinch_over_the_generator_never_sends_him() -> void:
+	var generator := _generator_on_screen()
+	_touch(0, generator - Vector2(40, 0), true)
+	_touch(1, generator + Vector2(40, 0), true)
+	_touch_drag(1, generator + Vector2(90, 0))
+	_touch(1, generator + Vector2(90, 0), false)
+	_touch(0, generator - Vector2(40, 0), false)
+	assert_eq(_generator_taps, 0)
+
+
+func test_a_tap_on_bare_ground_taps_nothing() -> void:
+	var ground := _camera.unproject_position(Vector3(0.0, 0.0, -10.0))
+	_mouse_button(MOUSE_BUTTON_LEFT, ground, true)
+	_mouse_button(MOUSE_BUTTON_LEFT, ground, false)
+	assert_eq(_generator_taps, 0)
 	assert_eq(_tapped, [] as Array[int])

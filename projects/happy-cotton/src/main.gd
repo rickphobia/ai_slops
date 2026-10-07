@@ -6,6 +6,7 @@ const TUNING_PATH := "res://data/tuning.tres"
 
 var _tuning: Tuning
 var _farm: Farm
+var _worker_activity := WorkerView.Activity.IN_FIELD
 
 @onready var _field: Field = $Field
 @onready var _app: AppOverlay = $AppOverlay
@@ -25,7 +26,9 @@ func _ready() -> void:
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
 	_farm = Farm.new(_tuning, _field.plot_count())
 	_field.plot_tapped.connect(_on_plot_tapped)
+	_field.generator_tapped.connect(_on_generator_tapped)
 	_field.show_plots(_farm.plots())
+	_show_worker()
 	_show_app()
 
 
@@ -41,11 +44,13 @@ func _process(delta: float) -> void:
 		return
 	_farm.advance(delta)
 	_field.show_plots(_farm.plots())
+	_show_worker()
 	_show_app()
 
 
 ## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
-## whether that happens; an unripe plot shows its time left instead.
+## whether that happens, and a plant or pick that happens brings the Worker back to the
+## field; an unripe plot shows its time left instead.
 func _on_plot_tapped(index: int) -> void:
 	if _farm.plot(index).stage == PlotView.Stage.EMPTY:
 		_log_command("plant", index, _farm.plant(index))
@@ -55,6 +60,26 @@ func _on_plot_tapped(index: int) -> void:
 		if result.reason == Farm.NOT_RIPE:
 			_field.show_time_left(index, _farm.plot(index).seconds_left)
 	_field.show_plots(_farm.plots())
+	_show_worker()
+
+
+func _on_generator_tapped() -> void:
+	var result := _farm.run_generator()
+	if result.happened:
+		GameLog.debug("run generator")
+	else:
+		GameLog.debug("run generator refused", {"reason": result.reason})
+	_show_worker()
+
+
+## Shows the Worker and logs each change in what he is doing, such as stopping to breathe.
+func _show_worker() -> void:
+	var view := _farm.worker()
+	if view.activity != _worker_activity:
+		_worker_activity = view.activity
+		var activity_name: String = WorkerView.Activity.keys()[view.activity]
+		GameLog.debug("worker", {"activity": activity_name.to_lower()})
+	_field.show_worker(view)
 
 
 ## Passes the rules' App messages to the Mascot, celebrates a met Quota, logs Quota checks and

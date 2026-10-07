@@ -11,4 +11,4 @@ Every file in `assets/` is listed here with its author, licence and where it cam
 | `quaternius-modular-men/farmer.glb` | The Worker | Ultimate Modular Men, `Farmer` (copy taken from the CC0 redistribution in github.com/LuanDucate/Ducz.CharacterCreator, `public/models/Male/Farmer.glb`) | Quaternius | CC0 1.0 | https://quaternius.com/packs/ultimatemodularcharacters.html |
 | `polyhaven/dry_ground_01_diff_1k.jpg` | Dust on the ground and in the plots | `dry_ground_01`, diffuse, 1k JPG | Poly Haven (Rob Tuytel) | CC0 1.0 | https://polyhaven.com/a/dry_ground_01 |
 
-The plant and fence colours are replaced in code (`src/adapters/field/`) with the field's muted palette; the Worker keeps the model's own colours. The files themselves are unchanged.
+The plant and fence colours are replaced in code (`src/adapters/field/`) with the field's muted palette; the Worker keeps the model's own colours. The files themselves are unchanged. The Generator and its loudspeaker pole are simple shapes built in code (`src/adapters/field/generator.gd`), not an asset.
