@@ -4,7 +4,7 @@ An endless 3D farm game in the style of Hay Day, played in the browser, that sat
 
 ## Status
 
-`in progress`: walking skeleton and shareable link (tickets 01–02). The project builds, its checks run in CI, a placeholder field loads in the editor and in the browser, and the server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No gameplay yet; the tickets in `docs/tickets/` add it.
+`in progress`: tickets 01–03. The game opens on the title screen with its Sources page; Start goes to a placeholder field. The server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No gameplay yet; the tickets in `docs/tickets/` add it.
 
 ## Requirements
 
@@ -29,7 +29,7 @@ The GUT test addon (9.7.1) is vendored in `addons/gut/`, so there is nothing to 
 ## Run
 
 ```bash
-godot --path .          # play: today a placeholder field
+godot --path .          # play: the title screen, then a placeholder field
 godot --path . --editor # open the project in the Godot editor
 ```
 
@@ -123,9 +123,11 @@ All the game's numbers live in one tuning table, `data/tuning.tres`, described f
 
 ## How it works
 
+- `src/adapters/title/` is the first scene: the game's name, the content note (exact wording from the spec's content rules), Start and the Sources page. Start opens `src/main.tscn`.
+- `src/content/sources_register.gd` is the one list of sources the game draws on; the Sources page is built from it, and a test checks every entry is complete with a unique id. Add a source there before the game uses a claim or a piece of state vocabulary from it.
 - `src/main.tscn` / `src/main.gd` is the thin entrypoint: it logs the build version, loads and checks the tuning table, and shows the field. Later tickets wire the Farm rules to the adapters here.
 - `src/config/` holds the tuning table and the build version (read from `version.txt`, which the build scripts write before an export; without it the build is a `dev build`).
-- `src/adapters/` holds everything that talks to Godot or the outside world. Today that is the game log.
+- `src/adapters/` holds everything that talks to Godot or the outside world. Today that is the game log and the title screen.
 - The Farm rules (ticket 04 on) go in `src/rules/`: plain GDScript objects with no scene tree, clock or file access, tested through their public interface.
 
 ## Folder layout
@@ -137,8 +139,9 @@ data/tuning.tres       the tuning table's values
 src/
   main.tscn, main.gd   entrypoint
   config/              tuning table, build version
+  content/             sources register
   rules/               Farm rules (from ticket 04)
-  adapters/            game log; later the field, The App overlay, save store, clock
+  adapters/            game log, title screen; later the field, The App overlay, save store, clock
 tests/                 GUT tests, mirroring src/
 addons/gut/            the GUT test addon (vendored, 9.7.1)
 scripts/               setup-godot.sh, check.sh, godot-pin.env
