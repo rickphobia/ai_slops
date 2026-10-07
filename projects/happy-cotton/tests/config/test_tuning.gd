@@ -5,9 +5,7 @@ const SHIPPED_TABLE := "res://data/tuning.tres"
 
 
 func _good_table() -> Tuning:
-	var tuning := Tuning.new()
-	tuning.grow_seconds = 10.0
-	return tuning
+	return FastTuning.table()
 
 
 func test_a_complete_table_has_no_problems() -> void:
@@ -44,6 +42,24 @@ func test_a_value_that_is_too_low_is_reported_by_field_name() -> void:
 
 	assert_eq(problems.size(), 1)
 	assert_string_contains(problems[0], "grow_seconds")
+
+
+func test_a_count_that_is_not_a_whole_number_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.first_quota = 2.5
+
+	var expected: Array[String] = ["first_quota is 2.5, but it must be a whole number"]
+	assert_eq(tuning.problems(), expected)
+
+
+func test_a_quota_that_does_not_rise_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.quota_rise = 0.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "quota_rise")
 
 
 func test_every_missing_field_is_reported_at_once() -> void:
