@@ -4,7 +4,7 @@ An endless 3D farm game in the style of Hay Day, played in the browser, that sat
 
 ## Status
 
-`in progress`: the walking skeleton (ticket 01). The project builds, its checks run in CI and a placeholder field loads in the editor and in the browser. No gameplay yet; the tickets in `docs/tickets/` add it.
+`in progress`: walking skeleton and shareable link (tickets 01–02). The project builds, its checks run in CI, a placeholder field loads in the editor and in the browser, and the server deploy scripts publish `main` to `https://rickphobia.com/ai-projects/happy-cotton/`. No gameplay yet; the tickets in `docs/tickets/` add it.
 
 ## Requirements
 
@@ -59,13 +59,65 @@ godot --headless --export-release Web build/web/index.html
 python3 -m http.server --directory build/web 8000   # then open http://localhost:8000
 ```
 
-The preset is single-threaded with the Compatibility (WebGL 2) renderer (decision 0001), so any static file server works with no special headers. The server must send `.wasm` files as `application/wasm`. The build is about 40 MB, mostly the engine. Browsers only run it from `localhost` or HTTPS.
+The preset uses a custom page shell, `web/shell.html`: a loading bar with a percentage while the build downloads, and a plain message instead of a black screen when the browser has no WebGL 2. The preset is single-threaded with the Compatibility (WebGL 2) renderer (decision 0001), so any static file server works with no special headers. The server must send `.wasm` files as `application/wasm`. The build is about 40 MB, mostly the engine. Browsers only run it from `localhost` or HTTPS.
 
-CI (`.github/workflows/happy-cotton.yml`) runs `scripts/check.sh`, the web export and `shellcheck` on every push that touches this folder. Deploying to rickphobia.com arrives with ticket 02.
+CI (`.github/workflows/happy-cotton.yml`) runs `scripts/check.sh`, the web export and `shellcheck` (on `scripts/` and `deploy/`) on every push that touches this folder.
+
+## Deploy
+
+The game is a static site, served at `https://rickphobia.com/ai-projects/happy-cotton/` by nginx in Docker on the Beelink, with `~/homelab/html` as the site root. GitHub can't reach the home network, so the server pulls: you run one script there.
+
+`deploy/update-site.sh` fetches `main` into `~/homelab/dev/ai_slops`, builds the `happy-cotton-godot:<version>` Docker image from `deploy/Dockerfile` (a digest-pinned Ubuntu plus the Godot and web templates pinned in `scripts/godot-pin.env`, checksum-verified; no Godot install needed on the server), writes `version.txt` (short commit and date), exports the web build in that image, copies it to `~/homelab/html/ai-projects/happy-cotton.new`, then renames it into place. The old build stays as `happy-cotton.previous`. If any step fails, the script exits non-zero, names the step, and the live site stays as it was. If `main` hasn't moved since the last deploy, it does nothing.
+
+### First-time setup (on the Beelink)
+
+Needs `git`, `docker` (your user can run it without sudo) and `flock` (part of `util-linux`, already on Ubuntu). The checkout in `~/homelab/dev/ai_slops` is shared with the other projects' deploy scripts; it is created if missing.
+
+```bash
+~/homelab/code/ai_slops/projects/happy-cotton/deploy/update-site.sh   # first run, from any checkout
+```
+
+The first run builds the image, which downloads the 1.3 GB templates bundle: allow about 10 minutes. Later runs reuse the image and take under a minute.
+
+**nginx check.** No nginx change is needed if `/ai-projects/` is already served from `~/homelab/html/ai-projects/`. After the first run, check the page and that `.wasm` is sent as `application/wasm` (browsers refuse to stream-compile it otherwise):
+
+```bash
+curl -I https://rickphobia.com/ai-projects/happy-cotton/                                    # expect 200
+curl -sI https://rickphobia.com/ai-projects/happy-cotton/index.wasm | grep -i content-type  # expect application/wasm
+```
+
+If the page is `404`, fix nginx's `root`/`location` for `/ai-projects/`; if the type is wrong, add `application/wasm wasm;` to its `mime.types` and reload nginx. Not checked yet: the owner fills in the date and result after the first deploy.
+
+### Update
+
+```bash
+~/homelab/dev/ai_slops/projects/happy-cotton/deploy/update-site.sh
+```
+
+To rebuild even though `main` hasn't changed: `HAPPY_COTTON_FORCE=1 ~/homelab/dev/ai_slops/projects/happy-cotton/deploy/update-site.sh`.
+
+Settings (all optional, shown with defaults in `.env.example`) are environment variables: `HAPPY_COTTON_REPO_URL`, `HAPPY_COTTON_BRANCH`, `HAPPY_COTTON_SRC_DIR`, `HAPPY_COTTON_SITE_ROOT`, `HAPPY_COTTON_SITE_SUBPATH`, `HAPPY_COTTON_FORCE`. The scripts do not read `.env`.
+
+### Roll back
+
+```bash
+~/homelab/dev/ai_slops/projects/happy-cotton/deploy/rollback.sh
+```
+
+Swaps `happy-cotton` and `happy-cotton.previous`. Run it again to undo. The next `update-site.sh` run puts the latest `main` back, so fix `main` before running it.
+
+### Check that it worked
+
+```bash
+curl -I https://rickphobia.com/ai-projects/happy-cotton/   # expect HTTP 200
+cat ~/homelab/dev/happy-cotton.deployed-commit            # the commit that is live
+```
+
+Then open the URL: the loading bar fills, then the field shows. The browser console's first game line is `[info] game started version="<commit> <date>"`.
 
 ## Configuration
 
-The game reads no environment variables. `.env.example` will list the deploy scripts' settings when they arrive (ticket 02).
+The game reads no environment variables. `.env.example` lists the deploy scripts' settings with their defaults (see "Deploy").
 
 All the game's numbers live in one tuning table, `data/tuning.tres`, described field by field in `src/config/tuning.gd`. The entry scene checks it at startup: a missing or out-of-range value stops the game with `Cannot start Happy Cotton:` and one line per bad value naming the field, on screen and in the log.
 
@@ -90,6 +142,8 @@ src/
 tests/                 GUT tests, mirroring src/
 addons/gut/            the GUT test addon (vendored, 9.7.1)
 scripts/               setup-godot.sh, check.sh, godot-pin.env
+deploy/                update-site.sh, rollback.sh, Dockerfile (the server's export image)
+web/shell.html         the web page around the game: loading bar, no-WebGL 2 message
 docs/                  spec, tickets, decisions
 ```
 
@@ -109,6 +163,8 @@ Known failure modes:
 - **`Cannot start Happy Cotton:` on screen** — the tuning table has a missing or out-of-range value; the message names it. Fix `data/tuning.tres`.
 - **`check: FAILED at: type check`** — a script has an untyped declaration or an unsafe access; the lines above say which file and line.
 - **Export fails with "No export template found"** — run `scripts/setup-godot.sh`.
+- **`update-site: FAILED while <step>`** — the step names what broke (fetching, building the image, exporting, swapping folders); the live site is unchanged unless it says "swapping folders". Fix it and run the script again.
+- **"Happy Cotton can't start in this browser"** — the browser has no WebGL 2 (or lacks another feature the message names).
 
 ## Decisions
 

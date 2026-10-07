@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>$GODOT_PROJECT_NAME</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: #f4efe6;
+	background-color: #1d2a1f;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+#status {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	gap: 1rem;
+	padding: 0 16px;
+	text-align: center;
+}
+
+#status-progress {
+	width: min(20rem, 80%);
+}
+
+#status-notice {
+	display: none;
+	max-width: 32rem;
+	line-height: 1.4;
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+
+		<noscript>Happy Cotton needs JavaScript to run.</noscript>
+
+		<div id="status">
+			<div id="status-label">Loading Happy Cotton…</div>
+			<progress id="status-progress"></progress>
+			<div id="status-notice"></div>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+// Custom shell (export_presets.cfg, html/custom_html_shell): a loading bar with a percentage while
+// the ~40 MB build downloads, and a plain message instead of a black screen when the browser
+// can't run it. The build is single-threaded, so the stock shell's service-worker path is left out.
+const GODOT_CONFIG = $GODOT_CONFIG;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const status = document.getElementById('status');
+	const label = document.getElementById('status-label');
+	const progress = document.getElementById('status-progress');
+	const notice = document.getElementById('status-notice');
+
+	function showNotice(text) {
+		label.textContent = 'Happy Cotton can\'t start in this browser';
+		progress.style.display = 'none';
+		notice.textContent = text;
+		notice.style.display = 'block';
+	}
+
+	const missing = Engine.getMissingFeatures({ threads: false });
+	if (missing.length !== 0) {
+		console.error('Missing browser features:', missing);
+		const noWebGL2 = missing.some((feature) => feature.startsWith('WebGL2'));
+		showNotice(noWebGL2
+			? 'It needs WebGL 2, which this browser or device has turned off or doesn\'t support. Try an up-to-date Chrome, Firefox, Edge or Safari, and check that hardware acceleration is on.'
+			: 'This browser is missing: ' + missing.join(', ') + '. Try an up-to-date Chrome, Firefox, Edge or Safari.');
+		return;
+	}
+
+	engine.startGame({
+		onProgress: function (current, total) {
+			if (current > 0 && total > 0) {
+				progress.value = current;
+				progress.max = total;
+				label.textContent = 'Loading Happy Cotton… ' + Math.floor((100 * current) / total) + '%';
+			} else {
+				progress.removeAttribute('value');
+				progress.removeAttribute('max');
+			}
+		},
+	}).then(() => {
+		status.remove();
+	}, (err) => {
+		console.error(err);
+		showNotice(err instanceof Error ? err.message : String(err));
+	});
+}());
+		</script>
+	</body>
+</html>
