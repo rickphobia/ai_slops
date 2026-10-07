@@ -83,8 +83,12 @@ The work the Worker is made to do whenever there is no cotton to pick: hoeing th
 _Avoid_: idle, chores, waiting, downtime, punishment (that is a Study Session)
 
 **Drill**:
-Laps and standing to attention, called by the loudspeaker, as part of Toil.
-_Avoid_: exercise, training, PE
+Running on the Generator when the loudspeaker calls, as part of Toil.
+_Avoid_: exercise, training, PE, laps
+
+**Generator**:
+The treadmill the Worker is made to run on to power the loudspeaker and The App.
+_Avoid_: treadmill, wheel, machine
 
 ### Small acts
 

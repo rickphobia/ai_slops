@@ -137,6 +137,10 @@ The title screen carries a plain content note and a Sources page. Every factual 
 90. As a player, I want the Worker to Toil whenever there is no cotton to pick (hoeing the rows, and Drill when the loudspeaker calls), so that waiting for crops is never free time.
 91. As a player, I want Toil to add Exhaustion slowly, so that the only real rest is the rest hour I pay for.
 92. As a player, I want the Worker to stop Toiling and go back to the field as soon as cotton is ripe, so that I'm never kept from picking by an animation.
+93. As a player, I want Drill to be the Worker running on a Generator that powers the loudspeaker and The App, so that I see the state's cheerful voice literally run on the Worker's body.
+94. As a player, I want the Worker to tire after a few laps (slow, stagger, stop to breathe), so that I see the body give out.
+95. As a player, I want the Overseer to blow a whistle and use a whip when the Worker stops, with its sounds, so that the coercion behind the cheerful surface is felt.
+96. As a player, I want a master volume and mute, so that I can play without sound.
 
 ## Implementation Decisions
 
@@ -174,9 +178,9 @@ The title screen carries a plain content note and a Sources page. Every factual 
 
 ### Content rules (the five ground rules)
 
-- Every factual claim and every piece of state vocabulary links to an entry in the sources register.
+- Every factual claim and every piece of state vocabulary links to an entry in the sources register. The Generator and the whip are the game's own invention, not documented practice; the game never presents them as fact and the Sources page doesn't cite them.
 - The Worker and anyone else shown are people with dignity: no caricature in looks or speech, ever.
-- Nothing graphic. Punishment is shown as absence, time and loss, never as physical harm.
+- Nothing graphic: no blood, wounds or gore. Punishment is shown as absence, time and loss, with one exception the owner chose on 2026-10-07: the Overseer whips the Worker at the Generator, shown as a whip crack, a flinch and a stagger.
 - The title screen states: "Happy Cotton depicts the forced labour of Uyghurs in Xinjiang and the separation of their families, based on documented reporting. Sources are listed in the game." No age gate.
 - Brands, when they arrive in later specs, are fictional parodies. No real company is named in the game.
 - English only. CC0 models, textures and fonts, credited in a credits file.
@@ -206,7 +210,7 @@ These are agreed for later specs, not this one:
 - Reports ("Neighbourhood Harmony") and Quiet Acts.
 - The Privilege store beyond the rest hour.
 - The satire layers: Gratitude and the monetisation parody (patriotic videos, the "Five-Year Plan" pass, offers), achievements, the "Daily Attendance" streak, and the fake "Model Worker" leaderboard.
-- Sound: the bright App layer and the grim world layer, and the volume and mute settings that come with them.
+- Sound beyond the Generator and the Overseer (ticket 15): the bright App layer and the grim world layer.
 - Any server, account, real leaderboard, real money or real advertising, ever.
 - Languages other than English.
 
@@ -230,6 +234,8 @@ Ticket work adds exact links and page references for each line of App text that 
 The App is the state's voice and is always cheerful; the field is the truth and is always grim. Rules emit message keys, not text, so the voice can be rewritten and sharpened without touching the rules, and the sources check stays in one place.
 
 ### Accepted risks
+
+- The page is not linked from the site's dashboard, but anyone with the URL can open it and search engines may index it. The whip (owner's choice, 2026-10-07) goes beyond the sourced record; restricting access (a password or Tailscale only) is the fix if that becomes a concern.
 
 - A 30–40 MB download and slower start on phones (decision 0001).
 - Players can move their device clock to cheat growth. That only harms their own single-player game, so the rules guard against crashes, not cheating.
