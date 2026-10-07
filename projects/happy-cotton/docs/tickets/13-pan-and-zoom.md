@@ -4,17 +4,17 @@
 
 **Blocked by:** 05 (Grounded field look)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** adapters/field
 
 **Effort:** medium
 
-- [ ] Dragging with one finger or the left mouse button pans the camera across the ground; the view follows the pointer (the ground under the finger stays under it)
-- [ ] Pinch with two fingers, or the mouse wheel, zooms towards the point between the fingers or under the mouse
-- [ ] The camera's angle never changes; there is no rotation
-- [ ] Pan and zoom are clamped: the field always stays at least partly on screen, zoom stays between a near and far limit; the limits are named values in one place, not scattered numbers
-- [ ] A tap on a plot counts on release, and only if the pointer moved less than a small threshold since the press; a drag or pinch never plants or picks
-- [ ] Taps on The App overlay's buttons still go to the overlay, not to the field or the camera
-- [ ] Tests cover the tap-versus-drag decision and the clamping (the pure parts, without a scene), following the existing adapter tests
-- [ ] Works with touch in a phone browser and with mouse and wheel on desktop in the web export (record what was checked in the PR)
+- [x] Dragging with one finger or the left mouse button pans the camera across the ground; the view follows the pointer (the ground under the finger stays under it)
+- [x] Pinch with two fingers, or the mouse wheel, zooms towards the point between the fingers or under the mouse
+- [x] The camera's angle never changes; there is no rotation
+- [x] Pan and zoom are clamped: the field always stays at least partly on screen, zoom stays between a near and far limit; the limits are named values in one place, not scattered numbers
+- [x] A tap on a plot counts on release, and only if the pointer moved less than a small threshold since the press; a drag or pinch never plants or picks
+- [x] Taps on The App overlay's buttons still go to the overlay, not to the field or the camera
+- [x] Tests cover the tap-versus-drag decision and the clamping (the pure parts, without a scene), following the existing adapter tests
+- [x] Works with touch in a phone browser and with mouse and wheel on desktop in the web export (record what was checked in the PR)
