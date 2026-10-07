@@ -5,8 +5,11 @@ extends Node3D
 ## CropLooks), shows the time left on a growing plot, and reports which plot was tapped.
 ## Knows nothing of the rules beyond the plot views it is shown.
 ##
-## Touches and mouse clicks arrive the same way: Godot turns a touch into a left click
-## (input_devices/pointing/emulate_mouse_from_touch, on by default), so only clicks are handled.
+## Dragging pans the camera and pinching or the mouse wheel zooms it (within FieldCamera's
+## limits); a tap counts on release, only if the pointer barely moved (PointerGesture).
+## Touches are read as touches, so a pinch's two fingers can be told apart; the left clicks
+## Godot makes up from a touch (emulate_mouse_from_touch, kept on so The App's buttons work
+## with touch) are ignored here. Input reaches this only after The App's controls pass on it.
 
 signal plot_tapped(index: int)
 
@@ -24,6 +27,11 @@ const FENCE_SCALE := 2.0
 const FENCE_BACK_EDGE := 0.465
 ## The Worker stands still, breathing, while the player taps.
 const WORKER_ANIMATION := &"Idle_Neutral"
+## How far a finger or the mouse may move between press and release, in viewport units
+## (the 1280x720 base size, whatever the screen), and still count as a tap.
+const TAP_SLOP := 12.0
+## The pointer id the mouse uses in a gesture; touch fingers are numbered from 0.
+const MOUSE_POINTER := -2
 
 @export var columns := 4
 @export var rows := 3
@@ -40,6 +48,10 @@ var _crops: Array[Node3D] = []
 var _shown_stages: Array[PlotView.Stage] = []
 var _labelled_plot := -1
 var _label_seconds_remaining := 0.0
+var _gesture := PointerGesture.new(TAP_SLOP)
+var _view: FieldCamera
+## The unit vector from the ground back to the camera: the camera's fixed angle.
+var _camera_back: Vector3
 
 @onready var _camera: Camera3D = $Camera
 @onready var _time_left: Label3D = $TimeLeft
@@ -66,6 +78,7 @@ func _ready() -> void:
 		_shown_stages.append(PlotView.Stage.EMPTY)
 		add_child(plot)
 	_build_fence()
+	_start_camera()
 	_start_worker_idle()
 	_time_left.visible = false
 
@@ -117,25 +130,112 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventMouseButton:
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		_on_pointer_button(touch.index, touch.position, touch.pressed, touch.canceled)
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		_move_pointer(drag.index, drag.position)
+	elif event.device == InputEvent.DEVICE_ID_EMULATION:
 		return
-	var click := event as InputEventMouseButton
-	if not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+	elif event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.button_index == MOUSE_BUTTON_LEFT:
+			_on_pointer_button(MOUSE_POINTER, click.position, click.pressed, false)
+		elif click.pressed and click.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_at(click.position, 1.0 / FieldCamera.WHEEL_ZOOM_STEP)
+		elif click.pressed and click.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_zoom_at(click.position, FieldCamera.WHEEL_ZOOM_STEP)
+		else:
+			return
+	elif event is InputEventMouseMotion:
+		if not _gesture.is_pressed(MOUSE_POINTER):
+			return
+		_move_pointer(MOUSE_POINTER, (event as InputEventMouseMotion).position)
+	else:
 		return
-	var index := _plot_under(click.position)
-	if index >= 0:
-		get_viewport().set_input_as_handled()
-		plot_tapped.emit(index)
+	get_viewport().set_input_as_handled()
+
+
+func _on_pointer_button(pointer: int, position: Vector2, pressed: bool, canceled: bool) -> void:
+	if pressed:
+		_gesture.press(pointer, position)
+	elif canceled:
+		_gesture.cancel(pointer)
+	elif _gesture.release(pointer):
+		var index := _plot_under(position)
+		if index >= 0:
+			plot_tapped.emit(index)
+
+
+## One finger pans so the ground under it stays under it; two pan by their midpoint and zoom
+## by how much their spread changed, towards the point between them.
+func _move_pointer(pointer: int, position: Vector2) -> void:
+	var midpoint_before := _gesture.midpoint()
+	var spread_before := _gesture.spread()
+	_gesture.move(pointer, position)
+	_pan(midpoint_before, _gesture.midpoint())
+	var spread_after := _gesture.spread()
+	if spread_before > 0.0 and spread_after > 0.0:
+		_zoom_at(_gesture.midpoint(), spread_before / spread_after)
+
+
+## Slides the camera so the ground under one screen point moves to another.
+func _pan(from_screen: Vector2, to_screen: Vector2) -> void:
+	var from_ground := _ground_under(from_screen)
+	var to_ground := _ground_under(to_screen)
+	if not from_ground.is_finite() or not to_ground.is_finite():
+		return
+	var offset := from_ground - to_ground
+	_view.pan(Vector2(offset.x, offset.z))
+	_place_camera()
+
+
+## Zooms by a factor while keeping the ground under a screen point where it is.
+func _zoom_at(screen_position: Vector2, factor: float) -> void:
+	var anchor := _ground_under(screen_position)
+	_view.zoom_by(factor)
+	_place_camera()
+	var drifted := _ground_under(screen_position)
+	if not anchor.is_finite() or not drifted.is_finite():
+		return
+	var offset := anchor - drifted
+	_view.pan(Vector2(offset.x, offset.z))
+	_place_camera()
 
 
 ## The plot under a screen position: follow the camera ray down to the ground (y = 0).
 func _plot_under(screen_position: Vector2) -> int:
+	var ground_point := _ground_under(screen_position)
+	if not ground_point.is_finite():
+		return -1
+	return _grid.index_at(ground_point)
+
+
+## Where the camera ray through a screen position meets the ground (y = 0); not finite when
+## the ray never comes down to it.
+func _ground_under(screen_position: Vector2) -> Vector3:
 	var origin := _camera.project_ray_origin(screen_position)
 	var direction := _camera.project_ray_normal(screen_position)
 	if direction.y >= 0.0:
-		return -1
-	var ground_point := origin + direction * (-origin.y / direction.y)
-	return _grid.index_at(ground_point)
+		return Vector3(INF, INF, INF)
+	return origin + direction * (-origin.y / direction.y)
+
+
+## The camera starts where the scene puts it; from then on it keeps that angle and only
+## slides and zooms along it, over the fenced field.
+func _start_camera() -> void:
+	_camera_back = _camera.transform.basis.z.normalized()
+	var start_distance := _camera.position.y / _camera_back.y
+	var start_focus := _camera.position - _camera_back * start_distance
+	_view = FieldCamera.new(
+		Vector2(start_focus.x, start_focus.z), start_distance, _fence_half_size()
+	)
+	_place_camera()
+
+
+func _place_camera() -> void:
+	_camera.position = _view.position_along(_camera_back)
 
 
 func _hide_time_left() -> void:
@@ -145,8 +245,8 @@ func _hide_time_left() -> void:
 
 ## A plank fence around the plots, one model per metre-run, leaving no gaps at the corners.
 func _build_fence() -> void:
-	var half_x := (columns - 1) * spacing / 2.0 + plot_size / 2.0 + fence_margin
-	var half_z := (rows - 1) * spacing / 2.0 + plot_size / 2.0 + fence_margin
+	var half_x := _fence_half_size().x
+	var half_z := _fence_half_size().y
 	var fence := Node3D.new()
 	fence.name = "Fence"
 	var planks := _material(FENCE_COLOUR)
@@ -169,6 +269,14 @@ func _build_fence() -> void:
 			section.translate_object_local(Vector3(0.0, 0.0, FENCE_BACK_EDGE))
 			fence.add_child(section)
 	add_child(fence)
+
+
+## How far the fence reaches from the field's centre: across (x) and front to back (y).
+func _fence_half_size() -> Vector2:
+	return Vector2(
+		(columns - 1) * spacing / 2.0 + plot_size / 2.0 + fence_margin,
+		(rows - 1) * spacing / 2.0 + plot_size / 2.0 + fence_margin
+	)
 
 
 func _start_worker_idle() -> void:
