@@ -19,8 +19,12 @@ The official who runs the Farm day to day: a person under pressure from above, n
 _Avoid_: boss, guard, villain
 
 **Family**:
-The Worker's relatives far away, present only through letters and calls.
+The Worker's relatives far away, present only through letters and calls. It includes his Children.
 _Avoid_: relatives, home (as a character)
+
+**Children**:
+The Worker's children, held at a state boarding school far away and present only through letters and calls.
+_Avoid_: kids, sons, daughters (unless naming one)
 
 **Mascot**:
 The smiling cotton boll that speaks for The App.
@@ -105,3 +109,33 @@ _Avoid_: reward, upgrade, item
 **Gratitude**:
 The App's parody premium currency. It is never bought with real money.
 _Avoid_: gems, diamonds, premium currency
+
+**Bill**:
+A charge the state takes from the Worker's Labour Points: electricity, rent or his Children's school fees.
+_Avoid_: tax, cost, expense, fee (alone)
+
+**Debt**:
+What the Worker owes when his Labour Points can't cover a Bill. It is never forgiven and blocks Privileges while it lasts.
+_Avoid_: negative balance, loan, overdraft
+
+**Upgrade**:
+Something the Worker buys in The App's store that makes him more productive, such as a better Generator or tools. Each one raises the Quota.
+_Avoid_: power-up, boost, improvement
+
+### Endings
+
+**Taken**:
+The ending where the Worker can't pay his Children's school fees and one of them ends up on the Generator.
+_Avoid_: bad ending, game over
+
+**Promotion**:
+The ending where the state rewards the Worker's Quotas and Reports by making him an Overseer.
+_Avoid_: good ending, win, level up
+
+**Revolt**:
+The ending where the Worker and his Co-workers stop the Generator together for one day, and the state replaces them all.
+_Avoid_: rebellion, uprising, victory
+
+**Endless**:
+What happens when no other ending does: the work goes on, and play never stops.
+_Avoid_: default ending, game over, normal ending
