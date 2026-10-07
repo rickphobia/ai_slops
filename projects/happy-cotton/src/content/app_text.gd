@@ -6,6 +6,10 @@ extends RefCounted
 ## sources register; tests/content/test_app_text.gd fails if one doesn't.
 
 ## The state's vocabulary, each term mapped to the source that documents it.
+## Where in the source, so a reader can check it:
+## - Poverty Alleviation: zenz-2020, Executive Summary: cotton picking "plays a key role in
+##   achieving the state's poverty alleviation targets. These targets are mainly achieved
+##   through coercive labor transfers."
 const DOUBLESPEAK: Dictionary[String, String] = {
 	"Poverty Alleviation": "zenz-2020",
 }

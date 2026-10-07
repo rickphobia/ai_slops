@@ -59,9 +59,11 @@ func say(text: String) -> void:
 	_bubble.visible = not text.is_empty()
 
 
+## Confetti falls from the whole width of the screen, which can change while playing.
 func celebrate() -> void:
-	_confetti.position = Vector2(get_viewport().get_visible_rect().size.x / 2.0, -20.0)
-	_confetti.emission_rect_extents = Vector2(get_viewport().get_visible_rect().size.x / 2.0, 1)
+	var half_width := get_viewport().get_visible_rect().size.x / 2.0
+	_confetti.position = Vector2(half_width, -20.0)
+	_confetti.emission_rect_extents = Vector2(half_width, 1)
 	_confetti.restart()
 
 

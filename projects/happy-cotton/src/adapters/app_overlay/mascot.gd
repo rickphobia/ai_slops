@@ -1,7 +1,8 @@
 class_name Mascot
 extends Control
 ## The smiling cotton boll that speaks for The App, drawn as a placeholder: a puff of white
-## lobes on a brown husk, with a fixed grin. It only draws itself; AppOverlay gives it words.
+## lobes on a brown husk, with a fixed grin. It only draws itself; its words go in the speech
+## bubble AppOverlay places beside it.
 
 const COTTON := Color(1.0, 1.0, 0.98)
 const HUSK := Color(0.55, 0.36, 0.2)

@@ -63,17 +63,18 @@ func _on_plot_tapped(index: int) -> void:
 func _show_app() -> void:
 	var lines: Array[String] = []
 	for message in _farm.take_messages():
-		if message.key == Farm.QUOTA_MET or message.key == Farm.QUOTA_MISSED:
+		var met := message.key == Farm.QUOTA_MET
+		if met or message.key == Farm.QUOTA_MISSED:
 			var fields := message.values
-			fields["met"] = message.key == Farm.QUOTA_MET
+			fields["met"] = met
 			GameLog.info("quota checked", fields)
+		if met:
+			_app.celebrate()
 		var text := AppText.render(message)
 		if text.is_empty():
 			GameLog.warning("app message has no text", {"key": message.key})
 		else:
 			lines.append(text)
-		if message.key == Farm.QUOTA_MET:
-			_app.celebrate()
 	if not lines.is_empty():
 		_app.say("\n".join(lines))
 	_app.show_shift(_farm.shift(), _farm.labour_points())
