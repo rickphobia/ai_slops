@@ -24,13 +24,13 @@ func _ready() -> void:
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_cover.add_child(label)
 	add_child(_cover)
-	get_tree().root.size_changed.connect(_update)
-	_update()
+	get_tree().root.size_changed.connect(_show_if_portrait)
+	_show_if_portrait()
 
 
 static func is_portrait(window_size: Vector2i) -> bool:
 	return window_size.y > window_size.x
 
 
-func _update() -> void:
+func _show_if_portrait() -> void:
 	_cover.visible = is_portrait(get_tree().root.size)

@@ -44,7 +44,7 @@ func test_tapping_an_empty_plot_plants_it_and_logs_at_debug_level() -> void:
 	assert_has(_lines, "[debug] plant plot=2")
 
 
-func test_tapping_a_growing_plot_neither_plants_nor_picks() -> void:
+func test_tapping_a_growing_plot_is_refused_by_the_rules_as_not_ripe() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
 	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
 	await wait_process_frames(1)
@@ -54,4 +54,4 @@ func test_tapping_a_growing_plot_neither_plants_nor_picks() -> void:
 
 	field.plot_tapped.emit(0)
 
-	assert_eq(_lines, [] as Array[String])
+	assert_eq(_lines, ['[debug] pick refused plot=0 reason=&"not_ripe"'] as Array[String])

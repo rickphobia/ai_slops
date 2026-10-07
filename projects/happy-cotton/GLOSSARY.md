@@ -30,7 +30,15 @@ _Avoid_: helper, guide, tutorial character
 
 **Farm**:
 The state-run cotton farm the Worker labours on. It grows, expands and earns; the Worker does not.
-_Avoid_: my farm, plot, the player's farm
+_Avoid_: my farm, the player's farm (a Plot is one bed of it, not the whole Farm)
+
+**Plot**:
+One bed of the Farm's field where the Worker plants and picks cotton. It is empty, growing or ripe.
+_Avoid_: tile, cell, patch
+
+**Stage**:
+How far a Plot's cotton has grown: Seedling, Flowering, Boll, then Ripe, when it can be picked.
+_Avoid_: level, phase
 
 **Quota**:
 The amount of cotton the state demands from the Worker in a period. It only ever rises.

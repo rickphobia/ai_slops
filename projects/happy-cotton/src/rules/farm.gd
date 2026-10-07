@@ -29,10 +29,6 @@ func _init(tuning: Tuning, plot_count: int) -> void:
 	_grown.fill(EMPTY)
 
 
-func plot_count() -> int:
-	return _grown.size()
-
-
 func plant(index: int) -> CommandResult:
 	if not _exists(index):
 		return CommandResult.refused(NO_SUCH_PLOT)
@@ -63,7 +59,7 @@ func advance(seconds: float) -> void:
 			_grown[index] = minf(_grown[index] + seconds, _tuning.grow_seconds)
 
 
-## The plot at index; it must exist (see plot_count).
+## The plot at index; it must exist.
 func plot(index: int) -> PlotView:
 	var grown := _grown[index]
 	if grown == EMPTY:

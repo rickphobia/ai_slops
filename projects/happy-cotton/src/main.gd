@@ -32,8 +32,8 @@ func tuning() -> Tuning:
 	return _tuning
 
 
-## Crops grow in real time while the game runs. A hidden browser tab stops frames, so it
-## doesn't count as online play.
+## Crops grow in real time while the game runs. A hidden browser tab stops frames, and Godot
+## caps one frame's delta (about 0.13 s), so the hidden time doesn't count as online play.
 func _process(delta: float) -> void:
 	if _farm == null:
 		return
@@ -41,16 +41,16 @@ func _process(delta: float) -> void:
 	_field.show_plots(_farm.plots())
 
 
-## A tap plants an empty plot, picks a ripe one, and shows the time left on a growing one.
+## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
+## whether that happens; an unripe plot shows its time left instead.
 func _on_plot_tapped(index: int) -> void:
-	var plot := _farm.plot(index)
-	match plot.stage:
-		PlotView.Stage.EMPTY:
-			_log_command("plant", index, _farm.plant(index))
-		PlotView.Stage.RIPE:
-			_log_command("pick", index, _farm.pick(index))
-		_:
-			_field.show_time_left(index, plot.seconds_left)
+	if _farm.plot(index).stage == PlotView.Stage.EMPTY:
+		_log_command("plant", index, _farm.plant(index))
+	else:
+		var result := _farm.pick(index)
+		_log_command("pick", index, result)
+		if result.reason == Farm.NOT_RIPE:
+			_field.show_time_left(index, _farm.plot(index).seconds_left)
 	_field.show_plots(_farm.plots())
 
 
