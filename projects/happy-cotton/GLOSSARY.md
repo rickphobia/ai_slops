@@ -19,8 +19,12 @@ The official who runs the Farm day to day: a person under pressure from above, n
 _Avoid_: boss, guard, villain
 
 **Family**:
-The Worker's relatives far away, present only through letters and calls.
+The Worker's relatives far away, present only through letters and calls. It includes his Children.
 _Avoid_: relatives, home (as a character)
+
+**Children**:
+The Worker's children, held at a state boarding school far away and present only through letters and calls.
+_Avoid_: kids, sons, daughters (unless naming one)
 
 **Mascot**:
 The smiling cotton boll that speaks for The App.
@@ -97,3 +101,7 @@ _Avoid_: reward, upgrade, item
 **Gratitude**:
 The App's parody premium currency. It is never bought with real money.
 _Avoid_: gems, diamonds, premium currency
+
+**Bill**:
+A charge the state takes from the Worker's Labour Points: electricity, rent or his Children's school fees.
+_Avoid_: tax, cost, expense, fee (alone)
