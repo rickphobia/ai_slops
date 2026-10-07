@@ -18,3 +18,4 @@
 - [ ] A save that can't be read is kept aside, not overwritten; the player sees a clear message and can start over
 - [ ] "Start over" asks for confirmation
 - [ ] Saves, loads and failures are logged without dumping the save itself
+- [ ] On start, the time since the save was written is fed through the same offline resume as a hidden tab (crops grow, Withering, Study Sessions, Exhaustion recovery), with the away summary; the clock-safety rules apply
