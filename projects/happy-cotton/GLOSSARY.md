@@ -105,3 +105,11 @@ _Avoid_: gems, diamonds, premium currency
 **Bill**:
 A charge the state takes from the Worker's Labour Points: electricity, rent or his Children's school fees.
 _Avoid_: tax, cost, expense, fee (alone)
+
+**Debt**:
+What the Worker owes when his Labour Points can't cover a Bill. It is never forgiven and blocks Privileges while it lasts.
+_Avoid_: negative balance, loan, overdraft
+
+**Upgrade**:
+Something the Worker buys in The App's store that makes him more productive, such as a better Generator or tools. Each one raises the Quota.
+_Avoid_: power-up, boost, improvement
