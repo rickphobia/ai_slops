@@ -4,15 +4,15 @@
 
 **Blocked by:** 08 (Exhaustion and the rest hour), 09 (Save and continue), 10 (Offline time), 11 (Withering and Negligence), 12 (Settings), 14 (Run the Generator), 15 (The Overseer at the Generator)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules
 
 **Effort:** low
 
-- [ ] The Farm rules own a Ledger and delegate earning, spending and docking Labour Points to it; Farm's other public views are unchanged
-- [ ] Buying the rest hour goes through a "buy a Privilege" command that takes which Privilege; its refusal reasons are unchanged
-- [ ] Negligence docking stays clamped at zero
-- [ ] The save format and its contents are unchanged
-- [ ] Existing tests pass, changed only where they call the rest-hour command; no test is weakened or deleted
-- [ ] The Ledger is tested only through Farm
+- [x] The Farm rules own a Ledger and delegate earning, spending and docking Labour Points to it; Farm's other public views are unchanged
+- [x] Buying the rest hour goes through a "buy a Privilege" command that takes which Privilege; its refusal reasons are unchanged
+- [x] Negligence docking stays clamped at zero
+- [x] The save format and its contents are unchanged
+- [x] Existing tests pass, changed only where they call the rest-hour command; no test is weakened or deleted
+- [x] The Ledger is tested only through Farm

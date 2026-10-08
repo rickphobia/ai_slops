@@ -98,7 +98,7 @@ static func lines() -> Dictionary[StringName, AppLine]:
 	}
 
 
-## Why a rest hour was refused, for each reason Farm.buy_rest_hour() gives (values: price,
+## Why a rest hour was refused, for each reason buying the rest hour gives (values: price,
 ## points).
 static func rest_hour_refusals() -> Dictionary[StringName, AppLine]:
 	return {

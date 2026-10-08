@@ -192,7 +192,7 @@ func _on_generator_tapped() -> void:
 
 ## The rules decide whether he gets his rest hour; a refusal is explained by the Mascot.
 func _on_rest_hour_pressed() -> void:
-	var result := _farm.buy_rest_hour()
+	var result := _farm.buy_privilege(Farm.REST_HOUR)
 	if result.happened:
 		GameLog.info("rest hour bought", {"labour_points_left": _farm.labour_points()})
 	else:
