@@ -1,5 +1,5 @@
 extends GutTest
-## The Generator's loudspeaker lamp, turnstile and tap area, and the fence's gate out to it.
+## The Generator's loudspeaker lamp, cables and tap area, and the fence's gate out to it.
 
 var _generator: Generator
 
@@ -24,21 +24,54 @@ func test_the_lamp_glows_while_lit_and_dims_again() -> void:
 	assert_false((_generator.get_node("LampLight") as OmniLight3D).visible)
 
 
-func test_a_tap_on_the_turnstile_or_the_machine_counts_and_one_far_away_does_not() -> void:
-	assert_true(_generator.covers(Vector3(-8.0, 0.0, 2.0)), "the turnstile")
+func test_a_tap_on_the_lap_line_or_the_machine_counts_and_one_far_away_does_not() -> void:
+	assert_true(_generator.covers(Vector3(-8.0, 0.0, 2.0)), "the lap line")
 	assert_true(_generator.covers(Vector3(-8.0 + Generator.PUMP_SPOT.x, 0.0, 2.9)), "the pump")
 	assert_false(_generator.covers(Vector3(-5.0, 0.0, 2.0)), "inside the fence")
 	assert_false(_generator.covers(Vector3(-8.0, 0.0, 5.0)), "further along the track")
 
 
-func test_each_push_turns_the_turnstile_a_quarter_turn() -> void:
-	var arms: Node3D = _generator.get_node("TurnstileArms")
+func test_cables_run_from_under_the_track_to_the_machine_and_nothing_crosses_it() -> void:
+	var cables := _generator.find_children("Cable*", "MeshInstance3D", false, false)
 
-	_generator.push_turnstile()
-	_generator.push_turnstile()
-	_generator._process(10.0)
+	assert_eq(cables.size(), Generator.CABLE_ALONG.size())
+	for part in _generator.get_children():
+		var shape := part as Node3D
+		var over_the_track := absf(shape.position.x) < Generator.TRACK_EDGE_X
+		assert_false(
+			over_the_track and shape.position.y > 0.05, "%s stands on the track" % part.name
+		)
 
-	assert_almost_eq(arms.rotation.y, PI, 0.001)
+
+func test_while_lit_each_step_pulses_the_lamp_faintly_and_it_settles() -> void:
+	var light: OmniLight3D = _generator.get_node("LampLight")
+	_generator.set_lit(true)
+
+	_generator.pulse()
+	var pulsed := light.light_energy
+	_generator._process(1.0)
+
+	assert_gt(pulsed, Generator.LAMP_LIGHT_ENERGY)
+	assert_lte(pulsed, Generator.LAMP_LIGHT_ENERGY * 1.5, "faint")
+	assert_almost_eq(light.light_energy, Generator.LAMP_LIGHT_ENERGY, 0.001)
+
+
+func test_a_dark_lamp_does_not_pulse() -> void:
+	_generator.pulse()
+
+	assert_false((_generator.get_node("LampLight") as OmniLight3D).visible)
+	assert_false(_generator.is_pulsing())
+
+
+func test_with_the_pulse_skipped_the_lamp_stays_steady() -> void:
+	_generator.skip_pulse = true
+	_generator.set_lit(true)
+
+	_generator.pulse()
+
+	assert_false(_generator.is_pulsing())
+	var light: OmniLight3D = _generator.get_node("LampLight")
+	assert_almost_eq(light.light_energy, Generator.LAMP_LIGHT_ENERGY, 0.001)
 
 
 func test_the_fence_leaves_a_gate_on_the_left_side_only() -> void:

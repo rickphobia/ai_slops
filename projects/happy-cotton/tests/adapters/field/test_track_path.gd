@@ -1,16 +1,16 @@
 extends GutTest
-## The track's centre line: a rounded rectangle around the field, measured from the turnstile
+## The track's centre line: a rounded rectangle around the field, measured from the lap line
 ## on its left side in the direction he runs (away from the camera first).
 
 const HALF_SIZE := Vector2(7.0, 5.0)
 const RADIUS := 1.0
-const TURNSTILE_Z := 3.0
+const LAP_LINE_Z := 3.0
 
 var _track: TrackPath
 
 
 func before_each() -> void:
-	_track = TrackPath.new(HALF_SIZE, RADIUS, TURNSTILE_Z)
+	_track = TrackPath.new(HALF_SIZE, RADIUS, LAP_LINE_Z)
 
 
 func test_a_lap_is_the_straights_and_one_full_circle_of_corners() -> void:
@@ -18,7 +18,7 @@ func test_a_lap_is_the_straights_and_one_full_circle_of_corners() -> void:
 	assert_almost_eq(_track.length(), straights + TAU * RADIUS, 0.0001)
 
 
-func test_it_starts_at_the_turnstile_heading_away_from_the_camera() -> void:
+func test_it_starts_at_the_lap_line_heading_away_from_the_camera() -> void:
 	assert_almost_eq(_track.point_at(0.0), Vector3(-7.0, 0.0, 3.0), Vector3.ONE * 0.0001)
 	assert_almost_eq(_track.heading_at(0.0), Vector3(0.0, 0.0, -1.0), Vector3.ONE * 0.0001)
 
@@ -44,7 +44,7 @@ func test_corners_are_round() -> void:
 	assert_almost_eq(_track.point_at(halfway_round).distance_to(corner_centre), RADIUS, 0.0001)
 
 
-func test_a_lap_brings_him_back_to_the_turnstile() -> void:
+func test_a_lap_brings_him_back_to_the_lap_line() -> void:
 	assert_almost_eq(_track.point_at(_track.length()), _track.point_at(0.0), Vector3.ONE * 0.0001)
 	assert_almost_eq(
 		_track.point_at(_track.length() + 2.0), _track.point_at(2.0), Vector3.ONE * 0.0001

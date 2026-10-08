@@ -1,13 +1,14 @@
 class_name Field
 extends Node3D
 ## The field the Worker works: a fenced grid of plots seen from a fixed, angled camera, with
-## the Worker beside it, a dirt track around the fence and the Generator at the track's corner,
-## outside the fence's gate. Shows each plot's growth stage as a cotton plant (see CropLooks),
-## shows the time left on a growing plot, shows the Worker walking out to the track and
-## running laps of it (see WorkerMotion), shows the Overseer beside the Generator whistling
-## and whipping when the rules say so (see OverseerLook), plays the field's sounds (see
-## FieldSounds), and reports which plot, or the Generator, was tapped. Knows nothing of the
-## rules beyond the views and events it is shown.
+## the Worker beside it, a track around the fence paved with power tiles (see PowerTiles) and
+## the Generator at the track's corner, outside the fence's gate. Shows each plot's growth
+## stage as a cotton plant (see CropLooks), shows the time left on a growing plot, shows the
+## Worker walking out to the track and running laps of it (see WorkerMotion), lights the tile
+## under each of his steps, shows the Overseer beside the Generator whistling and whipping
+## when the rules say so (see OverseerLook), plays the field's sounds (see FieldSounds), and
+## reports which plot, or the Generator, was tapped. Knows nothing of the rules beyond the
+## views and events it is shown.
 ##
 ## Dragging pans the camera and pinching or the mouse wheel zooms it (within FieldCamera's
 ## limits); a tap counts on release, only if the pointer barely moved (PointerGesture).
@@ -31,8 +32,8 @@ const TAP_SLOP := 12.0
 const PAN_SPEED := 0.6
 ## The pointer id the mouse uses in a gesture; touch fingers are numbered from 0.
 const MOUSE_POINTER := -2
-## Where the Overseer stands from the turnstile: outside the track, by the loudspeaker pole,
-## watching the turnstile where the Worker stops.
+## Where the Overseer stands from the lap line: outside the track, by the loudspeaker pole,
+## watching the lap line where the Worker stops.
 const OVERSEER_SPOT := Vector3(-1.9, 0.0, -1.7)
 ## How much colour is left in the world when the Worker is fully exhausted: nearly grey.
 const DRAINED_SATURATION := 0.1
@@ -50,7 +51,7 @@ const DRAINED_SATURATION := 0.1
 @export var track_gap := 1.3
 @export var track_width := 1.6
 @export var track_corner_radius := 1.6
-## Where the gate in the fence's left side is, front to back (z); the turnstile stands on the
+## Where the gate in the fence's left side is, front to back (z); the lap line crosses the
 ## track outside it. Must fall between the track's corners.
 @export var gate_z := 4.0
 ## How far inside the fence he steps on his way through the gate, in metres.
@@ -67,6 +68,7 @@ var _worker: WorkerMotion
 var _overseer: OverseerLook
 var _sounds := FieldSounds.new()
 var _track: TrackPath
+var _tiles: PowerTiles
 var _view: FieldCamera
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
 var _camera_back: Vector3
@@ -104,6 +106,9 @@ func _ready() -> void:
 		_fence_half_size() + Vector2.ONE * track_gap, track_corner_radius, gate_z
 	)
 	add_child(TrackLook.build(_track, track_width))
+	_tiles = PowerTiles.new(_track, track_width)
+	_tiles.name = "PowerTiles"
+	add_child(_tiles)
 	_generator.position = _track.point_at(0.0)
 	# Its own copy: the scene's environment is shared by every instance of the scene.
 	_haze.environment = _haze.environment.duplicate()
@@ -112,8 +117,7 @@ func _ready() -> void:
 	_start_worker()
 	_start_overseer()
 	add_child(_sounds)
-	_worker.stepped.connect(_sounds.footstep)
-	_worker.pushed_through_turnstile.connect(_sounds.turnstile)
+	_worker.stepped.connect(_on_worker_stepped)
 	_time_left.visible = false
 
 
@@ -153,11 +157,14 @@ func show_worker(view: WorkerView) -> void:
 	_haze.environment.adjustment_saturation = saturation_for(view.exhaustion, _full_saturation)
 
 
-## Reduced motion: the Worker neither slumps nor staggers. The colour drain stays, as it
-## only follows his Exhaustion and never moves on screen.
+## Reduced motion: the Worker neither slumps nor staggers, the power tiles' trail goes dark
+## at once instead of fading and the lamp doesn't pulse. The colour drain stays, as it only
+## follows his Exhaustion and never moves on screen; so do the sounds.
 func set_reduced_motion(on: bool) -> void:
 	_worker.skip_slump = on
 	_worker.skip_stagger = on
+	_tiles.instant_fade = on
+	_generator.skip_pulse = on
 
 
 ## The Overseer acts on an event from the rules (Farm.OVERSEER_WHISTLE or OVERSEER_WHIP): he
@@ -342,7 +349,15 @@ func _start_worker() -> void:
 	var player := _animation_player_of(body, "worker")
 	var gate := Vector3(-_fence_half_size().x + gate_inside, 0.0, gate_z)
 	_worker = WorkerMotion.new(body, player, _track, gate)
-	_worker.pushed_through_turnstile.connect(_generator.push_turnstile)
+
+
+## A footstep on the track: you hear it, and the tile under it lights, ticks and pulses the
+## lamp (which only pulses while he runs).
+func _on_worker_stepped(foot: Vector3) -> void:
+	_sounds.footstep()
+	if _tiles.light_at(foot):
+		_sounds.tile_tick()
+		_generator.pulse()
 
 
 func _start_overseer() -> void:

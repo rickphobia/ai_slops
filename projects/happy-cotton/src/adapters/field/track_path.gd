@@ -1,7 +1,7 @@
 class_name TrackPath
 extends RefCounted
 ## The centre line of the dirt track around the field: a rectangle with rounded corners,
-## centred on the field. A place on it is the distance run from the turnstile, which stands
+## centred on the field. A place on it is the distance run from the lap line, which runs
 ## across its left side; he runs up the left side away from the camera, round the back, down
 ## the right side and back along the front.
 
@@ -15,17 +15,17 @@ var half_size: Vector2
 var _radius: float
 ## Half of each straight, between the corners: across (x) and front to back (y).
 var _straight_half: Vector2
-## Where the turnstile is, measured from the start of the left side.
-var _turnstile_offset: float
+## Where the lap line is, measured from the start of the left side.
+var _lap_line_offset: float
 
 
-## `turnstile_z` is where the turnstile crosses the left side, between its corners.
-func _init(track_half_size: Vector2, corner_radius: float, turnstile_z: float) -> void:
-	assert(absf(turnstile_z) <= track_half_size.y - corner_radius, "turnstile off the straight")
+## `lap_line_z` is where the lap line crosses the left side, between its corners.
+func _init(track_half_size: Vector2, corner_radius: float, lap_line_z: float) -> void:
+	assert(absf(lap_line_z) <= track_half_size.y - corner_radius, "lap line off the straight")
 	half_size = track_half_size
 	_radius = corner_radius
 	_straight_half = half_size - Vector2.ONE * corner_radius
-	_turnstile_offset = _straight_half.y - turnstile_z
+	_lap_line_offset = _straight_half.y - lap_line_z
 
 
 ## One lap, in metres.
@@ -33,21 +33,21 @@ func length() -> float:
 	return 4.0 * (_straight_half.x + _straight_half.y) + TAU * _radius
 
 
-## The point on the ground some distance past the turnstile, wrapping round lap after lap.
+## The point on the ground some distance past the lap line, wrapping round lap after lap.
 func point_at(distance: float) -> Vector3:
 	var place := _place(distance)
 	return Vector3(place[0].x, 0.0, place[0].y)
 
 
-## The direction he runs at some distance past the turnstile, as a unit vector.
+## The direction he runs at some distance past the lap line, as a unit vector.
 func heading_at(distance: float) -> Vector3:
 	var place := _place(distance)
 	return Vector3(place[1].x, 0.0, place[1].y)
 
 
-## The point and heading (both on the ground plane, x and z) at a distance past the turnstile.
+## The point and heading (both on the ground plane, x and z) at a distance past the lap line.
 func _place(distance: float) -> Array[Vector2]:
-	var along := fposmod(distance + _turnstile_offset, length())
+	var along := fposmod(distance + _lap_line_offset, length())
 	for side in SIDE_STARTS.size():
 		var heading := SIDE_HEADINGS[side]
 		var start := SIDE_STARTS[side] * _straight_half + heading.orthogonal() * _radius
