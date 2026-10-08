@@ -34,6 +34,58 @@ func test_it_shows_the_quota_the_time_left_and_the_labour_points() -> void:
 	assert_has(texts, "30 Labour Points")
 
 
+func _badge() -> BalanceBadge:
+	return _overlay.find_child("BalanceBadge", true, false) as BalanceBadge
+
+
+func test_debt_shows_in_red_where_the_labour_points_are() -> void:
+	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0), 0, 14)
+
+	assert_has(_label_texts(), "Debt 14 Labour Points")
+	assert_does_not_have(_label_texts(), "0 Labour Points")
+	assert_true(_badge().shows_debt())
+
+	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0), 3, 0)
+
+	assert_has(_label_texts(), "3 Labour Points")
+	assert_false(_badge().shows_debt())
+
+
+func test_the_pay_slip_card_lists_each_bill_and_what_is_left() -> void:
+	var slip := {"shift": 3, "earned": 20, "laps": 12, "electricity": 6, "rent": 6, "balance": 8}
+
+	_overlay.pay_slip_card().show_slip(slip)
+
+	var card := _overlay.pay_slip_card()
+	assert_true(card.visible)
+	assert_has(_label_texts(), "Pay slip  ·  Shift 3")
+	var expected: Array[String] = [
+		"Earned this Shift: +20",
+		"Electricity, 12 laps: −6. Thanks for the power!",
+		"Dormitory rent: −6. A warm bed, kindly provided!",
+		"Yours to keep: 8 Labour Points",
+	]
+	assert_eq(card.row_texts(), expected)
+
+
+func test_a_negative_balance_on_the_pay_slip_reads_as_debt() -> void:
+	var slip := {"shift": 1, "earned": 0, "laps": 0, "electricity": 0, "rent": 6, "balance": -6}
+
+	var rows := PaySlipCard.rows(slip)
+
+	assert_eq(rows[-1], "Owed to the Farm: 6 Labour Points. We will settle it together!")
+	assert_true(PaySlipCard.in_debt(slip))
+
+
+func test_the_pay_slip_card_is_put_away_by_its_button() -> void:
+	_overlay.pay_slip_card().show_slip({"shift": 1, "balance": 0})
+	var close: Button = _overlay.pay_slip_card().find_child("PaySlipClose", true, false)
+
+	close.pressed.emit()
+
+	assert_false(_overlay.pay_slip_card().visible)
+
+
 func test_the_mascot_says_what_it_is_given() -> void:
 	_overlay.say("Shift 1 begins!")
 

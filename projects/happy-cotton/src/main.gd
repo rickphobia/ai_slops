@@ -314,6 +314,8 @@ func _show_app() -> void:
 			in [Farm.QUOTA_MET, Farm.GENERATOR_UPGRADED, Farm.TOOLS_UPGRADED, Farm.REST_STARTED]
 		):
 			_app.celebrate()
+		if message.key == Farm.PAY_SLIP:
+			_app.pay_slip_card().show_slip(message.values)
 		var text := AppText.render(message)
 		if text.is_empty():
 			GameLog.warning("app message has no text", {"key": message.key})
@@ -321,7 +323,7 @@ func _show_app() -> void:
 			lines.append(text)
 	if not lines.is_empty():
 		_app.say("\n".join(lines))
-	_app.show_shift(_farm.shift(), _farm.labour_points())
+	_app.show_shift(_farm.shift(), _farm.labour_points(), _farm.debt())
 	_app.show_study_session(_farm.study_session_seconds_left())
 	_app.show_exhaustion(_farm.exhaustion())
 	_app.show_resting(_farm.rest_hour().seconds_left)
@@ -350,6 +352,24 @@ func _log_message(message: AppMessage) -> void:
 		GameLog.info("rest hour ended", {"exhaustion": _farm.exhaustion()})
 	elif message.key == Farm.COTTON_DROPPED:
 		GameLog.info("cotton dropped", {"exhaustion": _farm.exhaustion()})
+	elif message.key == Farm.PAY_SLIP:
+		_log_bills(message.values)
+	elif message.key == Farm.FELL_INTO_DEBT:
+		GameLog.info("debt incurred", message.values)
+	elif message.key == Farm.DEBT_CLEARED:
+		GameLog.info("debt cleared", message.values)
+
+
+## One line per Bill in the order charged, with whether the balance covered it.
+func _log_bills(slip: Dictionary) -> void:
+	var shift: int = slip["shift"]
+	var electricity := {"shift": shift, "bill": "electricity", "amount": slip["electricity"]}
+	electricity["laps"] = slip["laps"]
+	electricity["covered"] = slip["electricity_covered"]
+	GameLog.info("bill charged", electricity)
+	var rent := {"shift": shift, "bill": "rent", "amount": slip["rent"]}
+	rent["covered"] = slip["rent_covered"]
+	GameLog.info("bill charged", rent)
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:
