@@ -52,8 +52,10 @@ const FLINCH_SECONDS := 0.6
 ## Played on a loop; the stagger plays once, then he breathes.
 const LOOPING: Array[StringName] = [STANDING, WALKING, RUNNING, BREATHING]
 
-## Reduced motion (ticket 12): no stagger into his breath or after the whip.
+## Reduced motion: no stagger into his breath or after the whip.
 var skip_stagger := false
+## Reduced motion: he doesn't lean forward as Exhaustion rises (he still slows).
+var skip_slump := false
 
 var _body: Node3D
 var _player: AnimationPlayer
@@ -248,7 +250,7 @@ func _play_moving(ground_speed: float) -> void:
 
 ## Leans him forward and slows him in step with `share` of the most Exhaustion.
 func _slump(share: float) -> void:
-	_body.rotation.x = deg_to_rad(MOST_SLUMP_DEGREES) * share
+	_body.rotation.x = 0.0 if skip_slump else deg_to_rad(MOST_SLUMP_DEGREES) * share
 	_speed = lerpf(1.0, SLOWEST_ANIMATION_SPEED, share)
 	if _player != null:
 		_player.speed_scale = _speed

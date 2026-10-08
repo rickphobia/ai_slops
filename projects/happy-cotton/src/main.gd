@@ -1,7 +1,8 @@
 extends Node
 ## Entry scene: logs which build is running, loads and checks the tuning table, continues the
 ## saved Farm (or starts a new one) and wires it to the field, The App and the wall clock, and
-## adds the Skip time control in debug mode. It autosaves after every command, at the end of
+## adds the Skip time control in debug mode. It puts the player's settings into effect and
+## opens the Settings screen from The App. It autosaves after every command, at the end of
 ## each Shift, when the player leaves (see LeavingWatch), and every AUTOSAVE_SECONDS of play.
 ## Kept thin: no game rules here.
 
@@ -13,6 +14,8 @@ const AUTOSAVE_SECONDS := 15.0
 
 ## The save slot. Tests set their own before adding the scene.
 var save_store := SaveStore.new()
+## The player's settings file. Tests set their own before adding the scene.
+var settings_store := SettingsStore.new()
 
 var _tuning: Tuning
 var _farm: Farm
@@ -38,6 +41,7 @@ func _ready() -> void:
 		return
 	_tuning = tuning
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
+	_add_settings_screen()
 	_clock = WallClock.new(Time.get_unix_time_from_system)
 	_open_save()
 	var leaving_watch := LeavingWatch.new()
@@ -48,6 +52,28 @@ func _ready() -> void:
 		var skip_time := SkipTimePanel.new()
 		skip_time.skip_requested.connect(_on_skip_requested)
 		add_child(skip_time)
+
+
+## Adds the Settings screen above The App, hidden until The App's Settings button opens it.
+func _add_settings_screen() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = _app.layer + 1
+	var panel := SettingsPanel.new()
+	panel.name = "SettingsPanel"
+	panel.store = settings_store
+	panel.visible = false
+	panel.changed.connect(_apply_settings)
+	layer.add_child(panel)
+	add_child(layer)
+	_app.settings_pressed.connect(panel.open)
+	_apply_settings(settings_store.read())
+
+
+func _apply_settings(settings: PlayerSettings) -> void:
+	SettingsEffects.apply_volume(settings)
+	_app.scale_text(settings.text_scale)
+	_app.set_reduced_motion(settings.reduced_motion)
+	_field.set_reduced_motion(settings.reduced_motion)
 
 
 ## Continues the saved Farm, feeding the time since it was saved through the offline resume,

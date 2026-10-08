@@ -1,5 +1,7 @@
 extends Control
-## The first screen: names the game, carries the content note, and offers Start and Sources.
+## The first screen: names the game, carries the content note, and offers Start, Settings and
+## Sources. It puts the player's settings into effect (the text size on the Sources page,
+## and the volume) as it opens and whenever they change.
 ## With a save in the slot it offers Continue and Start over instead of Start; Start over asks
 ## for confirmation before it deletes the save. The Sources page is built from the sources
 ## register. Sizes are set for the 1280x720 base
@@ -17,17 +19,20 @@ const START_OVER_QUESTION := "Start over? Your saved game will be deleted for go
 const MAIN_SCENE_PATH := "res://src/main.tscn"
 const BACKGROUND := Color(0.72, 0.69, 0.6)
 const INK := Color(0.16, 0.14, 0.12)
-const BUTTON_SIZE := Vector2(320, 96)
+const BUTTON_SIZE := Vector2(260, 96)
 
 ## How Start leaves this screen: func(scene_path: String). Tests swap it so pressing Start
 ## doesn't replace the test runner's scene.
 var open_scene: Callable = _change_scene
 ## The save slot Continue and Start over act on. Tests set their own before adding the screen.
 var save_store := SaveStore.new()
+## The player's settings file. Tests set their own before adding the screen.
+var settings_store := SettingsStore.new()
 
 var _title_page: Control
 var _sources_page: Control
 var _confirm_page: Control
+var _settings_page: SettingsPanel
 var _start_button: Button
 var _continue_button: Button
 var _start_over_button: Button
@@ -45,6 +50,13 @@ func _ready() -> void:
 	add_child(_title_page)
 	add_child(_sources_page)
 	add_child(_confirm_page)
+	_settings_page = SettingsPanel.new()
+	_settings_page.name = "SettingsPanel"
+	_settings_page.store = settings_store
+	_settings_page.changed.connect(_apply_settings)
+	_settings_page.closed.connect(show_title)
+	add_child(_settings_page)
+	_apply_settings(settings_store.read())
 	start_pressed.connect(_go_to_main_scene)
 	show_title()
 	GameLog.info("title shown", {"has_save": save_store.has_save()})
@@ -63,6 +75,15 @@ func show_sources() -> void:
 	GameLog.info("sources opened")
 
 
+func show_settings() -> void:
+	_settings_page.open()
+	_show_page(_settings_page)
+
+
+func is_showing_settings() -> bool:
+	return _settings_page.visible
+
+
 func is_showing_sources() -> bool:
 	return _sources_page.visible
 
@@ -72,7 +93,7 @@ func is_confirming_start_over() -> bool:
 
 
 func _show_page(page: Control) -> void:
-	for each_page: Control in [_title_page, _sources_page, _confirm_page]:
+	for each_page: Control in [_title_page, _sources_page, _confirm_page, _settings_page]:
 		each_page.visible = each_page == page
 
 
@@ -110,6 +131,11 @@ func _start_over() -> void:
 	_open_main_scene()
 
 
+func _apply_settings(settings: PlayerSettings) -> void:
+	SettingsEffects.scale_text(_sources_page, settings.text_scale)
+	SettingsEffects.apply_volume(settings)
+
+
 func _change_scene(scene_path: String) -> void:
 	get_tree().change_scene_to_file(scene_path)
 
@@ -128,6 +154,7 @@ func _build_title_page() -> Control:
 	_start_over_button = _button("Start over", "StartOverButton", _ask_to_start_over)
 	for button: Button in [_start_button, _continue_button, _start_over_button]:
 		buttons.add_child(button)
+	buttons.add_child(_button("Settings", "SettingsButton", show_settings))
 	buttons.add_child(_button("Sources", "SourcesButton", show_sources))
 	page.add_child(buttons)
 	return _wrap_centred(page)

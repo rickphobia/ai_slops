@@ -4,14 +4,16 @@ extends CanvasLayer
 ## the Shift's time left, the Worker's Exhaustion and Labour Points; the Mascot with a speech
 ## bubble at the bottom; the rest hour button with its price at the bottom right; and confetti
 ## for a met Quota. During a Study Session the plain room covers the field, under the bar and
-## the Mascot. It shows what it is given and never decides anything. Only the rest hour button
-## catches taps, so the field underneath still gets the rest (the rules refuse them in a Study
-## Session).
+## the Mascot. It shows what it is given and never decides anything. Only the rest hour and
+## Settings buttons catch taps, so the field underneath still gets the rest (the rules refuse
+## them in a Study Session). With reduced motion there is no confetti.
 ## The Generator powers The App: while the Worker isn't running it, the bar, the Mascot and
 ## the rest hour button dim; the Study Session room is not The App and stays as it is.
 
 ## The rest hour button was pressed; the rules decide whether he gets it.
 signal rest_hour_pressed
+## The Settings button was pressed.
+signal settings_pressed
 
 const BAR_COLOUR := Color(1.0, 0.42, 0.62)
 const BUBBLE_COLOUR := Color(1.0, 0.98, 0.9)
@@ -30,7 +32,10 @@ const CONFETTI_COLOURS: Array[Color] = [
 const UNPOWERED := Color(0.45, 0.45, 0.45)
 const FONT_SIZE := 28
 const MARGIN := 16
+## The player's own button, not one of The App's lines, so it isn't in AppText.
+const SETTINGS_BUTTON_TEXT := "Settings"
 
+var _root: Control
 var _quota_bar: ProgressBar
 var _quota_label: Label
 var _shift_label: Label
@@ -44,23 +49,24 @@ var _study_room: StudyRoom
 ## The parts of The App that dim with the Generator.
 var _powered_parts: Array[CanvasItem] = []
 var _powered := true
+var _reduced_motion := false
 
 
 func _ready() -> void:
 	layer = 10
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
+	_root = Control.new()
+	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_root)
 	_study_room = StudyRoom.new()
 	_study_room.visible = false
-	root.add_child(_study_room)
+	_root.add_child(_study_room)
 	var top_bar := _build_top_bar()
-	root.add_child(top_bar)
+	_root.add_child(top_bar)
 	var mascot_corner := _build_mascot_corner()
-	root.add_child(mascot_corner)
+	_root.add_child(mascot_corner)
 	_rest_hour_button = _build_rest_hour_button()
-	root.add_child(_rest_hour_button)
+	_root.add_child(_rest_hour_button)
 	_powered_parts = [top_bar, mascot_corner, _rest_hour_button]
 	_confetti = _build_confetti()
 	add_child(_confetti)
@@ -120,6 +126,20 @@ func in_study_room() -> bool:
 	return _study_room.visible
 
 
+## With reduced motion a met Quota brings no confetti.
+func set_reduced_motion(on: bool) -> void:
+	_reduced_motion = on
+
+
+## Scales all of The App's text to `scale` times its normal size.
+func scale_text(scale: float) -> void:
+	SettingsEffects.scale_text(_root, scale)
+
+
+func is_celebrating() -> bool:
+	return _confetti.emitting
+
+
 ## The Mascot says this until it has something else to say.
 func say(text: String) -> void:
 	_speech.text = text
@@ -128,6 +148,8 @@ func say(text: String) -> void:
 
 ## Confetti falls from the whole width of the screen, which can change while playing.
 func celebrate() -> void:
+	if _reduced_motion:
+		return
 	var half_width := get_viewport().get_visible_rect().size.x / 2.0
 	_confetti.position = Vector2(half_width, -20.0)
 	_confetti.emission_rect_extents = Vector2(half_width, 1)
@@ -179,6 +201,12 @@ func _build_top_bar() -> Control:
 	row.add_child(_exhaustion_label)
 	_points_label = _label(TEXT_ON_BAR)
 	row.add_child(_points_label)
+	var settings := Button.new()
+	settings.name = "SettingsButton"
+	settings.text = SETTINGS_BUTTON_TEXT
+	settings.add_theme_font_size_override("font_size", FONT_SIZE)
+	settings.pressed.connect(settings_pressed.emit)
+	row.add_child(settings)
 	return bar
 
 
