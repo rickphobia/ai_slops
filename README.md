@@ -11,6 +11,7 @@ ai_slops/
 ├── README.md            # this file: what the repo is and the project index
 ├── CLAUDE.md            # rules Claude Code follows when working here
 ├── .claude/skills/      # shared workflow skills: /grill-with-docs, /to-spec, /to-tickets, /implement ...
+├── .claude/agents/      # fact-finder: cheap read-only lookups on Haiku, used by /grilling
 ├── .claude/settings.json  # guardrails (permission rules); each project keeps a copy
 ├── .github/             # one CI workflow per project, plus ci-gate (the check main requires)
 ├── scripts/             # next-tickets.sh: start ticket sessions; try-pr.sh / previews.sh: play PRs before merging
