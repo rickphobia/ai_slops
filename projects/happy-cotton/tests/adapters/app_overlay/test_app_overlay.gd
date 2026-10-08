@@ -122,3 +122,36 @@ func test_the_study_room_does_not_dim_with_the_app() -> void:
 
 	var room := _overlay.find_children("*", "StudyRoom", true, false)[0] as CanvasItem
 	assert_eq(room.modulate, Color.WHITE)
+
+
+func test_a_met_quota_brings_confetti() -> void:
+	_overlay.celebrate()
+
+	assert_true(_overlay.is_celebrating())
+
+
+func test_with_reduced_motion_a_met_quota_brings_no_confetti() -> void:
+	_overlay.set_reduced_motion(true)
+	_overlay.celebrate()
+
+	assert_false(_overlay.is_celebrating())
+
+
+func test_the_text_scales_with_the_text_size() -> void:
+	_overlay.say("Bigger")
+	_overlay.scale_text(1.5)
+
+	var speech: Label
+	for node in _overlay.find_children("*", "Label", true, false):
+		if (node as Label).text == "Bigger":
+			speech = node
+	assert_eq(speech.get_theme_font_size("font_size"), roundi(AppOverlay.FONT_SIZE * 1.5))
+	_overlay.scale_text(1.0)
+	assert_eq(speech.get_theme_font_size("font_size"), AppOverlay.FONT_SIZE)
+
+
+func test_the_settings_button_asks_for_settings() -> void:
+	watch_signals(_overlay)
+	(_overlay.find_child("SettingsButton", true, false) as Button).pressed.emit()
+
+	assert_signal_emitted(_overlay, "settings_pressed")

@@ -8,22 +8,27 @@ const SLOT := FOLDER + "/save.json"
 
 var _opened_scenes: Array[String] = []
 var _store := SaveStore.new(SLOT)
+var _settings_store := SettingsStore.new(FOLDER + "/settings.json")
 
 
 func before_each() -> void:
 	_opened_scenes = []
 	DirAccess.make_dir_recursive_absolute(FOLDER)
 	_store.discard()
+	_settings_store.discard()
 
 
 func after_all() -> void:
 	_store.discard()
+	_settings_store.discard()
+	SettingsEffects.apply_volume(PlayerSettings.new())
 
 
 func _title_screen() -> Control:
 	var screen: Control = TITLE_SCENE.instantiate()
 	screen.set("open_scene", func(path: String) -> void: _opened_scenes.append(path))
 	screen.set("save_store", _store)
+	screen.set("settings_store", _settings_store)
 	add_child_autofree(screen)
 	return screen
 
@@ -157,3 +162,31 @@ func test_starting_over_from_a_damaged_save_keeps_it_aside() -> void:
 	assert_false(_store.has_save())
 	assert_eq(FileAccess.get_file_as_string(FOLDER + "/save.damaged-1.json"), "{ damaged")
 	DirAccess.remove_absolute(FOLDER + "/save.damaged-1.json")
+
+
+func test_settings_opens_the_settings_page_and_back_returns_to_the_title() -> void:
+	var screen := _title_screen()
+
+	(screen.find_child("SettingsButton", true, false) as Button).pressed.emit()
+	var showing: bool = screen.call("is_showing_settings")
+	assert_true(showing)
+	assert_false(_shown(screen, "SourcesButton"))
+
+	(screen.find_child("SettingsBackButton", true, false) as Button).pressed.emit()
+	showing = screen.call("is_showing_settings")
+	assert_false(showing)
+	assert_true(_shown(screen, "SourcesButton"))
+
+
+func test_a_bigger_text_size_scales_the_sources_page_and_is_remembered() -> void:
+	var screen := _title_screen()
+	var heading := screen.find_child("SourcesHeading", true, false) as Label
+	var normal := heading.get_theme_font_size("font_size")
+
+	(screen.find_child("TextSize150", true, false) as Button).pressed.emit()
+
+	assert_eq(heading.get_theme_font_size("font_size"), roundi(normal * 1.5))
+	assert_eq(_settings_store.read().text_scale, 1.5)
+	var reopened := _title_screen()
+	var reopened_heading := reopened.find_child("SourcesHeading", true, false) as Label
+	assert_eq(reopened_heading.get_theme_font_size("font_size"), roundi(normal * 1.5))

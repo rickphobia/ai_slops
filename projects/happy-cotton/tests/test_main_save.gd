@@ -11,6 +11,7 @@ const SAVE_SLOT := SAVE_FOLDER + "/save.json"
 
 var _lines: Array[String] = []
 var _store := SaveStore.new(SAVE_SLOT)
+var _settings_store := SettingsStore.new(SAVE_FOLDER + "/settings.json")
 
 
 func before_each() -> void:
@@ -37,6 +38,7 @@ func _empty_save_folder() -> void:
 func _main() -> Node:
 	var main := MAIN_SCENE.instantiate()
 	main.set("save_store", _store)
+	main.set("settings_store", _settings_store)
 	return main
 
 

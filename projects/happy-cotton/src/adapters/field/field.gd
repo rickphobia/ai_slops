@@ -153,6 +153,13 @@ func show_worker(view: WorkerView) -> void:
 	_haze.environment.adjustment_saturation = saturation_for(view.exhaustion, _full_saturation)
 
 
+## Reduced motion: the Worker neither slumps nor staggers. The colour drain stays, as it
+## only follows his Exhaustion and never moves on screen.
+func set_reduced_motion(on: bool) -> void:
+	_worker.skip_slump = on
+	_worker.skip_stagger = on
+
+
 ## The Overseer acts on an event from the rules (Farm.OVERSEER_WHISTLE or OVERSEER_WHIP): he
 ## blows his whistle, or cracks the whip and the Worker flinches and staggers. The camera
 ## stays where the player put it.

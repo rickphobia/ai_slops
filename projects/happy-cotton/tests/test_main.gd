@@ -10,6 +10,7 @@ const SAVE_SLOT := SAVE_FOLDER + "/save.json"
 
 var _lines: Array[String] = []
 var _store := SaveStore.new(SAVE_SLOT)
+var _settings_store := SettingsStore.new(SAVE_FOLDER + "/settings.json")
 
 
 func before_each() -> void:
@@ -36,6 +37,7 @@ func _empty_save_folder() -> void:
 func _main() -> Node:
 	var main := MAIN_SCENE.instantiate()
 	main.set("save_store", _store)
+	main.set("settings_store", _settings_store)
 	return main
 
 
@@ -264,3 +266,23 @@ func test_negative_offline_time_is_logged_as_a_warning() -> void:
 			+ " seconds_away=-60.0 seconds_counted=0.0"
 		)
 	)
+
+
+func test_the_stored_settings_are_put_into_effect_and_the_app_opens_them() -> void:
+	var stored := PlayerSettings.new()
+	stored.reduced_motion = true
+	stored.muted = true
+	_settings_store.write(stored)
+	var main: Node = add_child_autofree(_main())
+	await wait_process_frames(1)
+	var app := main.get_node("AppOverlay") as AppOverlay
+	var panel := main.find_child("SettingsPanel", true, false) as Control
+
+	app.celebrate()
+	assert_false(app.is_celebrating(), "reduced motion: no confetti")
+	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index(&"Master")))
+	assert_false(panel.visible)
+	app.settings_pressed.emit()
+	assert_true(panel.visible)
+
+	SettingsEffects.apply_volume(PlayerSettings.new())

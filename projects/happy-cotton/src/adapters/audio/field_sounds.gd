@@ -3,8 +3,8 @@ extends Node
 ## The field's sounds: the Worker's footsteps on the track, the turnstile turning as he
 ## pushes through it, the Generator's whine, which rises with his speed and winds down when he
 ## stops, and the Overseer's whistle and whip crack. All play through one bus, BUS (in
-## default_bus_layout.tres), so the settings' volume and mute (ticket 12) can control them
-## together. Browsers block sound until the page is touched, so
+## default_bus_layout.tres), which sends to Master, where the player's volume and mute apply
+## (SettingsEffects.apply_volume). Browsers block sound until the page is touched, so
 ## nothing plays before the player's first tap or click.
 
 const BUS := &"Field"
