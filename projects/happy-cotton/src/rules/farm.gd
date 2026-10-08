@@ -158,7 +158,7 @@ func advance(seconds: float) -> void:
 			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
 			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
 			_toil(worked)
-			var withered := _crops.pass_time(worked, growth_rate, true)
+			var withered := _crops.tend(worked, growth_rate)
 			remaining -= worked
 			if worked >= shift_left:
 				_shift_elapsed = 0.0
@@ -189,12 +189,12 @@ func resume_offline(seconds: float) -> AwayReport:
 	while remaining > 0.0:
 		if in_study_session():
 			var served := _serve_study_session(remaining)
-			_crops.pass_time(served, rate, false)
+			_crops.grow(served, rate)
 			study_served += served
 			remaining -= served
 		else:
 			var step := minf(remaining, _crops.seconds_until_wither(rate))
-			var withered_plots := _crops.pass_time(step, rate, true)
+			var withered_plots := _crops.tend(step, rate)
 			withered += withered_plots.size()
 			_log_negligence(withered_plots)
 			remaining -= step

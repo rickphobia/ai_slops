@@ -71,27 +71,26 @@ func empty(index: int) -> void:
 ## Session; INF when none would.
 func seconds_until_wither(growth_rate: float) -> float:
 	var soonest := INF
-	for index in _grown.size():
-		if _grown[index] == EMPTY or _withered[index]:
-			continue
+	for index in _living():
 		var until_ripe := _seconds_until_ripe(index, growth_rate)
 		soonest = minf(soonest, until_ripe + _wither_seconds - _ripe_for[index])
 	return soonest
 
 
-## Grows every crop by `seconds` at `growth_rate`. When `ripe_ages` (time outside a Study
-## Session), ripe cotton also ages towards Withering. Returns the plots that Withered.
-func pass_time(seconds: float, growth_rate: float, ripe_ages: bool) -> Array[int]:
+## Time in a Study Session: crops grow by `seconds` at `growth_rate`, but ripe cotton doesn't
+## age towards Withering.
+func grow(seconds: float, growth_rate: float) -> void:
+	for index in _living():
+		_grow_plot(index, seconds, growth_rate)
+
+
+## Time outside a Study Session: crops grow by `seconds` at `growth_rate` and ripe cotton ages
+## towards Withering. Returns the plots that Withered.
+func tend(seconds: float, growth_rate: float) -> Array[int]:
 	var withered: Array[int] = []
-	for index in _grown.size():
-		if _grown[index] == EMPTY or _withered[index]:
-			continue
-		var until_ripe := _seconds_until_ripe(index, growth_rate)
+	for index in _living():
+		var until_ripe := _grow_plot(index, seconds, growth_rate)
 		if seconds < until_ripe:
-			_grown[index] += seconds * growth_rate
-			continue
-		_grown[index] = _grow_seconds
-		if not ripe_ages:
 			continue
 		var aged := seconds - until_ripe
 		if aged >= _wither_seconds - _ripe_for[index]:
@@ -120,6 +119,26 @@ func view(index: int) -> PlotView:
 		return PlotView.new(PlotView.Stage.RIPE, 0.0)
 	var stage_index := floori(grown * GROWING.size() / _grow_seconds)
 	return PlotView.new(GROWING[stage_index], _grow_seconds - grown)
+
+
+## Plots with a crop that hasn't Withered.
+func _living() -> Array[int]:
+	var living: Array[int] = []
+	for index in _grown.size():
+		if _grown[index] != EMPTY and not _withered[index]:
+			living.append(index)
+	return living
+
+
+## Grows one crop, ripe at most. Returns the seconds it took to ripen: more than `seconds` when
+## it is still growing.
+func _grow_plot(index: int, seconds: float, growth_rate: float) -> float:
+	var until_ripe := _seconds_until_ripe(index, growth_rate)
+	if seconds < until_ripe:
+		_grown[index] += seconds * growth_rate
+	else:
+		_grown[index] = _grow_seconds
+	return until_ripe
 
 
 ## 0 when ripe; INF when the crop isn't growing at this rate.
