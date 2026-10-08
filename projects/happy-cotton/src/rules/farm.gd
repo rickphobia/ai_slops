@@ -35,7 +35,11 @@ const WORKER_BUSY := &"worker_busy"
 const RESTING := &"resting"
 const REST_HOUR_TAKEN_AWAY := &"rest_hour_taken_away"
 const NOT_ENOUGH_LABOUR_POINTS := &"not_enough_labour_points"
-## Every reason buy_rest_hour() can refuse with; the App text table explains each.
+## The Privileges buy_privilege() sells.
+const REST_HOUR := &"rest_hour"
+## buy_privilege() was given a Privilege the Farm does not sell.
+const NO_SUCH_PRIVILEGE := &"no_such_privilege"
+## Every reason buying the rest hour can refuse with; the App text table explains each.
 const REST_HOUR_REFUSALS: Array[StringName] = [
 	IN_STUDY_SESSION,
 	REST_HOUR_TAKEN_AWAY,
@@ -110,7 +114,7 @@ var _shift_number := 1
 var _shift_elapsed := 0.0
 ## Cotton picked this Shift. Starts from zero each Shift: a surplus carries no credit.
 var _picked := 0
-var _labour_points := 0
+var _ledger := Ledger.new()
 ## Seconds left in the current Study Session; 0 when the Worker is on the field.
 var _study_left := 0.0
 ## Quotas missed since the last met one; it sets the next Study Session's length.
@@ -177,7 +181,7 @@ func pick(index: int) -> CommandResult:
 		_messages.append(AppMessage.new(COTTON_DROPPED, {}))
 	else:
 		_picked += 1
-		_labour_points += roundi(_tuning.labour_points_per_pick)
+		_ledger.earn(roundi(_tuning.labour_points_per_pick))
 	return CommandResult.done()
 
 
@@ -207,9 +211,16 @@ func run_generator() -> CommandResult:
 	return CommandResult.done()
 
 
+## Buys a Privilege with Labour Points. The only one so far is REST_HOUR.
+func buy_privilege(privilege: StringName) -> CommandResult:
+	if privilege == REST_HOUR:
+		return _buy_rest_hour()
+	return CommandResult.refused(NO_SUCH_PRIVILEGE)
+
+
 ## The rest hour, the first Privilege: it costs Labour Points and takes the Worker off the
 ## Generator, lowering his Exhaustion towards its floor while the Shift counts on.
-func buy_rest_hour() -> CommandResult:
+func _buy_rest_hour() -> CommandResult:
 	if in_study_session():
 		return CommandResult.refused(IN_STUDY_SESSION)
 	if _rest_taken_away:
@@ -217,9 +228,9 @@ func buy_rest_hour() -> CommandResult:
 	if _resting():
 		return CommandResult.refused(RESTING)
 	var price := _rest_hour_price()
-	if _labour_points < price:
+	if not _ledger.can_afford(price):
 		return CommandResult.refused(NOT_ENOUGH_LABOUR_POINTS)
-	_labour_points -= price
+	_ledger.spend(price)
 	_rest_left = _tuning.rest_hour_seconds
 	_toil.bring_back()
 	var values := {"price": price, "minutes": ceili(_rest_left / 60.0)}
@@ -317,7 +328,7 @@ func to_save() -> Dictionary:
 		"shift_number": _shift_number,
 		"shift_elapsed": _shift_elapsed,
 		"picked": _picked,
-		"labour_points": _labour_points,
+		"labour_points": _ledger.balance(),
 		"study_left": _study_left,
 		"misses_in_a_row": _misses_in_a_row,
 		"busy_left": _busy_left,
@@ -362,7 +373,7 @@ func restore(save: Dictionary) -> Array[String]:
 	_shift_number = shift_number
 	_shift_elapsed = shift_elapsed
 	_picked = picked
-	_labour_points = labour_points
+	_ledger = Ledger.new(labour_points)
 	_study_left = study_left
 	_misses_in_a_row = misses_in_a_row
 	_busy_left = busy_left
@@ -389,7 +400,7 @@ func shift() -> ShiftView:
 
 
 func labour_points() -> int:
-	return _labour_points
+	return _ledger.balance()
 
 
 func in_study_session() -> bool:
@@ -484,10 +495,7 @@ func _start_study_session() -> void:
 func _log_negligence(withered_plots: Array[int]) -> void:
 	if withered_plots.is_empty():
 		return
-	var docked := mini(
-		_labour_points, withered_plots.size() * roundi(_tuning.negligence_labour_points)
-	)
-	_labour_points -= docked
+	var docked := _ledger.dock(withered_plots.size() * roundi(_tuning.negligence_labour_points))
 	var values := {"plots": withered_plots.size(), "points": docked}
 	_messages.append(AppMessage.new(NEGLIGENCE_LOGGED, values))
 	_begin_study_session(maxf(_study_left, _tuning.negligence_study_session_seconds))
