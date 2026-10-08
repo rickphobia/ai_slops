@@ -91,7 +91,7 @@ func _on_rest_hour_pressed() -> void:
 		GameLog.info("rest hour bought", {"labour_points_left": _farm.labour_points()})
 	else:
 		GameLog.debug("rest hour refused", {"reason": result.reason})
-		var values := {"price": roundi(_tuning.rest_hour_price), "points": _farm.labour_points()}
+		var values := {"price": _farm.rest_hour_price(), "points": _farm.labour_points()}
 		_app.say(AppText.render_rest_hour_refusal(result.reason, values))
 	_show_farm()
 
@@ -160,7 +160,9 @@ func _show_app() -> void:
 	_app.show_shift(_farm.shift(), _farm.labour_points())
 	_app.show_study_session(_farm.study_session_seconds_left())
 	_app.show_exhaustion(_farm.exhaustion())
-	_app.show_rest_hour(roundi(_tuning.rest_hour_price), _farm.rest_seconds_left())
+	_app.show_rest_hour(
+		_farm.rest_hour_price(), _farm.rest_seconds_left(), _farm.rest_hour_taken_away()
+	)
 
 
 func _log_message(message: AppMessage) -> void:

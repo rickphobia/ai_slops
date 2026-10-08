@@ -190,7 +190,7 @@ func clear(index: int) -> CommandResult:
 func run_generator() -> CommandResult:
 	if in_study_session():
 		return CommandResult.refused(IN_STUDY_SESSION)
-	if resting():
+	if _resting():
 		return CommandResult.refused(RESTING)
 	_toil.send()
 	return CommandResult.done()
@@ -203,9 +203,9 @@ func buy_rest_hour() -> CommandResult:
 		return CommandResult.refused(IN_STUDY_SESSION)
 	if _rest_taken_away:
 		return CommandResult.refused(REST_HOUR_TAKEN_AWAY)
-	if resting():
+	if _resting():
 		return CommandResult.refused(RESTING)
-	var price := roundi(_tuning.rest_hour_price)
+	var price := rest_hour_price()
 	if _labour_points < price:
 		return CommandResult.refused(NOT_ENOUGH_LABOUR_POINTS)
 	_labour_points -= price
@@ -232,7 +232,7 @@ func advance(seconds: float) -> void:
 			var growth_rate := 1.0 if _toil.is_running() else 0.0
 			var worked := minf(minf(remaining, shift_left), _toil.seconds_until_turn())
 			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
-			worked = minf(worked, _rest_left if resting() else INF)
+			worked = minf(worked, _rest_left if _resting() else INF)
 			_toil.pass_time(worked)
 			_rest(worked)
 			var withered := _crops.tend(worked, growth_rate)
@@ -323,7 +323,7 @@ func study_session_seconds_left() -> float:
 
 func worker() -> WorkerView:
 	var activity := WorkerView.Activity.IN_FIELD
-	if resting():
+	if _resting():
 		activity = WorkerView.Activity.RESTING
 	elif _toil.is_breathing():
 		activity = WorkerView.Activity.BREATHING
@@ -342,13 +342,18 @@ func exhaustion_floor() -> float:
 	return _exhaustion.floor_level()
 
 
-func resting() -> bool:
+func _resting() -> bool:
 	return _rest_left > 0.0
 
 
 ## Seconds left of the rest hour; 0 when he isn't resting.
 func rest_seconds_left() -> float:
 	return _rest_left
+
+
+## Labour Points a rest hour costs.
+func rest_hour_price() -> int:
+	return roundi(_tuning.rest_hour_price)
 
 
 ## Whether a missed Quota has taken the rest hour away for this Shift.
@@ -462,7 +467,7 @@ func _pick_refusal(index: int) -> StringName:
 
 ## Why the Worker can't do field work right now, or &"" when he can.
 func _unable_to_work() -> StringName:
-	if resting():
+	if _resting():
 		return RESTING
 	if _busy_left > 0.0:
 		return WORKER_BUSY
@@ -480,7 +485,7 @@ func _start_field_work(exhaustion_added: float) -> void:
 
 ## Some seconds of a rest hour, never past its end: Exhaustion falls a little at a time.
 func _rest(seconds: float) -> void:
-	if not resting():
+	if not _resting():
 		return
 	_exhaustion.recover(_tuning.rest_hour_recovery * seconds / _tuning.rest_hour_seconds)
 	if seconds >= _rest_left:

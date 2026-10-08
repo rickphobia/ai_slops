@@ -22,6 +22,7 @@ const STUDY_SESSION_TIMER := "Study Session  ·  {time} left"
 const EXHAUSTION := "Exhaustion {level}%"
 const REST_HOUR_BUTTON := "Rest hour  ·  {price} Labour Points"
 const RESTING := "Resting  ·  {time} left"
+const REST_HOUR_TAKEN_AWAY := "Rest hour  ·  suspended this Shift"
 
 
 ## Text for every message key the rules can emit (Farm.MESSAGE_KEYS).

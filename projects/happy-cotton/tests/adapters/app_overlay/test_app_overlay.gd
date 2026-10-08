@@ -92,6 +92,12 @@ func test_while_he_rests_the_button_shows_the_time_left() -> void:
 	assert_eq(_overlay.rest_hour_button().text, "Resting  ·  0:45 left")
 
 
+func test_after_a_missed_quota_the_button_says_the_rest_hour_is_suspended() -> void:
+	_overlay.show_rest_hour(20, 0.0, true)
+
+	assert_eq(_overlay.rest_hour_button().text, "Rest hour  ·  suspended this Shift")
+
+
 func test_pressing_the_rest_hour_button_is_reported() -> void:
 	watch_signals(_overlay)
 

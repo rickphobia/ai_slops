@@ -76,10 +76,11 @@ func update(delta: float) -> void:
 ## Shows him doing what he should, where he is. `starting_breath` says a breath shown now
 ## is a new one, so he staggers into it.
 func _settle(starting_breath: bool) -> void:
+	if _is_home():
+		_body.rotation.y = _home_facing
+		_play(STANDING)
+		return
 	match _activity:
-		WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING:
-			_body.rotation.y = _home_facing
-			_play(STANDING)
 		WorkerView.Activity.RUNNING:
 			_body.rotation.y = _run_facing
 			# On his last lap before he stops, he slows to a walk.
@@ -95,8 +96,12 @@ func _settle(starting_breath: bool) -> void:
 
 
 func _target() -> Vector3:
-	var at_home := _activity in [WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING]
-	return _home if at_home else _run_spot
+	return _home if _is_home() else _run_spot
+
+
+## In the field or resting, he is at his place beside the plots.
+func _is_home() -> bool:
+	return _activity in [WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING]
 
 
 ## Leans him forward and slows him in step with `share` of the most Exhaustion.

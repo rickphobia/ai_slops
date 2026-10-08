@@ -72,9 +72,12 @@ func show_exhaustion(level: float) -> void:
 	_exhaustion_label.text = AppText.EXHAUSTION.format({"level": roundi(level)})
 
 
-## Shows the rest hour's price, or how long the rest has left while he rests.
-func show_rest_hour(price: int, rest_seconds_left: float) -> void:
-	if rest_seconds_left > 0.0:
+## Shows the rest hour's price, how long the rest has left while he rests, or that a missed
+## Quota has taken it away.
+func show_rest_hour(price: int, rest_seconds_left: float, taken_away := false) -> void:
+	if taken_away:
+		_rest_hour_button.text = AppText.REST_HOUR_TAKEN_AWAY
+	elif rest_seconds_left > 0.0:
 		_rest_hour_button.text = AppText.RESTING.format({"time": clock_text(rest_seconds_left)})
 	else:
 		_rest_hour_button.text = AppText.REST_HOUR_BUTTON.format({"price": price})

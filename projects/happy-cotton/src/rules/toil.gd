@@ -45,10 +45,6 @@ func is_breathing() -> bool:
 	return _on_generator and _breath_left > 0.0
 
 
-func is_on_generator() -> bool:
-	return _on_generator
-
-
 ## Laps he will run before he stops to breathe, counting the one he is on.
 func laps_left() -> int:
 	return _laps_this_run - floori(_run_since_breath / _tuning.lap_seconds)
