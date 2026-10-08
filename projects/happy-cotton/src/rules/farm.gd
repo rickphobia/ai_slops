@@ -397,7 +397,7 @@ func worker() -> WorkerView:
 		activity = WorkerView.Activity.BREATHING
 	elif _toil.is_running():
 		activity = WorkerView.Activity.RUNNING
-	return WorkerView.new(activity, _toil.laps_left(), _exhaustion.level())
+	return WorkerView.new(activity, _toil.laps_left(), _exhaustion.level(), _toil.lap_progress())
 
 
 ## From 0 (rested) to Exhaustion.MOST (spent).

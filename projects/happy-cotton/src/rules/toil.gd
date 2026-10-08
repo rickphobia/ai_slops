@@ -68,6 +68,11 @@ func laps_left() -> int:
 	return _laps_this_run - floori(_run_since_breath / _tuning.lap_seconds)
 
 
+## How far through his current lap he is, from 0 up to (not including) 1.
+func lap_progress() -> float:
+	return fmod(_run_since_breath, _tuning.lap_seconds) / _tuning.lap_seconds
+
+
 ## Seconds until he stops to breathe or starts running again; INF while he is off the
 ## Generator.
 func seconds_until_turn() -> float:

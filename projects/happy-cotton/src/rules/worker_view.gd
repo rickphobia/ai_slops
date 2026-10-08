@@ -18,13 +18,25 @@ var laps_left: int:
 var exhaustion: float:
 	get:
 		return _exhaustion
+## How far through his current lap he is, from 0 (at the turnstile) to just under 1. Kept
+## while he is off the Generator, as his laps carry over; 0 while he breathes.
+var lap_progress: float:
+	get:
+		return _lap_progress
 
 var _activity: Activity
 var _laps_left: int
 var _exhaustion: float
+var _lap_progress: float
 
 
-func _init(worker_activity: Activity, worker_laps_left: int, worker_exhaustion := 0.0) -> void:
+func _init(
+	worker_activity: Activity,
+	worker_laps_left: int,
+	worker_exhaustion := 0.0,
+	worker_lap_progress := 0.0
+) -> void:
 	_activity = worker_activity
 	_laps_left = worker_laps_left
 	_exhaustion = worker_exhaustion
+	_lap_progress = worker_lap_progress
