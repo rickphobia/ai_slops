@@ -1,14 +1,26 @@
 extends Node
-## Entry scene: logs which build is running, loads and checks the tuning table, creates the
-## Farm rules and wires them to the field, The App and the wall clock, and adds the Skip time
-## control in debug mode. Kept thin: no game rules here.
+## Entry scene: logs which build is running, loads and checks the tuning table, continues the
+## saved Farm (or starts a new one) and wires it to the field, The App and the wall clock, and
+## adds the Skip time control in debug mode. It autosaves after every command, at the end of
+## each Shift, when the game loses focus or is closed, and every AUTOSAVE_SECONDS of play.
+## Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
+## The web export only copies a save to browser storage on its next frame, and a hidden tab
+## gets none, so the save made as the tab hides is lost if the tab is closed while hidden.
+## Saving this often bounds what that loses: online play that would count as offline time.
+const AUTOSAVE_SECONDS := 15.0
+
+## The save slot. Tests set their own before adding the scene.
+var save_store := SaveStore.new()
 
 var _tuning: Tuning
 var _farm: Farm
 var _clock: WallClock
 var _worker_activity := WorkerView.Activity.IN_FIELD
+var _since_autosave := 0.0
+## False when a damaged save couldn't be moved aside: saving would overwrite it.
+var _can_save := true
 
 @onready var _field: Field = $Field
 @onready var _app: AppOverlay = $AppOverlay
@@ -26,17 +38,66 @@ func _ready() -> void:
 		return
 	_tuning = tuning
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
-	_farm = Farm.new(_tuning, _field.plot_count())
 	_clock = WallClock.new(Time.get_unix_time_from_system)
-	_field.plot_tapped.connect(_on_plot_tapped)
-	_field.generator_tapped.connect(_on_generator_tapped)
-	_app.rest_hour_pressed.connect(_on_rest_hour_pressed)
-	_show_farm()
+	_open_save()
 	if DebugMode.is_on():
 		GameLog.info("debug mode on")
 		var skip_time := SkipTimePanel.new()
 		skip_time.skip_requested.connect(_on_skip_requested)
 		add_child(skip_time)
+
+
+## Continues the saved Farm, feeding the time since it was saved through the offline resume,
+## or starts a new one when there is no save. A save that can't be read is kept aside and the
+## player is offered Start over.
+func _open_save() -> void:
+	var stored := save_store.read()
+	if stored.status == StoredSave.Status.NONE:
+		GameLog.info("new game", {"path": save_store.path()})
+		_begin(Farm.new(_tuning, _field.plot_count()))
+		return
+	var problem := stored.problem
+	if stored.status == StoredSave.Status.FOUND:
+		var farm := Farm.new(_tuning, _field.plot_count())
+		var problems := farm.restore(stored.farm)
+		if problems.is_empty():
+			GameLog.info("save loaded", {"path": save_store.path(), "shift": farm.shift().number})
+			_farm = farm
+			var away := _clock.offline_seconds_since(stored.saved_at)
+			if away != 0.0:
+				_resume_offline(away)
+			_begin(farm)
+			return
+		problem = "; ".join(problems)
+	_offer_start_over(problem)
+
+
+## Keeps the damaged save aside, untouched, and covers the game until the player starts over.
+func _offer_start_over(problem: String) -> void:
+	var kept_as := save_store.keep_aside()
+	GameLog.warning("save unreadable", {"problem": problem, "kept_as": kept_as})
+	if kept_as.is_empty():
+		_can_save = false
+		GameLog.error("save not kept aside, saving is off", {"path": save_store.path()})
+	var notice := DamagedSaveNotice.new()
+	notice.start_over_pressed.connect(_on_start_over_after_damaged_save)
+	add_child(notice)
+
+
+func _on_start_over_after_damaged_save() -> void:
+	GameLog.info("start over after a damaged save")
+	_begin(Farm.new(_tuning, _field.plot_count()))
+
+
+## Wires the Farm to the field and The App, and saves it at once: a new Farm, or a restored
+## one now that its time away has been counted (so it isn't counted again).
+func _begin(farm: Farm) -> void:
+	_farm = farm
+	_field.plot_tapped.connect(_on_plot_tapped)
+	_field.generator_tapped.connect(_on_generator_tapped)
+	_app.rest_hour_pressed.connect(_on_rest_hour_pressed)
+	_save("start")
+	_show_farm()
 
 
 ## The tuning table that passed the startup check, or null if the game stopped.
@@ -53,8 +114,25 @@ func _process(delta: float) -> void:
 	var away := _clock.offline_seconds(delta)
 	if away != 0.0:
 		_resume_offline(away)
+	var shift_number := _farm.shift().number
 	_farm.advance(delta)
+	_since_autosave += delta
+	if _farm.shift().number != shift_number:
+		_save("shift_end")
+	elif _since_autosave >= AUTOSAVE_SECONDS:
+		_save("timer")
 	_show_farm()
+
+
+## Saves when the game loses focus (another tab or app), is paused or is closed.
+func _notification(what: int) -> void:
+	var leaving := [
+		NOTIFICATION_APPLICATION_FOCUS_OUT,
+		NOTIFICATION_APPLICATION_PAUSED,
+		NOTIFICATION_WM_CLOSE_REQUEST,
+	]
+	if what in leaving:
+		_save("hidden")
 
 
 ## A tap on an empty plot plants it, on a Withered one clears it, and on any other plot it
@@ -71,6 +149,7 @@ func _on_plot_tapped(index: int) -> void:
 		_log_command("pick", index, result)
 		if result.reason == Farm.NOT_RIPE:
 			_field.show_time_left(index, _farm.plot(index).seconds_left)
+	_save("command")
 	_field.show_plots(_farm.plots())
 	_show_worker()
 
@@ -81,6 +160,7 @@ func _on_generator_tapped() -> void:
 		GameLog.debug("run generator")
 	else:
 		GameLog.debug("run generator refused", {"reason": result.reason})
+	_save("command")
 	_show_worker()
 
 
@@ -91,15 +171,19 @@ func _on_rest_hour_pressed() -> void:
 		GameLog.info("rest hour bought", {"labour_points_left": _farm.labour_points()})
 	else:
 		GameLog.debug("rest hour refused", {"reason": result.reason})
-		var values := {"price": _farm.rest_hour_price(), "points": _farm.labour_points()}
+		var values := {"price": _farm.rest_hour().price, "points": _farm.labour_points()}
 		_app.say(AppText.render_rest_hour_refusal(result.reason, values))
+	_save("command")
 	_show_farm()
 
 
 ## Skip time runs exactly the offline resume of a real absence that long.
 func _on_skip_requested(seconds: float) -> void:
+	if _farm == null:
+		return
 	GameLog.info("skip time", {"seconds": seconds})
 	_resume_offline(seconds)
+	_save("command")
 	_show_farm()
 
 
@@ -122,6 +206,18 @@ func _resume_offline(seconds: float) -> void:
 		"exhaustion_recovered": report.exhaustion_recovered,
 	}
 	GameLog.info("offline resume", resumed)
+
+
+## Writes the Farm to the save slot. Only the reason is logged, never the save itself.
+func _save(reason: String) -> void:
+	if _farm == null or not _can_save:
+		return
+	_since_autosave = 0.0
+	var problem := save_store.write(_farm.to_save(), _clock.now())
+	if problem.is_empty():
+		GameLog.debug("game saved", {"reason": reason})
+	else:
+		GameLog.error("save failed", {"reason": reason, "problem": problem})
 
 
 func _show_farm() -> void:
@@ -160,9 +256,8 @@ func _show_app() -> void:
 	_app.show_shift(_farm.shift(), _farm.labour_points())
 	_app.show_study_session(_farm.study_session_seconds_left())
 	_app.show_exhaustion(_farm.exhaustion())
-	_app.show_rest_hour(
-		_farm.rest_hour_price(), _farm.rest_seconds_left(), _farm.rest_hour_taken_away()
-	)
+	var rest_hour := _farm.rest_hour()
+	_app.show_rest_hour(rest_hour.price, rest_hour.seconds_left, rest_hour.taken_away)
 
 
 func _log_message(message: AppMessage) -> void:

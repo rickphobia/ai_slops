@@ -19,6 +19,8 @@ extends RefCounted
 ## breathe. Labour Points buy a rest hour, which takes him off the Generator and lowers
 ## Exhaustion towards a floor that rises every Shift. A missed Quota takes the rest hour away
 ## for the next Shift. Offline time recovers Exhaustion slowly, never below the floor.
+## to_save() gives the whole Farm as plain data and restore() takes it back, so a restored Farm
+## plays on exactly as the saved one would have.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
@@ -39,6 +41,9 @@ const REST_HOUR_REFUSALS: Array[StringName] = [
 	RESTING,
 	NOT_ENOUGH_LABOUR_POINTS,
 ]
+
+## The save format to_save() writes and restore() reads. Raise it when the format changes.
+const SAVE_VERSION := 1
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -205,7 +210,7 @@ func buy_rest_hour() -> CommandResult:
 		return CommandResult.refused(REST_HOUR_TAKEN_AWAY)
 	if _resting():
 		return CommandResult.refused(RESTING)
-	var price := rest_hour_price()
+	var price := _rest_hour_price()
 	if _labour_points < price:
 		return CommandResult.refused(NOT_ENOUGH_LABOUR_POINTS)
 	_labour_points -= price
@@ -292,6 +297,69 @@ func resume_offline(seconds: float) -> AwayReport:
 	return AwayReport.new(seconds, counted, problem, ripened, withered, study_served, recovered)
 
 
+## The whole Farm as plain data (numbers, true or false, lists and dictionaries), with the save
+## format version. Pending App messages and the source of chance are not part of it.
+func to_save() -> Dictionary:
+	return {
+		"version": SAVE_VERSION,
+		"shift_number": _shift_number,
+		"shift_elapsed": _shift_elapsed,
+		"picked": _picked,
+		"labour_points": _labour_points,
+		"study_left": _study_left,
+		"misses_in_a_row": _misses_in_a_row,
+		"busy_left": _busy_left,
+		"rest_left": _rest_left,
+		"rest_taken_away": _rest_taken_away,
+		"crops": _crops.to_save(),
+		"exhaustion": _exhaustion.to_save(),
+		"toil": _toil.to_save(),
+	}
+
+
+## Takes the Farm from a save written by to_save(), as it comes back from JSON. Returns what is
+## wrong with it, one line per bad field; then the Farm is left as it was. On success the
+## pending App messages are dropped: they described the Farm before the restore.
+## Timers are held to what the tuning table allows now, in case it shortened them since the
+## save was written; the save's other numbers are taken as they are.
+func restore(save: Dictionary) -> Array[String]:
+	var reader := SaveReader.new(save)
+	var version := reader.whole("version")
+	if reader.problems().is_empty() and version != SAVE_VERSION:
+		return ["version %d is not the version this game reads (%d)" % [version, SAVE_VERSION]]
+	var crops := Crops.new(_tuning.grow_seconds, _tuning.wither_seconds, _crops.count())
+	crops.restore(reader.section("crops"))
+	var exhaustion := Exhaustion.new(_tuning)
+	exhaustion.restore(reader.section("exhaustion"))
+	var toil := Toil.new(_tuning, exhaustion)
+	toil.restore(reader.section("toil"))
+	var shift_number := reader.whole("shift_number", 1)
+	var shift_elapsed := minf(reader.number("shift_elapsed"), _tuning.shift_seconds)
+	var picked := reader.whole("picked")
+	var labour_points := reader.whole("labour_points")
+	var study_left := reader.number("study_left")
+	var misses_in_a_row := reader.whole("misses_in_a_row")
+	var busy_left := minf(reader.number("busy_left"), _tuning.slow_action_seconds)
+	var rest_left := minf(reader.number("rest_left"), _tuning.rest_hour_seconds)
+	var rest_taken_away := reader.flag("rest_taken_away")
+	if not reader.problems().is_empty():
+		return reader.problems()
+	_crops = crops
+	_exhaustion = exhaustion
+	_toil = toil
+	_shift_number = shift_number
+	_shift_elapsed = shift_elapsed
+	_picked = picked
+	_labour_points = labour_points
+	_study_left = study_left
+	_misses_in_a_row = misses_in_a_row
+	_busy_left = busy_left
+	_rest_left = rest_left
+	_rest_taken_away = rest_taken_away
+	_messages = []
+	return []
+
+
 ## The plot at index; it must exist.
 func plot(index: int) -> PlotView:
 	return _crops.view(index)
@@ -346,19 +414,13 @@ func _resting() -> bool:
 	return _rest_left > 0.0
 
 
-## Seconds left of the rest hour; 0 when he isn't resting.
-func rest_seconds_left() -> float:
-	return _rest_left
+## Its price, the seconds left of one under way, and whether a missed Quota took it away.
+func rest_hour() -> RestHourView:
+	return RestHourView.new(_rest_hour_price(), _rest_left, _rest_taken_away)
 
 
-## Labour Points a rest hour costs.
-func rest_hour_price() -> int:
+func _rest_hour_price() -> int:
 	return roundi(_tuning.rest_hour_price)
-
-
-## Whether a missed Quota has taken the rest hour away for this Shift.
-func rest_hour_taken_away() -> bool:
-	return _rest_taken_away
 
 
 ## What The App should say since the last call, oldest first. Empties the queue.

@@ -1,5 +1,6 @@
 extends GutTest
-## The wall clock turns the gap between two frames into offline time, with a fake clock.
+## The wall clock turns the gap between two frames, or since the save was written, into
+## offline time, with a fake clock.
 
 var _now := 1000.0
 var _clock: WallClock
@@ -56,3 +57,15 @@ func test_a_clock_set_back_reports_negative_offline_time() -> void:
 	_now -= 3600.0
 
 	assert_eq(_clock.offline_seconds(0.016), -3600.0)
+
+
+func test_the_time_since_the_save_was_written_is_offline_time() -> void:
+	assert_eq(_clock.offline_seconds_since(_now - 3600.0), 3600.0)
+
+
+func test_a_save_written_moments_ago_has_no_offline_time() -> void:
+	assert_eq(_clock.offline_seconds_since(_now - 2.0), 0.0)
+
+
+func test_a_save_from_the_future_gives_negative_offline_time() -> void:
+	assert_eq(_clock.offline_seconds_since(_now + 600.0), -600.0)

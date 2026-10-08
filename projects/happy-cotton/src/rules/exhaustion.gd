@@ -42,6 +42,16 @@ func raise_floor(amount: float) -> void:
 	_level = maxf(_level, _floor)
 
 
+func to_save() -> Dictionary:
+	return {"level": _level, "floor": _floor}
+
+
+## Takes Exhaustion and its floor from a save, each held to MOST, and never below the floor.
+func restore(reader: SaveReader) -> void:
+	_floor = minf(MOST, reader.number("floor"))
+	_level = clampf(reader.number("level"), _floor, MOST)
+
+
 func slows_work() -> bool:
 	return _level > _tuning.slow_exhaustion
 

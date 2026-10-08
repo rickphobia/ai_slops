@@ -238,5 +238,5 @@ func test_a_rest_waits_offline_like_the_shift() -> void:
 
 	farm.resume_offline(100.0)
 
-	assert_eq(farm.rest_seconds_left(), FastTuning.REST_HOUR_SECONDS)
+	assert_eq(farm.rest_hour().seconds_left, FastTuning.REST_HOUR_SECONDS)
 	assert_eq(farm.worker().activity, WorkerView.Activity.RESTING)

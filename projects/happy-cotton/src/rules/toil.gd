@@ -37,6 +37,24 @@ func rested() -> void:
 	_laps_this_run = _exhaustion.laps_before_breath()
 
 
+func to_save() -> Dictionary:
+	return {
+		"on_generator": _on_generator,
+		"run_since_breath": _run_since_breath,
+		"breath_left": _breath_left,
+		"laps_this_run": _laps_this_run,
+	}
+
+
+## Takes his place and run from a save. The run and breath are held to what the tuning table
+## allows now, in case it shortened them since the save was written.
+func restore(reader: SaveReader) -> void:
+	_on_generator = reader.flag("on_generator")
+	_laps_this_run = reader.whole("laps_this_run", 1)
+	_run_since_breath = minf(reader.number("run_since_breath"), _run_seconds())
+	_breath_left = minf(reader.number("breath_left"), _tuning.breath_seconds)
+
+
 func is_running() -> bool:
 	return _on_generator and _breath_left <= 0.0
 
