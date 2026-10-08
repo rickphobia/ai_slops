@@ -14,3 +14,5 @@ study_session_cap_seconds = 2400.0
 lap_seconds = 4.0
 laps_before_breath = 6.0
 breath_seconds = 6.0
+offline_growth_rate = 0.25
+offline_cap_seconds = 604800.0

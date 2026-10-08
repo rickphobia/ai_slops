@@ -224,5 +224,6 @@ func test_every_key_the_rules_emit_is_listed() -> void:
 		Farm.QUOTA_MISSED_REPEATEDLY,
 		Farm.STUDY_SESSION_STARTED,
 		Farm.STUDY_SESSION_ENDED,
+		Farm.AWAY_SUMMARY,
 	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)
