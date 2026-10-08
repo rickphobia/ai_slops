@@ -77,12 +77,38 @@ A ripe crop that died because nobody picked it in time (8 hours, online or offli
 _Avoid_: dead, rotten, spoiled
 
 **Negligence**:
-The App's record of a Withered crop. It is punished more severely than a missed Quota.
+The App's record of a crop lost to Withering or eaten by Bollworms. It is punished more severely than a missed Quota.
 _Avoid_: penalty, fine, mistake
 
 **Farm Level**:
 How far the Farm has grown. It belongs to the state, not the Worker, and each new level raises the Quota.
 _Avoid_: player level, XP, rank
+
+### Nature
+
+**Disaster**:
+A Sandstorm or a Heatwave that strikes during a Shift, after a warning from The App. The App never lowers the Quota for one.
+_Avoid_: weather, event, hazard
+
+**Sandstorm**:
+A Disaster that turns the sky orange and slows the crops' growth while it lasts.
+_Avoid_: dust storm, storm
+
+**Heatwave**:
+A Disaster that makes every lap on the Generator tire the Worker faster while it lasts.
+_Avoid_: heat, hot spell
+
+**Bollworm**:
+The real cotton pest that appears on growing Plots. Left too long, Bollworms eat the crop, and The App logs it as Negligence.
+_Avoid_: worm (alone), bug, pest
+
+**Fertiliser**:
+A supply bought in The App's store and spread on a Seedling so the crop grows faster. It is used up, and its price rises every Shift.
+_Avoid_: boost, plant food, booster
+
+**Pesticide**:
+A supply bought in The App's store and sprayed on a Plot to keep Bollworms off its crop.
+_Avoid_: spray (as a noun), poison, bug killer
 
 ### The Worker's body
 
