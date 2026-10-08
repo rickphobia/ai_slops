@@ -16,3 +16,6 @@ laps_before_breath = 6.0
 breath_seconds = 6.0
 offline_growth_rate = 0.25
 offline_cap_seconds = 604800.0
+wither_seconds = 28800.0
+negligence_labour_points = 10.0
+negligence_study_session_seconds = 3600.0

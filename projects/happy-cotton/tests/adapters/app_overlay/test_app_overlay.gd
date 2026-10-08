@@ -58,6 +58,14 @@ func test_a_study_session_shows_the_room_and_its_time_left() -> void:
 	assert_has(_label_texts(), "Study Session  ·  5:00 left")
 
 
+func test_the_room_covers_the_whole_screen() -> void:
+	_overlay.show_study_session(10.0)
+	await wait_process_frames(1)
+
+	var room: StudyRoom = _overlay.find_children("*", "StudyRoom", true, false)[0]
+	assert_eq(room.size, room.get_viewport_rect().size, "a 0x0 room draws nothing")
+
+
 func test_the_room_goes_away_when_the_study_session_ends() -> void:
 	_overlay.show_study_session(10.0)
 

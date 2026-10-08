@@ -56,12 +56,15 @@ func _process(delta: float) -> void:
 	_show_farm()
 
 
-## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
-## whether that happens, and a plant or pick that happens brings the Worker back to the
-## field; an unripe plot shows its time left instead.
+## A tap on an empty plot plants it, on a Withered one clears it, and on any other plot it
+## tries to pick. The rules decide whether that happens, and a command that happens brings the
+## Worker back to the field; an unripe plot shows its time left instead.
 func _on_plot_tapped(index: int) -> void:
-	if _farm.plot(index).stage == PlotView.Stage.EMPTY:
+	var stage := _farm.plot(index).stage
+	if stage == PlotView.Stage.EMPTY:
 		_log_command("plant", index, _farm.plant(index))
+	elif stage == PlotView.Stage.WITHERED:
+		_log_command("clear", index, _farm.clear(index))
 	else:
 		var result := _farm.pick(index)
 		_log_command("pick", index, result)
@@ -101,6 +104,7 @@ func _resume_offline(seconds: float) -> void:
 	var resumed := {
 		"seconds": report.seconds_counted,
 		"ripened": report.ripened,
+		"withered": report.withered,
 		"study_seconds_served": report.study_seconds_served,
 	}
 	GameLog.info("offline resume", resumed)
@@ -122,8 +126,8 @@ func _show_worker() -> void:
 	_field.show_worker(view)
 
 
-## Passes the rules' App messages to the Mascot, celebrates a met Quota, logs Quota checks and
-## Study Sessions, and refreshes the bar and the Study Session room.
+## Passes the rules' App messages to the Mascot, celebrates a met Quota, logs Quota checks,
+## Negligence and Study Sessions, and refreshes the bar and the Study Session room.
 ## A Shift's end and the next Shift's start arrive together, so the Mascot says all of a
 ## frame's lines at once; otherwise the praise would be replaced before anyone could read it.
 func _show_app() -> void:
@@ -153,6 +157,8 @@ func _log_message(message: AppMessage) -> void:
 		GameLog.info("study session started", message.values)
 	elif message.key == Farm.STUDY_SESSION_ENDED:
 		GameLog.info("study session ended", message.values)
+	elif message.key == Farm.NEGLIGENCE_LOGGED:
+		GameLog.info("negligence logged", message.values)
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:

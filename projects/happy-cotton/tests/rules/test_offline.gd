@@ -99,7 +99,7 @@ func test_coming_back_gives_an_away_summary_of_what_ripened() -> void:
 	var away_minutes := ceili(_offline_for(FastTuning.GROW_SECONDS) / 60.0)
 	assert_eq(
 		summary.values,
-		{"minutes": away_minutes, "ripened": 1, "study_minutes": 0},
+		{"minutes": away_minutes, "ripened": 1, "withered": 0, "study_minutes": 0},
 		"plots 0 and 1 were already ripe; only plot 2 ripened while away"
 	)
 

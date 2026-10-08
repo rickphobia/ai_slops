@@ -7,7 +7,10 @@ extends RefCounted
 ## doubles, capped at 50: 20, 40, 50, 50. On the Generator a lap takes 10 seconds and the
 ## Worker runs 10 laps (100 seconds, longer than a crop takes) before he stops to breathe for 5.
 ## Offline, crops grow at half speed (60 seconds offline to ripen) and one return counts at
-## most 1000 seconds.
+## most 1000 seconds. Each Withered plot docks 8 Labour Points, and Negligence starts an
+## 80-second Study Session, longer than the 50-second cap for missed Quotas.
+## In table() ripe cotton takes far longer to Wither than any test plays, so tests about other
+## rules never meet it; withering_table() makes it Wither after 50 seconds.
 
 const GROW_SECONDS := 30.0
 const SHIFT_SECONDS := 100.0
@@ -21,6 +24,10 @@ const LAPS_BEFORE_BREATH := 10
 const BREATH_SECONDS := 5.0
 const OFFLINE_GROWTH_RATE := 0.5
 const OFFLINE_CAP_SECONDS := 1000.0
+const WITHER_SECONDS := 50.0
+const SLOW_WITHER_SECONDS := 1000000.0
+const NEGLIGENCE_LABOUR_POINTS := 8
+const NEGLIGENCE_STUDY_SESSION_SECONDS := 80.0
 
 
 static func table() -> Tuning:
@@ -37,4 +44,14 @@ static func table() -> Tuning:
 	tuning.breath_seconds = BREATH_SECONDS
 	tuning.offline_growth_rate = OFFLINE_GROWTH_RATE
 	tuning.offline_cap_seconds = OFFLINE_CAP_SECONDS
+	tuning.wither_seconds = SLOW_WITHER_SECONDS
+	tuning.negligence_labour_points = NEGLIGENCE_LABOUR_POINTS
+	tuning.negligence_study_session_seconds = NEGLIGENCE_STUDY_SESSION_SECONDS
+	return tuning
+
+
+## The test table with ripe cotton Withering after WITHER_SECONDS.
+static func withering_table() -> Tuning:
+	var tuning := table()
+	tuning.wither_seconds = WITHER_SECONDS
 	return tuning

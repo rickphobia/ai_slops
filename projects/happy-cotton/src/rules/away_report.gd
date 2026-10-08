@@ -16,10 +16,14 @@ var seconds_counted: float:
 var clock_problem: StringName:
 	get:
 		return _clock_problem
-## Plots that ripened while away.
+## Plots that ripened while away, even if they then Withered.
 var ripened: int:
 	get:
 		return _ripened
+## Plots that Withered while away.
+var withered: int:
+	get:
+		return _withered
 ## Seconds of Study Session served while away.
 var study_seconds_served: float:
 	get:
@@ -29,14 +33,21 @@ var _seconds_away: float
 var _seconds_counted: float
 var _clock_problem: StringName
 var _ripened: int
+var _withered: int
 var _study_seconds_served: float
 
 
 func _init(
-	away: float, counted: float, problem: StringName, ripened_plots: int, study_served: float
+	away: float,
+	counted: float,
+	problem: StringName,
+	ripened_plots: int,
+	withered_plots: int,
+	study_served: float
 ) -> void:
 	_seconds_away = away
 	_seconds_counted = counted
 	_clock_problem = problem
 	_ripened = ripened_plots
+	_withered = withered_plots
 	_study_seconds_served = study_served

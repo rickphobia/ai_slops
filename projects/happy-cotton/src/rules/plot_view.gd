@@ -3,12 +3,13 @@ extends RefCounted
 ## A read-only snapshot of one plot, for the field and The App to show. Changing the Farm
 ## never changes a view already handed out; ask the Farm for a new one.
 
-enum Stage { EMPTY, SEEDLING, FLOWERING, BOLL, RIPE }
+## WITHERED: ripe cotton left unpicked too long; it must be cleared before replanting.
+enum Stage { EMPTY, SEEDLING, FLOWERING, BOLL, RIPE, WITHERED }
 
 var stage: Stage:
 	get:
 		return _stage
-## Seconds of play until the cotton is ripe; 0 when ripe or empty.
+## Seconds of play until the cotton is ripe; 0 when ripe, Withered or empty.
 var seconds_left: float:
 	get:
 		return _seconds_left

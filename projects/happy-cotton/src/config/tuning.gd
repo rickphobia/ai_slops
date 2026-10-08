@@ -19,10 +19,17 @@ const LIMITS: Dictionary = {
 	"breath_seconds": [0.5, 600.0],
 	"offline_growth_rate": [0.01, 1.0],
 	"offline_cap_seconds": [60.0, 2592000.0],
+	"wither_seconds": [1.0, 2592000.0],
+	"negligence_labour_points": [0.0, 10000.0],
+	"negligence_study_session_seconds": [1.0, 604800.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = [
-	"first_quota", "quota_rise", "labour_points_per_pick", "laps_before_breath"
+	"first_quota",
+	"quota_rise",
+	"labour_points_per_pick",
+	"laps_before_breath",
+	"negligence_labour_points",
 ]
 
 ## How long a planted plot takes to ripen, in seconds of real time.
@@ -55,6 +62,14 @@ const WHOLE_NUMBERS: Array[String] = [
 ## The most offline time one return counts, in seconds. More is cut to this, so one bad
 ## timestamp can't move the Farm on by years.
 @export var offline_cap_seconds: float = NAN
+## How long ripe cotton can wait to be picked before it Withers, in seconds counted outside
+## Study Sessions, online or offline.
+@export var wither_seconds: float = NAN
+## Labour Points docked for each Withered plot. The balance never goes below zero.
+@export var negligence_labour_points: float = NAN
+## How long the Study Session for Negligence lasts. It must be longer than the cap for a missed
+## Quota, so Negligence is always punished more severely.
+@export var negligence_study_session_seconds: float = NAN
 
 
 static func load_file(path: String) -> Tuning:
@@ -83,4 +98,12 @@ func problems() -> Array[String]:
 	if study_session_cap_seconds < study_session_seconds:
 		var cap_problem := "study_session_cap_seconds is %s, but it must be at least %s"
 		found.append(cap_problem % [study_session_cap_seconds, study_session_seconds])
+	if negligence_study_session_seconds <= study_session_cap_seconds:
+		var negligence_problem := (
+			"negligence_study_session_seconds is %s, but it must be longer than"
+			+ " study_session_cap_seconds (%s)"
+		)
+		found.append(
+			negligence_problem % [negligence_study_session_seconds, study_session_cap_seconds]
+		)
 	return found

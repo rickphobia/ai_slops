@@ -20,7 +20,7 @@ var _time_left: Label
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_time_left = Label.new()
 	_time_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_time_left.add_theme_font_size_override("font_size", FONT_SIZE)

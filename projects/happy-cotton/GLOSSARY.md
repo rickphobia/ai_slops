@@ -73,7 +73,7 @@ Telling the state about a Co-worker, rewarded with Labour Points. The App calls 
 _Avoid_: snitch, inform
 
 **Withered**:
-A crop that died because nobody tended it while the game was closed too long.
+A ripe crop that died because nobody picked it in time (8 hours, online or offline, not counting Study Sessions). A Withered plot must be cleared before it can be planted again.
 _Avoid_: dead, rotten, spoiled
 
 **Negligence**:

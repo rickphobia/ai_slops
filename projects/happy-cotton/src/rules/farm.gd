@@ -11,13 +11,17 @@ extends RefCounted
 ## after a set number of laps he stops to breathe and growth halts until he runs again.
 ## Planting or picking brings him back to the field, and so does a Study Session. Offline
 ## time (the game closed or its tab hidden) grows crops at a slower rate with no Generator and
-## serves the Study Session, but the Shift waits. Later tickets add Exhaustion here.
+## serves the Study Session, but the Shift waits. Ripe cotton left unpicked too long, counted
+## outside Study Sessions, Withers; each Withered plot is Negligence, which docks Labour Points
+## and starts a Study Session longer than a missed Quota's. Later tickets add Exhaustion here.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
 const NOT_RIPE := &"not_ripe"
 const NOTHING_PLANTED := &"nothing_planted"
 const IN_STUDY_SESSION := &"in_study_session"
+const WITHERED := &"withered"
+const NOT_WITHERED := &"not_withered"
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -32,13 +36,17 @@ const QUOTA_MET := &"quota_met"
 const QUOTA_MISSED := &"quota_missed"
 const QUOTA_MISSED_AGAIN := &"quota_missed_again"
 const QUOTA_MISSED_REPEATEDLY := &"quota_missed_repeatedly"
-## A Study Session began: values seconds, minutes (rounded up), in_a_row (1 for the first
-## since the last met Quota).
+## A Study Session began: values seconds, minutes (rounded up), in_a_row (Quotas missed in a
+## row so far: 1 for the first since the last met Quota, unchanged by Negligence).
 const STUDY_SESSION_STARTED := &"study_session_started"
 ## A Study Session ended: values in_a_row.
 const STUDY_SESSION_ENDED := &"study_session_ended"
+## Plots Withered at the same moment: values plots (how many), points (Labour Points docked).
+## A Study Session for the Negligence follows at once.
+const NEGLIGENCE_LOGGED := &"negligence_logged"
 ## The Worker came back from offline time: values minutes (away, rounded up), ripened (plots
-## that ripened while away), study_minutes (Study Session served while away, rounded up).
+## that ripened while away, even if they then Withered), withered (plots that Withered while
+## away), study_minutes (Study Session served while away, rounded up).
 const AWAY_SUMMARY := &"away_summary"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
@@ -49,23 +57,14 @@ const MESSAGE_KEYS: Array[StringName] = [
 	QUOTA_MISSED_REPEATEDLY,
 	STUDY_SESSION_STARTED,
 	STUDY_SESSION_ENDED,
+	NEGLIGENCE_LOGGED,
 	AWAY_SUMMARY,
 ]
 ## The Quota-missed key for the first, second and every later miss in a row.
 const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
 
-## The stages a crop passes through before it is ripe, each an equal share of the grow time.
-const GROWING: Array[PlotView.Stage] = [
-	PlotView.Stage.SEEDLING,
-	PlotView.Stage.FLOWERING,
-	PlotView.Stage.BOLL,
-]
-## Marks a plot with nothing planted in _grown.
-const EMPTY := -1.0
-
 var _tuning: Tuning
-## Seconds of growth per plot, capped at the grow time; EMPTY when nothing is planted.
-var _grown: Array[float] = []
+var _crops: Crops
 var _shift_number := 1
 ## Seconds of online play into the current Shift.
 var _shift_elapsed := 0.0
@@ -86,19 +85,20 @@ var _breath_left := 0.0
 
 func _init(tuning: Tuning, plot_count: int) -> void:
 	_tuning = tuning
-	_grown.resize(plot_count)
-	_grown.fill(EMPTY)
+	_crops = Crops.new(tuning.grow_seconds, tuning.wither_seconds, plot_count)
 	_start_shift()
 
 
 func plant(index: int) -> CommandResult:
 	if in_study_session():
 		return CommandResult.refused(IN_STUDY_SESSION)
-	if not _exists(index):
+	if not _crops.exists(index):
 		return CommandResult.refused(NO_SUCH_PLOT)
-	if _grown[index] != EMPTY:
+	if _crops.is_withered(index):
+		return CommandResult.refused(WITHERED)
+	if not _crops.is_empty(index):
 		return CommandResult.refused(NOT_EMPTY)
-	_grown[index] = 0.0
+	_crops.plant(index)
 	_on_generator = false
 	return CommandResult.done()
 
@@ -106,15 +106,30 @@ func plant(index: int) -> CommandResult:
 func pick(index: int) -> CommandResult:
 	if in_study_session():
 		return CommandResult.refused(IN_STUDY_SESSION)
-	if not _exists(index):
+	if not _crops.exists(index):
 		return CommandResult.refused(NO_SUCH_PLOT)
-	if _grown[index] == EMPTY:
+	if _crops.is_empty(index):
 		return CommandResult.refused(NOTHING_PLANTED)
-	if _grown[index] < _tuning.grow_seconds:
+	if _crops.is_withered(index):
+		return CommandResult.refused(WITHERED)
+	if not _crops.is_ripe(index):
 		return CommandResult.refused(NOT_RIPE)
-	_grown[index] = EMPTY
+	_crops.empty(index)
 	_picked += 1
 	_labour_points += roundi(_tuning.labour_points_per_pick)
+	_on_generator = false
+	return CommandResult.done()
+
+
+## Empties a Withered plot so it can be planted again. Like planting, it is field work.
+func clear(index: int) -> CommandResult:
+	if in_study_session():
+		return CommandResult.refused(IN_STUDY_SESSION)
+	if not _crops.exists(index):
+		return CommandResult.refused(NO_SUCH_PLOT)
+	if not _crops.is_withered(index):
+		return CommandResult.refused(NOT_WITHERED)
+	_crops.empty(index)
 	_on_generator = false
 	return CommandResult.done()
 
@@ -132,21 +147,26 @@ func run_generator() -> CommandResult:
 ## in one, and the Shift's otherwise; crops grow only while he runs on the Generator.
 func advance(seconds: float) -> void:
 	var remaining := seconds
-	# One long step can cover several Shifts, Study Sessions, runs and breaths; each ends in
-	# turn.
+	# One long step can cover several Shifts, Study Sessions, runs, breaths and Witherings;
+	# each ends in turn.
 	while remaining > 0.0:
 		if in_study_session():
 			remaining -= _serve_study_session(remaining)
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
+			var growth_rate := 1.0 if worker().activity == WorkerView.Activity.RUNNING else 0.0
 			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
+			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
 			_toil(worked)
+			var withered := _crops.tend(worked, growth_rate)
 			remaining -= worked
 			if worked >= shift_left:
 				_shift_elapsed = 0.0
 				_end_shift()
 			else:
 				_shift_elapsed += worked
+			# After the Shift's end, so a missed Quota's shorter Study Session can't replace it.
+			_log_negligence(withered)
 
 
 ## Moves the Farm on by some seconds offline: crops grow at the offline rate whatever the
@@ -160,35 +180,45 @@ func resume_offline(seconds: float) -> AwayReport:
 		problem = NEGATIVE_OFFLINE_TIME
 	elif seconds > _tuning.offline_cap_seconds:
 		problem = OFFLINE_TIME_CAPPED
-	var ripe_before := _ripe_count()
-	_grow(counted * _tuning.offline_growth_rate)
-	var study_served := _serve_study_session(counted)
-	var ripened := _ripe_count() - ripe_before
+	var rate := _tuning.offline_growth_rate
+	var ripe_before := _crops.ripe_count()
+	var study_served := 0.0
+	var withered := 0
+	var remaining := counted
+	# The Study Session comes first; ripe cotton ages towards Withering only after it.
+	while remaining > 0.0:
+		if in_study_session():
+			var served := _serve_study_session(remaining)
+			_crops.grow(served, rate)
+			study_served += served
+			remaining -= served
+		else:
+			var step := minf(remaining, _crops.seconds_until_wither(rate))
+			var withered_plots := _crops.tend(step, rate)
+			withered += withered_plots.size()
+			_log_negligence(withered_plots)
+			remaining -= step
+	# Withered plots are no longer ripe, and nothing else stops being ripe while away.
+	var ripened := _crops.ripe_count() - ripe_before + withered
 	if counted > 0.0:
 		var values := {
 			"minutes": ceili(counted / 60.0),
 			"ripened": ripened,
+			"withered": withered,
 			"study_minutes": ceili(study_served / 60.0),
 		}
 		_messages.append(AppMessage.new(AWAY_SUMMARY, values))
-	return AwayReport.new(seconds, counted, problem, ripened, study_served)
+	return AwayReport.new(seconds, counted, problem, ripened, withered, study_served)
 
 
 ## The plot at index; it must exist.
 func plot(index: int) -> PlotView:
-	var grown := _grown[index]
-	if grown == EMPTY:
-		return PlotView.new(PlotView.Stage.EMPTY, 0.0)
-	var grow_seconds := _tuning.grow_seconds
-	if grown >= grow_seconds:
-		return PlotView.new(PlotView.Stage.RIPE, 0.0)
-	var stage_index := floori(grown * GROWING.size() / grow_seconds)
-	return PlotView.new(GROWING[stage_index], grow_seconds - grown)
+	return _crops.view(index)
 
 
 func plots() -> Array[PlotView]:
 	var views: Array[PlotView] = []
-	for index in _grown.size():
+	for index in _crops.count():
 		views.append(plot(index))
 	return views
 
@@ -253,9 +283,28 @@ func _end_shift() -> void:
 ## Doubles for each miss in a row, up to the cap.
 func _start_study_session() -> void:
 	var doublings := _misses_in_a_row - 1
-	_study_left = minf(
-		_tuning.study_session_seconds * pow(2.0, doublings), _tuning.study_session_cap_seconds
+	_begin_study_session(
+		minf(_tuning.study_session_seconds * pow(2.0, doublings), _tuning.study_session_cap_seconds)
 	)
+
+
+## Logs the plots that Withered at one moment as Negligence: docks Labour Points for each, never
+## below zero, and starts the Negligence Study Session. Plots Withering together share one.
+func _log_negligence(withered_plots: Array[int]) -> void:
+	if withered_plots.is_empty():
+		return
+	var docked := mini(
+		_labour_points, withered_plots.size() * roundi(_tuning.negligence_labour_points)
+	)
+	_labour_points -= docked
+	var values := {"plots": withered_plots.size(), "points": docked}
+	_messages.append(AppMessage.new(NEGLIGENCE_LOGGED, values))
+	_begin_study_session(maxf(_study_left, _tuning.negligence_study_session_seconds))
+	_on_generator = false
+
+
+func _begin_study_session(seconds: float) -> void:
+	_study_left = seconds
 	var values := {
 		"seconds": _study_left,
 		"minutes": ceili(_study_left / 60.0),
@@ -299,30 +348,16 @@ func _seconds_until_toil_turns() -> float:
 	return _run_seconds() - _run_since_breath
 
 
-## Some seconds of the Worker's time outside a Study Session, never past the next turn.
+## Some seconds of the Worker's time outside a Study Session, never past the next turn. The
+## crops' growth for them is the caller's.
 func _toil(seconds: float) -> void:
 	if not _on_generator:
 		return
 	if _breath_left > 0.0:
 		_breath_left = 0.0 if seconds >= _breath_left else _breath_left - seconds
 		return
-	_grow(seconds)
 	if seconds >= _run_seconds() - _run_since_breath:
 		_run_since_breath = 0.0
 		_breath_left = _tuning.breath_seconds
 	else:
 		_run_since_breath += seconds
-
-
-func _grow(seconds: float) -> void:
-	for index in _grown.size():
-		if _grown[index] != EMPTY:
-			_grown[index] = minf(_grown[index] + seconds, _tuning.grow_seconds)
-
-
-func _ripe_count() -> int:
-	return _grown.count(_tuning.grow_seconds)
-
-
-func _exists(index: int) -> bool:
-	return index >= 0 and index < _grown.size()
