@@ -1,3 +1,6 @@
+# gdlint: disable=max-public-methods
+# Farm is the one seam the game and the tests drive (see the specs), so every command and view
+# is public here; the work itself is delegated to Crops, Toil, Exhaustion, Ledger and Store.
 class_name Farm
 extends RefCounted
 ## The Farm rules: the plots and the cotton growing in them. No scene tree, clock or file
@@ -20,6 +23,8 @@ extends RefCounted
 ## breathe. Labour Points buy a rest hour, which takes him off the Generator and lowers
 ## Exhaustion towards a floor that rises every Shift. A missed Quota takes the rest hour away
 ## for the next Shift. Offline time recovers Exhaustion slowly, never below the floor.
+## The store (see Store) sells Upgrades tier by tier: a Generator tier makes each second of
+## running grow more cotton at once, and raises the Quota from the next Shift on.
 ## to_save() gives the whole Farm as plain data and restore() takes it back, so a restored Farm
 ## plays on exactly as the saved one would have.
 
@@ -35,20 +40,29 @@ const WORKER_BUSY := &"worker_busy"
 const RESTING := &"resting"
 const REST_HOUR_TAKEN_AWAY := &"rest_hour_taken_away"
 const NOT_ENOUGH_LABOUR_POINTS := &"not_enough_labour_points"
+## The Upgrade has no tier left to buy.
+const FULLY_UPGRADED := &"fully_upgraded"
 ## The Privileges buy_privilege() sells.
 const REST_HOUR := &"rest_hour"
 ## buy_privilege() was given a Privilege the Farm does not sell.
 const NO_SUCH_PRIVILEGE := &"no_such_privilege"
-## Every reason buying the rest hour can refuse with; the App text table explains each.
-const REST_HOUR_REFUSALS: Array[StringName] = [
+## The Upgrades buy_upgrade() sells.
+const GENERATOR := &"generator"
+## buy_upgrade() was given an Upgrade the Farm does not sell.
+const NO_SUCH_UPGRADE := &"no_such_upgrade"
+## Every reason a store item can be refused with; the App text table explains each.
+const STORE_REFUSALS: Array[StringName] = [
 	IN_STUDY_SESSION,
 	REST_HOUR_TAKEN_AWAY,
 	RESTING,
 	NOT_ENOUGH_LABOUR_POINTS,
+	FULLY_UPGRADED,
 ]
 
 ## The save format to_save() writes and restore() reads. Raise it when the format changes.
-const SAVE_VERSION := 1
+## Version 2 added the store; a version 1 save restores with no Upgrades.
+const SAVE_VERSION := 2
+const SAVE_VERSIONS_READ: Array[int] = [1, SAVE_VERSION]
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -82,6 +96,9 @@ const REST_STARTED := &"rest_started"
 const REST_ENDED := &"rest_ended"
 ## An exhausted pick dropped its cotton: nothing counted, nothing earned.
 const COTTON_DROPPED := &"cotton_dropped"
+## A Generator tier was bought: values tier (from 1), price, multiplier (growth against no
+## Upgrade), quota_rise (from the next Shift).
+const GENERATOR_UPGRADED := &"generator_upgraded"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -96,6 +113,7 @@ const MESSAGE_KEYS: Array[StringName] = [
 	REST_STARTED,
 	REST_ENDED,
 	COTTON_DROPPED,
+	GENERATOR_UPGRADED,
 ]
 ## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
 ## Worker stopped to breathe.
@@ -115,6 +133,9 @@ var _shift_elapsed := 0.0
 ## Cotton picked this Shift. Starts from zero each Shift: a surplus carries no credit.
 var _picked := 0
 var _ledger := Ledger.new()
+var _store: Store
+## The Quota rise of the Upgrades bought before this Shift began; later ones wait for the next.
+var _shift_upgrade_rise := 0
 ## Seconds left in the current Study Session; 0 when the Worker is on the field.
 var _study_left := 0.0
 ## Quotas missed since the last met one; it sets the next Study Session's length.
@@ -140,6 +161,7 @@ func _init(tuning: Tuning, plot_count: int, roll: Callable = Callable()) -> void
 	_crops = Crops.new(tuning.grow_seconds, tuning.wither_seconds, plot_count)
 	_exhaustion = Exhaustion.new(tuning)
 	_toil = Toil.new(tuning, _exhaustion)
+	_store = Store.new(tuning.generator_tiers)
 	if roll.is_valid():
 		_roll = roll
 	else:
@@ -211,6 +233,34 @@ func run_generator() -> CommandResult:
 	return CommandResult.done()
 
 
+## Buys the next tier of an Upgrade with Labour Points. The only one so far is GENERATOR. It
+## works at once; its Quota rise counts from the next Shift.
+func buy_upgrade(upgrade: StringName) -> CommandResult:
+	if upgrade != GENERATOR:
+		return CommandResult.refused(NO_SUCH_UPGRADE)
+	var refusal := _generator_refusal()
+	if refusal != &"":
+		return CommandResult.refused(refusal)
+	var tier := _store.next_generator_tier()
+	var price := roundi(tier.price)
+	_ledger.spend(price)
+	_store.buy_generator_tier()
+	var values := {
+		"tier": _store.generator_tier(),
+		"price": price,
+		"multiplier": tier.growth_multiplier,
+		"quota_rise": roundi(tier.quota_rise),
+	}
+	_messages.append(AppMessage.new(GENERATOR_UPGRADED, values))
+	return CommandResult.done()
+
+
+## Only the debug wiring calls this, so players can never use it: it adds Labour Points
+## without work, to reach the store's dearer items quickly.
+func debug_add_labour_points(points: int) -> void:
+	_ledger.earn(points)
+
+
 ## Buys a Privilege with Labour Points. The only one so far is REST_HOUR.
 func buy_privilege(privilege: StringName) -> CommandResult:
 	if privilege == REST_HOUR:
@@ -221,15 +271,10 @@ func buy_privilege(privilege: StringName) -> CommandResult:
 ## The rest hour, the first Privilege: it costs Labour Points and takes the Worker off the
 ## Generator, lowering his Exhaustion towards its floor while the Shift counts on.
 func _buy_rest_hour() -> CommandResult:
-	if in_study_session():
-		return CommandResult.refused(IN_STUDY_SESSION)
-	if _rest_taken_away:
-		return CommandResult.refused(REST_HOUR_TAKEN_AWAY)
-	if _resting():
-		return CommandResult.refused(RESTING)
+	var refusal := _rest_hour_refusal()
+	if refusal != &"":
+		return CommandResult.refused(refusal)
 	var price := _rest_hour_price()
-	if not _ledger.can_afford(price):
-		return CommandResult.refused(NOT_ENOUGH_LABOUR_POINTS)
 	_ledger.spend(price)
 	_rest_left = _tuning.rest_hour_seconds
 	_toil.bring_back()
@@ -254,7 +299,7 @@ func advance(seconds: float) -> Array[StringName]:
 			remaining -= _serve_study_session(remaining)
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
-			var growth_rate := 1.0 if _toil.is_running() else 0.0
+			var growth_rate := _store.growth_multiplier() if _toil.is_running() else 0.0
 			var worked := minf(minf(remaining, shift_left), _toil.seconds_until_turn())
 			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
 			worked = minf(worked, _rest_left if _resting() else INF)
@@ -337,6 +382,8 @@ func to_save() -> Dictionary:
 		"crops": _crops.to_save(),
 		"exhaustion": _exhaustion.to_save(),
 		"toil": _toil.to_save(),
+		"store": _store.to_save(),
+		"shift_upgrade_quota_rise": _shift_upgrade_rise,
 	}
 
 
@@ -344,12 +391,13 @@ func to_save() -> Dictionary:
 ## wrong with it, one line per bad field; then the Farm is left as it was. On success the
 ## pending App messages are dropped: they described the Farm before the restore.
 ## Timers are held to what the tuning table allows now, in case it shortened them since the
-## save was written; the save's other numbers are taken as they are.
+## save was written; the save's other numbers are taken as they are. A version 1 save, from
+## before the store, restores with no Upgrades.
 func restore(save: Dictionary) -> Array[String]:
 	var reader := SaveReader.new(save)
 	var version := reader.whole("version")
-	if reader.problems().is_empty() and version != SAVE_VERSION:
-		return ["version %d is not the version this game reads (%d)" % [version, SAVE_VERSION]]
+	if reader.problems().is_empty() and version not in SAVE_VERSIONS_READ:
+		return ["version %d is not a version this game reads (%s)" % [version, SAVE_VERSIONS_READ]]
 	var crops := Crops.new(_tuning.grow_seconds, _tuning.wither_seconds, _crops.count())
 	crops.restore(reader.section("crops"))
 	var exhaustion := Exhaustion.new(_tuning)
@@ -365,6 +413,11 @@ func restore(save: Dictionary) -> Array[String]:
 	var busy_left := minf(reader.number("busy_left"), _tuning.slow_action_seconds)
 	var rest_left := minf(reader.number("rest_left"), _tuning.rest_hour_seconds)
 	var rest_taken_away := reader.flag("rest_taken_away")
+	var store := Store.new(_tuning.generator_tiers)
+	var shift_upgrade_rise := 0
+	if version >= 2:
+		store.restore(reader.section("store"))
+		shift_upgrade_rise = reader.whole("shift_upgrade_quota_rise")
 	if not reader.problems().is_empty():
 		return reader.problems()
 	_crops = crops
@@ -379,13 +432,15 @@ func restore(save: Dictionary) -> Array[String]:
 	_busy_left = busy_left
 	_rest_left = rest_left
 	_rest_taken_away = rest_taken_away
+	_store = store
+	_shift_upgrade_rise = shift_upgrade_rise
 	_messages = []
 	return []
 
 
 ## The plot at index; it must exist.
 func plot(index: int) -> PlotView:
-	return _crops.view(index)
+	return _crops.view(index, _store.growth_multiplier())
 
 
 func plots() -> Array[PlotView]:
@@ -446,6 +501,57 @@ func _rest_hour_price() -> int:
 	return roundi(_tuning.rest_hour_price)
 
 
+## Why the rest hour can't be bought right now, or &"" when it can.
+func _rest_hour_refusal() -> StringName:
+	if in_study_session():
+		return IN_STUDY_SESSION
+	if _rest_taken_away:
+		return REST_HOUR_TAKEN_AWAY
+	if _resting():
+		return RESTING
+	if not _ledger.can_afford(_rest_hour_price()):
+		return NOT_ENOUGH_LABOUR_POINTS
+	return &""
+
+
+## Why the next Generator tier can't be bought right now, or &"" when it can.
+func _generator_refusal() -> StringName:
+	var tier := _store.next_generator_tier()
+	if tier == null:
+		return FULLY_UPGRADED
+	if in_study_session():
+		return IN_STUDY_SESSION
+	if not _ledger.can_afford(roundi(tier.price)):
+		return NOT_ENOUGH_LABOUR_POINTS
+	return &""
+
+
+## Everything the store sells, Upgrades first, each with its price and why it can't be bought
+## right now.
+func store() -> Array[StoreItemView]:
+	var next := _store.next_generator_tier()
+	var current := _store.growth_multiplier()
+	var tiers := Vector2i(_store.generator_tier(), _store.generator_top_tier())
+	var generator: StoreItemView
+	if next == null:
+		generator = StoreItemView.upgrade(
+			GENERATOR, tiers, 0, Vector2(current, current), 0, _generator_refusal()
+		)
+	else:
+		generator = StoreItemView.upgrade(
+			GENERATOR,
+			tiers,
+			roundi(next.price),
+			Vector2(next.growth_multiplier, current),
+			roundi(next.quota_rise),
+			_generator_refusal()
+		)
+	var rest_hour := StoreItemView.new(
+		REST_HOUR, StoreItemView.Kind.PRIVILEGE, _rest_hour_price(), _rest_hour_refusal()
+	)
+	return [generator, rest_hour]
+
+
 ## What The App should say since the last call, oldest first. Empties the queue.
 func take_messages() -> Array[AppMessage]:
 	var taken := _messages
@@ -453,13 +559,16 @@ func take_messages() -> Array[AppMessage]:
 	return taken
 
 
-## The Quota only ever rises: a fixed step every Shift, met or missed.
+## The Quota only ever rises: a fixed step every Shift, met or missed, and the rise of every
+## Upgrade bought before this Shift began.
 func _quota() -> int:
-	return roundi(_tuning.first_quota + (_shift_number - 1) * _tuning.quota_rise)
+	var rise := (_shift_number - 1) * _tuning.quota_rise
+	return roundi(_tuning.first_quota + rise) + _shift_upgrade_rise
 
 
 func _start_shift() -> void:
 	_picked = 0
+	_shift_upgrade_rise = _store.quota_rise()
 	_messages.append(AppMessage.new(SHIFT_STARTED, {"shift": _shift_number, "quota": _quota()}))
 
 

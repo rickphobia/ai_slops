@@ -60,8 +60,16 @@ func _seen(farm: Farm) -> Dictionary:
 		"exhaustion_floor": farm.exhaustion_floor(),
 		"study_session_seconds_left": farm.study_session_seconds_left(),
 		"rest": [farm.rest_hour().seconds_left, farm.rest_hour().taken_away],
+		"store": _store_seen(farm),
 		"messages": messages,
 	}
+
+
+func _store_seen(farm: Farm) -> Array:
+	var items := []
+	for item in farm.store():
+		items.append([item.id, item.tier, item.price, item.quota_rise, item.refusal])
+	return items
 
 
 ## The same play on both Farms, checking after each step that a player sees the same.
@@ -182,3 +190,58 @@ func test_timers_longer_than_the_tuning_now_allows_are_cut_to_it() -> void:
 	farm.restore(save)
 
 	assert_eq(farm.rest_hour().seconds_left, FastTuning.REST_HOUR_SECONDS)
+
+
+func test_upgrade_tiers_and_the_quota_rise_still_to_come_survive_a_save() -> void:
+	var saved := _played_farm()
+	saved.debug_add_labour_points(FastTuning.GENERATOR_PRICES[0])
+	saved.buy_upgrade(Farm.GENERATOR)
+	saved.take_messages()
+	var restored := _new_farm()
+
+	var problems := restored.restore(_through_json(saved.to_save()))
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(_seen(restored), _seen(saved), "as restored")
+	assert_eq(restored.store()[0].tier, 1)
+	var end_shift := func(farm: Farm) -> void: farm.advance(farm.shift().seconds_left)
+	_assert_play_alike(saved, restored, end_shift, "through the end of the Shift")
+	var quota := (
+		FastTuning.FIRST_QUOTA + FastTuning.QUOTA_RISE + FastTuning.GENERATOR_QUOTA_RISES[0]
+	)
+	assert_eq(restored.shift().quota, quota, "the rise counts from the next Shift")
+
+
+func test_a_save_from_before_the_store_restores_with_no_upgrades() -> void:
+	var saved := _played_farm()
+	var save := _through_json(saved.to_save())
+	save["version"] = 1
+	save.erase("store")
+	save.erase("shift_upgrade_quota_rise")
+	var restored := _new_farm()
+
+	var problems := restored.restore(save)
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(_seen(restored), _seen(saved))
+	assert_eq(restored.store()[0].tier, 0)
+
+
+func test_a_save_of_this_version_without_the_store_is_damaged() -> void:
+	var save := _through_json(_played_farm().to_save())
+	save.erase("store")
+
+	var problems := _new_farm().restore(save)
+
+	assert_eq(problems, ["store is missing or not a section"] as Array[String])
+
+
+func test_upgrade_tiers_beyond_the_tuning_now_are_cut_to_its_top_tier() -> void:
+	var save := _through_json(_played_farm().to_save())
+	var store: Dictionary = save["store"]
+	store["generator_tier"] = 9
+	var farm := _new_farm()
+
+	farm.restore(save)
+
+	assert_eq(farm.store()[0].tier, FastTuning.GENERATOR_PRICES.size())

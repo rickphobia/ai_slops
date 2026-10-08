@@ -1,9 +1,10 @@
 extends Node
 ## Entry scene: logs which build is running, loads and checks the tuning table, continues the
-## saved Farm (or starts a new one) and wires it to the field, The App and the wall clock, and
-## adds the Skip time control in debug mode. It puts the player's settings into effect and
-## opens the Settings screen from The App. It autosaves after every command, at the end of
-## each Shift, when the player leaves (see LeavingWatch), and every AUTOSAVE_SECONDS of play.
+## saved Farm (or starts a new one) and wires it to the field, The App and its store, and the
+## wall clock, and adds the debug controls (Skip time, +100 Labour Points) in debug mode. It
+## puts the player's settings into effect and opens the Settings screen from The App. It
+## autosaves after every command, at the end of each Shift, when the player leaves (see
+## LeavingWatch), and every AUTOSAVE_SECONDS of play.
 ## Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
@@ -49,9 +50,10 @@ func _ready() -> void:
 	add_child(leaving_watch)
 	if DebugMode.is_on():
 		GameLog.info("debug mode on")
-		var skip_time := SkipTimePanel.new()
-		skip_time.skip_requested.connect(_on_skip_requested)
-		add_child(skip_time)
+		var debug_panel := DebugPanel.new()
+		debug_panel.skip_requested.connect(_on_skip_requested)
+		debug_panel.labour_points_requested.connect(_on_labour_points_requested)
+		add_child(debug_panel)
 
 
 ## Adds the Settings screen above The App, hidden until The App's Settings button opens it.
@@ -130,7 +132,8 @@ func _begin(farm: Farm) -> void:
 	_farm = farm
 	_field.plot_tapped.connect(_on_plot_tapped)
 	_field.generator_tapped.connect(_on_generator_tapped)
-	_app.rest_hour_pressed.connect(_on_rest_hour_pressed)
+	_app.upgrade_pressed.connect(_on_upgrade_pressed)
+	_app.privilege_pressed.connect(_on_privilege_pressed)
 	_save("start")
 	_show_farm()
 
@@ -190,15 +193,50 @@ func _on_generator_tapped() -> void:
 	_show_worker()
 
 
-## The rules decide whether he gets his rest hour; a refusal is explained by the Mascot.
-func _on_rest_hour_pressed() -> void:
-	var result := _farm.buy_privilege(Farm.REST_HOUR)
+## The rules decide whether he gets the next tier. A purchase closes the store, so the Mascot's
+## celebration shows; a refusal is explained by the Mascot.
+func _on_upgrade_pressed(id: StringName) -> void:
+	var item := _store_item(id)
+	var result := _farm.buy_upgrade(id)
 	if result.happened:
-		GameLog.info("rest hour bought", {"labour_points_left": _farm.labour_points()})
+		GameLog.info("upgrade bought", {"item": id, "tier": item.tier + 1, "price": item.price})
+	_after_purchase(id, item, result)
+
+
+## The rules decide whether he gets the Privilege, as for an Upgrade.
+func _on_privilege_pressed(id: StringName) -> void:
+	var item := _store_item(id)
+	var result := _farm.buy_privilege(id)
+	if result.happened:
+		GameLog.info("privilege bought", {"item": id, "price": item.price})
+	_after_purchase(id, item, result)
+
+
+func _after_purchase(id: StringName, item: StoreItemView, result: CommandResult) -> void:
+	if result.happened:
+		_app.store_panel().hide()
 	else:
-		GameLog.debug("rest hour refused", {"reason": result.reason})
-		var values := {"price": _farm.rest_hour().price, "points": _farm.labour_points()}
-		_app.say(AppText.render_rest_hour_refusal(result.reason, values))
+		GameLog.debug("purchase refused", {"item": id, "reason": result.reason})
+		var values := {"price": item.price if item else 0, "points": _farm.labour_points()}
+		_app.say(AppText.render_store_refusal(result.reason, values))
+	_save("command")
+	_show_farm()
+
+
+## The store's item with this id, or null if the store doesn't sell it.
+func _store_item(id: StringName) -> StoreItemView:
+	for item in _farm.store():
+		if item.id == id:
+			return item
+	return null
+
+
+## Debug mode only: Labour Points without work, to try the store's dearer items.
+func _on_labour_points_requested(points: int) -> void:
+	if _farm == null:
+		return
+	GameLog.info("debug labour points added", {"points": points})
+	_farm.debug_add_labour_points(points)
 	_save("command")
 	_show_farm()
 
@@ -271,7 +309,7 @@ func _show_app() -> void:
 	var lines: Array[String] = []
 	for message in _farm.take_messages():
 		_log_message(message)
-		if message.key == Farm.QUOTA_MET:
+		if message.key in [Farm.QUOTA_MET, Farm.GENERATOR_UPGRADED, Farm.REST_STARTED]:
 			_app.celebrate()
 		var text := AppText.render(message)
 		if text.is_empty():
@@ -283,8 +321,12 @@ func _show_app() -> void:
 	_app.show_shift(_farm.shift(), _farm.labour_points())
 	_app.show_study_session(_farm.study_session_seconds_left())
 	_app.show_exhaustion(_farm.exhaustion())
-	var rest_hour := _farm.rest_hour()
-	_app.show_rest_hour(rest_hour.price, rest_hour.seconds_left, rest_hour.taken_away)
+	_app.show_resting(_farm.rest_hour().seconds_left)
+	var store := _farm.store()
+	_app.show_store(store, _farm.labour_points())
+	for item in store:
+		if item.id == Farm.GENERATOR:
+			_field.show_generator_tier(item.tier)
 
 
 func _log_message(message: AppMessage) -> void:

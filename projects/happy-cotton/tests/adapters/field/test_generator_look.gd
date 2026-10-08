@@ -90,3 +90,27 @@ func test_the_fence_leaves_a_gate_on_the_left_side_only() -> void:
 			gate_sections += 1
 	assert_eq(gate_sections, 0)
 	assert_eq(left_sections, 4, "one of the left side's 5 sections is the gate")
+
+
+func test_with_no_upgrade_the_machine_is_plain_and_has_no_coils() -> void:
+	assert_eq(_generator.tier(), 0)
+	assert_eq(_generator.machine_colour(), Generator.PUMP_COLOUR)
+	assert_eq(_generator.find_children("Coil*", "MeshInstance3D", false, false).size(), 0)
+
+
+func test_each_upgrade_tier_repaints_the_machine_and_adds_a_coil() -> void:
+	_generator.show_tier(1)
+	var first_colour := _generator.machine_colour()
+	assert_ne(first_colour, Generator.PUMP_COLOUR)
+	assert_eq(_generator.find_children("Coil*", "MeshInstance3D", false, false).size(), 1)
+
+	_generator.show_tier(2)
+
+	assert_ne(_generator.machine_colour(), first_colour)
+	assert_eq(_generator.find_children("Coil*", "MeshInstance3D", false, false).size(), 2)
+
+
+func test_a_tier_past_the_colour_list_keeps_the_last_colour() -> void:
+	_generator.show_tier(Generator.TIER_COLOURS.size() + 2)
+
+	assert_eq(_generator.machine_colour(), Generator.TIER_COLOURS[-1])

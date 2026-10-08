@@ -1,6 +1,6 @@
 extends GutTest
 ## Debug mode is on only with ?debug=1 in the page URL or --debug after `--` on the command
-## line, and its Skip time control asks for +1 hour or +8 hours.
+## line, and its panel asks for +1 hour or +8 hours of Skip time, or +100 Labour Points.
 
 
 func test_debug_mode_is_off_by_default() -> void:
@@ -23,14 +23,16 @@ func test_debug_on_the_command_line_turns_it_on() -> void:
 	assert_false(DebugMode.asked_for("", PackedStringArray(["--verbose"])))
 
 
-func test_skip_time_offers_one_hour_and_eight_hours() -> void:
-	var panel: SkipTimePanel = add_child_autofree(SkipTimePanel.new())
+func test_the_panel_offers_one_hour_eight_hours_and_a_hundred_labour_points() -> void:
+	var panel: DebugPanel = add_child_autofree(DebugPanel.new())
 	watch_signals(panel)
 	var buttons := panel.find_children("*", "Button", true, false)
-	assert_eq(buttons.size(), 2)
+	assert_eq(buttons.size(), 3)
 
 	for node in buttons:
 		(node as Button).pressed.emit()
 
 	assert_signal_emitted_with_parameters(panel, "skip_requested", [3600.0], 0)
 	assert_signal_emitted_with_parameters(panel, "skip_requested", [28800.0], 1)
+	assert_signal_emitted_with_parameters(panel, "labour_points_requested", [100])
+	assert_eq((buttons[2] as Button).text, "+100 Labour Points")

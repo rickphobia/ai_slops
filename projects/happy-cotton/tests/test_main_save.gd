@@ -154,7 +154,8 @@ func test_a_save_the_rules_cannot_read_is_kept_aside_with_its_problems_logged() 
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 
-	assert_true(_has_line_starting('[warning] save unreadable problem="version 2'))
+	var problem := '[warning] save unreadable problem="version %d' % (Farm.SAVE_VERSION + 1)
+	assert_true(_has_line_starting(problem))
 	assert_eq(main.find_children("*", "DamagedSaveNotice", true, false).size(), 1)
 	assert_true(FileAccess.file_exists(SAVE_FOLDER + "/save.damaged-1.json"))
 

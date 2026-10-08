@@ -157,6 +157,11 @@ func show_worker(view: WorkerView) -> void:
 	_haze.environment.adjustment_saturation = saturation_for(view.exhaustion, _full_saturation)
 
 
+## Shows the Generator Upgrade tier owned, from 0 (none).
+func show_generator_tier(tier: int) -> void:
+	_generator.show_tier(tier)
+
+
 ## Reduced motion: the Worker neither slumps nor staggers, the power tiles' trail goes dark
 ## at once instead of fading and the lamp doesn't pulse. The colour drain stays, as it only
 ## follows his Exhaustion and never moves on screen; so do the sounds.

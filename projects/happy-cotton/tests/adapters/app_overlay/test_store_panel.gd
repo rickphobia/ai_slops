@@ -1,0 +1,112 @@
+extends GutTest
+## The store panel shows what the store sells: Upgrades and Privileges in their own sections,
+## each with its price, an Upgrade's tier, effect and Quota rise, the reason an item can't be
+## bought, and a fully upgraded item marked as such. Its buttons only ask.
+
+var _panel: StorePanel
+
+
+func before_each() -> void:
+	_panel = StorePanel.new()
+	add_child_autofree(_panel)
+
+
+func _generator(tier: int, refusal: StringName) -> StoreItemView:
+	if tier >= 3:
+		return StoreItemView.upgrade(
+			Farm.GENERATOR, Vector2i(3, 3), 0, Vector2(2.0, 2.0), 0, refusal
+		)
+	return StoreItemView.upgrade(
+		Farm.GENERATOR, Vector2i(tier, 3), 40, Vector2(1.25, 1.0), 3, refusal
+	)
+
+
+func _rest_hour(refusal: StringName) -> StoreItemView:
+	return StoreItemView.new(Farm.REST_HOUR, StoreItemView.Kind.PRIVILEGE, 20, refusal)
+
+
+func _show(items: Array[StoreItemView], points := 100) -> void:
+	_panel.show_items(items, points)
+
+
+func _texts(row: StoreRow) -> Array[String]:
+	var texts: Array[String] = []
+	for node in row.find_children("*", "Label", true, false):
+		var label := node as Label
+		if label.visible:
+			texts.append(label.text)
+	return texts
+
+
+func test_an_upgrade_shows_its_tier_price_effect_and_quota_rise() -> void:
+	_show([_generator(0, &"")])
+
+	var row := _panel.row(Farm.GENERATOR)
+	var texts := _texts(row)
+	assert_has(texts, "Generator  ·  Tier 0 of 3")
+	assert_true(texts.any(func(text: String) -> bool: return text.contains("×1.25")), "effect")
+	assert_true(texts.any(func(text: String) -> bool: return text.contains("(now ×1)")), "now")
+	assert_true(texts.any(func(text: String) -> bool: return text.contains("Quota +3")), "rise")
+	assert_eq(row.button().text, "40 Labour Points")
+	assert_false(row.button().disabled)
+
+
+func test_upgrades_and_privileges_go_in_their_own_sections() -> void:
+	_show([_generator(0, &""), _rest_hour(&"")])
+
+	var upgrade_row := _panel.row(Farm.GENERATOR)
+	var privilege_row := _panel.row(Farm.REST_HOUR)
+	assert_ne(upgrade_row.get_parent(), privilege_row.get_parent())
+
+
+func test_an_item_that_cannot_be_bought_says_why_and_its_button_is_off() -> void:
+	_show([_rest_hour(Farm.NOT_ENOUGH_LABOUR_POINTS)], 7)
+
+	var row := _panel.row(Farm.REST_HOUR)
+	assert_eq(row.refusal_text(), "This costs 20 Labour Points. You have 7. Keep picking!")
+	assert_true(row.button().disabled)
+
+
+func test_each_refusal_reads_as_the_app_says_it() -> void:
+	for reason: StringName in [Farm.IN_STUDY_SESSION, Farm.REST_HOUR_TAKEN_AWAY, Farm.RESTING]:
+		_show([_rest_hour(reason)])
+
+		assert_eq(
+			_panel.row(Farm.REST_HOUR).refusal_text(),
+			AppText.render_store_refusal(reason, {}),
+			String(reason)
+		)
+
+
+func test_a_fully_upgraded_item_is_marked_on_its_button_with_no_quota_rise() -> void:
+	_show([_generator(3, Farm.FULLY_UPGRADED)])
+
+	var row := _panel.row(Farm.GENERATOR)
+	assert_eq(row.button().text, "Fully upgraded!")
+	assert_true(row.button().disabled)
+	assert_eq(row.refusal_text(), "")
+	assert_false(_texts(row).any(func(text: String) -> bool: return text.contains("Quota +")))
+
+
+func test_rows_are_made_once_and_updated_after() -> void:
+	assert_true(_panel.show_items([_rest_hour(&"")], 100), "the first show adds rows")
+
+	var added := _panel.show_items([_rest_hour(Farm.RESTING)], 100)
+
+	assert_false(added)
+	assert_true(_panel.row(Farm.REST_HOUR).button().disabled)
+
+
+func test_a_buy_button_asks_for_its_upgrade() -> void:
+	_show([_generator(1, &"")])
+	watch_signals(_panel)
+
+	_panel.row(Farm.GENERATOR).button().pressed.emit()
+
+	assert_signal_emitted_with_parameters(_panel, "upgrade_pressed", [Farm.GENERATOR])
+
+
+func test_close_hides_the_store() -> void:
+	(_panel.find_child("CloseButton", true, false) as Button).pressed.emit()
+
+	assert_false(_panel.visible)

@@ -104,7 +104,8 @@ func test_fewest_laps_above_the_laps_at_no_exhaustion_is_reported() -> void:
 
 
 func test_every_missing_field_is_reported_at_once() -> void:
-	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size())
+	# Every flat value, and the Generator's tier list, which is empty.
+	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size() + 1)
 
 
 func test_a_file_that_does_not_exist_loads_as_nothing() -> void:

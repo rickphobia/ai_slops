@@ -80,40 +80,14 @@ func test_it_shows_the_exhaustion_as_a_whole_percentage() -> void:
 	assert_has(_label_texts(), "Exhaustion 43%")
 
 
-func test_the_rest_hour_button_shows_its_price() -> void:
-	_overlay.show_rest_hour(20, 0.0)
-
-	assert_eq(_overlay.rest_hour_button().text, "Rest hour  ·  20 Labour Points")
-
-
-func test_while_he_rests_the_button_shows_the_time_left() -> void:
-	_overlay.show_rest_hour(20, 45.0)
-
-	assert_eq(_overlay.rest_hour_button().text, "Resting  ·  0:45 left")
-
-
-func test_after_a_missed_quota_the_button_says_the_rest_hour_is_suspended() -> void:
-	_overlay.show_rest_hour(20, 0.0, true)
-
-	assert_eq(_overlay.rest_hour_button().text, "Rest hour  ·  suspended this Shift")
-
-
-func test_pressing_the_rest_hour_button_is_reported() -> void:
-	watch_signals(_overlay)
-
-	_overlay.rest_hour_button().pressed.emit()
-
-	assert_signal_emitted(_overlay, "rest_hour_pressed")
-
-
 func test_the_app_dims_while_the_generator_stands_still_and_brightens_when_it_turns() -> void:
 	_overlay.show_powered(false)
-	assert_eq(_overlay.rest_hour_button().modulate, AppOverlay.UNPOWERED)
+	assert_eq(_overlay.store_button().modulate, AppOverlay.UNPOWERED)
 	assert_false(_overlay.is_powered())
 
 	_overlay.show_powered(true)
 
-	assert_eq(_overlay.rest_hour_button().modulate, Color.WHITE)
+	assert_eq(_overlay.store_button().modulate, Color.WHITE)
 	assert_true(_overlay.is_powered())
 
 

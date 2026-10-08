@@ -15,6 +15,9 @@ const SAMPLE_VALUES := {
 	"study_minutes": 4,
 	"exhaustion_recovered": 6,
 	"price": 20,
+	"tier": 2,
+	"multiplier": 1.25,
+	"quota_rise": 3,
 }
 
 
@@ -41,21 +44,35 @@ func test_every_line_fills_all_its_slots_from_the_rules_values() -> void:
 		assert_false(text.contains("{"), "%s has no unfilled slot: %s" % [key, text])
 
 
-func test_every_rest_hour_refusal_has_text_citing_only_registered_sources() -> void:
+func test_every_store_refusal_has_text_citing_only_registered_sources() -> void:
 	var problems := AppText.problems(
-		Farm.REST_HOUR_REFUSALS, AppText.rest_hour_refusals(), AppText.DOUBLESPEAK, _register_ids()
+		Farm.STORE_REFUSALS, AppText.store_refusals(), AppText.DOUBLESPEAK, _register_ids()
 	)
 
 	assert_eq(problems, [] as Array[String])
 
 
 func test_a_refusal_fills_in_the_price_and_points() -> void:
-	var text := AppText.render_rest_hour_refusal(
+	var text := AppText.render_store_refusal(
 		Farm.NOT_ENOUGH_LABOUR_POINTS, {"price": 20, "points": 7}
 	)
 
 	assert_string_contains(text, "20 Labour Points")
 	assert_string_contains(text, "You have 7")
+
+
+func test_every_store_item_has_a_name_and_a_blurb() -> void:
+	for item in Farm.new(FastTuning.table(), 1).store():
+		assert_true(AppText.STORE_NAMES.has(item.id), "%s has a name" % item.id)
+		assert_true(AppText.STORE_BLURBS.has(item.id), "%s has a blurb" % item.id)
+
+
+func test_a_multiplier_reads_without_needless_decimals() -> void:
+	var values := {"tier": 1, "price": 10, "multiplier": 2.0, "quota_rise": 1}
+	var text := AppText.render(AppMessage.new(Farm.GENERATOR_UPGRADED, values))
+
+	assert_string_contains(text, "×2 the cotton")
+	assert_eq(AppText.fill("×{effect}", {"effect": 1.25}), "×1.25")
 
 
 func test_render_fills_in_the_values() -> void:

@@ -18,6 +18,9 @@ extends RefCounted
 ## drops its cotton half the time. Laps before a breath fall from 10 at no Exhaustion to 2 at
 ## 100 (6 at 50). A rest hour costs 10 Labour Points and lasts 20 seconds, taking away 40
 ## Exhaustion (2 a second); an hour offline takes away 36 (0.01 a second).
+## The Generator has two Upgrade tiers: the first costs 10 Labour Points (two picks), doubles
+## growth per second of running and raises the Quota by 1; the second costs 20, triples growth
+## and raises the Quota by 2 more.
 
 const GROW_SECONDS := 30.0
 const SHIFT_SECONDS := 100.0
@@ -51,6 +54,9 @@ const REST_HOUR_PRICE := 10
 const REST_HOUR_SECONDS := 20.0
 const REST_HOUR_RECOVERY := 40.0
 const OFFLINE_RECOVERY_PER_HOUR := 36.0
+const GENERATOR_PRICES: Array[int] = [10, 20]
+const GENERATOR_MULTIPLIERS: Array[float] = [2.0, 3.0]
+const GENERATOR_QUOTA_RISES: Array[int] = [1, 2]
 
 
 static func table() -> Tuning:
@@ -84,6 +90,14 @@ static func table() -> Tuning:
 	tuning.rest_hour_seconds = REST_HOUR_SECONDS
 	tuning.rest_hour_recovery = REST_HOUR_RECOVERY
 	tuning.offline_recovery_per_hour = OFFLINE_RECOVERY_PER_HOUR
+	var tiers: Array[GeneratorTier] = []
+	for index in GENERATOR_PRICES.size():
+		tiers.append(
+			GeneratorTier.make(
+				GENERATOR_PRICES[index], GENERATOR_MULTIPLIERS[index], GENERATOR_QUOTA_RISES[index]
+			)
+		)
+	tuning.generator_tiers = tiers
 	return tuning
 
 
