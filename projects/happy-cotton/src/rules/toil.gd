@@ -23,6 +23,8 @@ var _run_since_breath := 0.0
 var _breath_left := 0.0
 ## Laps this run lasts, set when it starts.
 var _laps_this_run: int
+## Laps finished since take_laps_run() last emptied the count: the electricity Bill's laps.
+var _laps_run := 0
 
 
 func _init(tuning: Tuning, exhaustion: Exhaustion) -> void:
@@ -52,16 +54,27 @@ func to_save() -> Dictionary:
 		"run_since_breath": _run_since_breath,
 		"breath_left": _breath_left,
 		"laps_this_run": _laps_this_run,
+		"laps_run": _laps_run,
 	}
 
 
 ## Takes his place and run from a save. The run and breath are held to what the tuning table
-## allows now, in case it shortened them since the save was written.
-func restore(reader: SaveReader) -> void:
+## allows now, in case it shortened them since the save was written. A save from before the
+## Bills (`has_laps_run` false) restores with no laps counted.
+func restore(reader: SaveReader, has_laps_run: bool) -> void:
 	_on_generator = reader.flag("on_generator")
 	_laps_this_run = reader.whole("laps_this_run", 1)
 	_run_since_breath = minf(reader.number("run_since_breath"), _run_seconds())
 	_breath_left = minf(reader.number("breath_left"), _breath_seconds())
+	if has_laps_run:
+		_laps_run = reader.whole("laps_run")
+
+
+## The laps he has finished since the last call, and starts counting again from zero.
+func take_laps_run() -> int:
+	var laps := _laps_run
+	_laps_run = 0
+	return laps
 
 
 func is_running() -> bool:
@@ -114,12 +127,15 @@ func pass_time(seconds: float) -> StringName:
 		_breath_left -= seconds
 		return NO_EVENT
 	_exhaustion.add(_tuning.exhaustion_per_lap * seconds / _tuning.lap_seconds)
+	var laps_before := floori(_run_since_breath / _tuning.lap_seconds)
 	if seconds >= _run_seconds() - _run_since_breath:
+		_laps_run += _laps_this_run - laps_before
 		_run_since_breath = 0.0
 		_breath_left = _breath_seconds()
 		_laps_this_run = _exhaustion.laps_before_breath()
 	else:
 		_run_since_breath += seconds
+		_laps_run += floori(_run_since_breath / _tuning.lap_seconds) - laps_before
 	return NO_EVENT
 
 

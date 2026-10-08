@@ -56,6 +56,7 @@ func _seen(farm: Farm) -> Dictionary:
 		"plots": plots,
 		"shift": [shift.number, shift.quota, shift.picked, shift.seconds_left],
 		"labour_points": farm.labour_points(),
+		"debt": farm.debt(),
 		"worker": [worker.activity, worker.laps_left, worker.exhaustion],
 		"exhaustion_floor": farm.exhaustion_floor(),
 		"study_session_seconds_left": farm.study_session_seconds_left(),
@@ -296,3 +297,48 @@ func test_upgrade_tiers_beyond_the_tuning_now_are_cut_to_its_top_tier() -> void:
 	farm.restore(save)
 
 	assert_eq(farm.store()[0].tier, FastTuning.GENERATOR_PRICES.size())
+
+
+func test_debt_survives_a_save() -> void:
+	var saved := Farm.new(FastTuning.billing_table(), PLOTS)
+	saved.advance(FastTuning.SHIFT_SECONDS)
+	var restored := Farm.new(FastTuning.billing_table(), PLOTS)
+
+	var problems := restored.restore(_through_json(saved.to_save()))
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(restored.debt(), FastTuning.RENT_PER_SHIFT)
+	assert_eq(restored.labour_points(), 0)
+
+
+func test_a_save_from_before_the_bills_restores_with_nothing_earned_or_run_this_shift() -> void:
+	var saved := _played_farm()
+	var save := _through_json(saved.to_save())
+	save["version"] = 3
+	save.erase("shift_earned")
+	var toil: Dictionary = save["toil"]
+	var laps_before_save: int = toil["laps_run"]
+	toil.erase("laps_run")
+	var restored := _new_farm()
+
+	var problems := restored.restore(save)
+
+	assert_eq(problems, [] as Array[String])
+	var saved_slip := _end_shift_slip(saved)
+	var restored_slip := _end_shift_slip(restored)
+	var saved_laps: int = saved_slip["laps"]
+	var restored_laps: int = restored_slip["laps"]
+	var restored_earned: int = restored_slip["earned"]
+	assert_gt(laps_before_save, 0, "laps were run before the save")
+	assert_eq(restored_laps, saved_laps - laps_before_save, "only laps after the restore count")
+	assert_eq(restored_earned, 0)
+
+
+## Plays to the end of the Shift and returns the pay slip's values.
+func _end_shift_slip(farm: Farm) -> Dictionary:
+	farm.take_messages()
+	farm.advance(farm.shift().seconds_left)
+	for message in farm.take_messages():
+		if message.key == Farm.PAY_SLIP:
+			return message.values
+	return {}

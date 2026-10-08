@@ -52,6 +52,25 @@ func test_a_count_that_is_not_a_whole_number_is_reported() -> void:
 	assert_eq(tuning.problems(), expected)
 
 
+func test_rent_must_be_whole_but_electricity_per_lap_can_be_a_fraction() -> void:
+	var tuning := _good_table()
+	tuning.electricity_per_lap = 0.5
+	tuning.rent_per_shift = 2.5
+
+	var expected: Array[String] = ["rent_per_shift is 2.5, but it must be a whole number"]
+	assert_eq(tuning.problems(), expected)
+
+
+func test_a_bill_below_zero_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.rent_per_shift = -1.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "rent_per_shift")
+
+
 func test_a_quota_that_does_not_rise_is_reported() -> void:
 	var tuning := _good_table()
 	tuning.quota_rise = 0.0

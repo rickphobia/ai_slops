@@ -19,6 +19,14 @@ const SAMPLE_VALUES := {
 	"multiplier": 1.25,
 	"share": 0.5,
 	"quota_rise": 3,
+	"earned": 14,
+	"laps": 12,
+	"electricity": 6,
+	"electricity_covered": true,
+	"rent": 6,
+	"rent_covered": false,
+	"balance": -2,
+	"debt": 2,
 }
 
 

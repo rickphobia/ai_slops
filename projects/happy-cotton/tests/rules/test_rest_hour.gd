@@ -164,7 +164,7 @@ func test_a_missed_quota_takes_the_rest_hour_away_for_the_next_shift() -> void:
 	var result := _farm.buy_privilege(Farm.REST_HOUR)
 
 	assert_false(result.happened)
-	assert_eq(result.reason, Farm.REST_HOUR_TAKEN_AWAY)
+	assert_eq(result.reason, Farm.PRIVILEGES_TAKEN_AWAY)
 	assert_true(_farm.rest_hour().taken_away)
 	assert_eq(_farm.labour_points(), FastTuning.REST_HOUR_PRICE)
 

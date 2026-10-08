@@ -146,7 +146,7 @@ func test_the_rest_hour_shows_it_was_taken_away_after_a_missed_quota() -> void:
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 	_farm.advance(FastTuning.STUDY_SESSION_SECONDS)
 
-	assert_eq(_item(Farm.REST_HOUR).refusal, Farm.REST_HOUR_TAKEN_AWAY)
+	assert_eq(_item(Farm.REST_HOUR).refusal, Farm.PRIVILEGES_TAKEN_AWAY)
 
 
 func test_the_rest_hour_bought_from_the_store_is_a_privilege_purchase() -> void:

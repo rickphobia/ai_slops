@@ -89,7 +89,8 @@ func test_a_met_quota_is_praised_at_the_end_of_the_shift_and_not_before() -> voi
 	_farm.advance(1.0)
 
 	var messages := _farm.take_messages()
-	assert_eq(_keys(messages), [Farm.QUOTA_MET, Farm.SHIFT_STARTED] as Array[StringName])
+	var expected: Array[StringName] = [Farm.QUOTA_MET, Farm.PAY_SLIP, Farm.SHIFT_STARTED]
+	assert_eq(_keys(messages), expected)
 	assert_eq(messages[0].values, {"shift": 1, "picked": 3, "quota": 3})
 
 
@@ -101,7 +102,7 @@ func test_a_missed_quota_is_reported_at_the_end_of_the_shift() -> void:
 
 	var messages := _farm.take_messages()
 	var expected: Array[StringName] = [
-		Farm.QUOTA_MISSED, Farm.STUDY_SESSION_STARTED, Farm.SHIFT_STARTED
+		Farm.QUOTA_MISSED, Farm.STUDY_SESSION_STARTED, Farm.PAY_SLIP, Farm.SHIFT_STARTED
 	]
 	assert_eq(_keys(messages), expected)
 	assert_eq(messages[0].values, {"shift": 1, "picked": 2, "quota": 3})
@@ -138,14 +139,17 @@ func test_one_long_step_ends_every_shift_it_covers() -> void:
 	var expected: Array[StringName] = [
 		Farm.QUOTA_MISSED,
 		Farm.STUDY_SESSION_STARTED,
+		Farm.PAY_SLIP,
 		Farm.SHIFT_STARTED,
 		Farm.STUDY_SESSION_ENDED,
 		Farm.QUOTA_MISSED_AGAIN,
 		Farm.STUDY_SESSION_STARTED,
+		Farm.PAY_SLIP,
 		Farm.SHIFT_STARTED,
 		Farm.STUDY_SESSION_ENDED,
 		Farm.QUOTA_MISSED_REPEATEDLY,
 		Farm.STUDY_SESSION_STARTED,
+		Farm.PAY_SLIP,
 		Farm.SHIFT_STARTED,
 	]
 	assert_eq(_keys(_farm.take_messages()), expected)
@@ -231,5 +235,8 @@ func test_every_key_the_rules_emit_is_listed() -> void:
 		Farm.COTTON_DROPPED,
 		Farm.GENERATOR_UPGRADED,
 		Farm.TOOLS_UPGRADED,
+		Farm.PAY_SLIP,
+		Farm.FELL_INTO_DEBT,
+		Farm.DEBT_CLEARED,
 	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)

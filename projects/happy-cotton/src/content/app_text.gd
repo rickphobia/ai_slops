@@ -18,6 +18,17 @@ const DOUBLESPEAK: Dictionary[String, String] = {
 const QUOTA_BAR := "Quota {picked} / {quota}"
 const SHIFT_TIMER := "Shift {shift}  ·  {time} left"
 const LABOUR_POINTS := "{points} Labour Points"
+## Shown in red where the Labour Points usually are.
+const DEBT := "Debt {debt} Labour Points"
+## The pay slip card: a title, a row per line, and the button that puts it away. Each Bill is
+## worded as a gift from the state.
+const PAY_SLIP_TITLE := "Pay slip  ·  Shift {shift}"
+const PAY_SLIP_EARNED := "Earned this Shift: +{earned}"
+const PAY_SLIP_ELECTRICITY := "Electricity, {laps} laps: −{electricity}. Thanks for the power!"
+const PAY_SLIP_RENT := "Dormitory rent: −{rent}. A warm bed, kindly provided!"
+const PAY_SLIP_LEFT := "Yours to keep: {points} Labour Points"
+const PAY_SLIP_DEBT := "Owed to the Farm: {debt} Labour Points. We will settle it together!"
+const PAY_SLIP_CLOSE := "Thank you!"
 const STUDY_SESSION_TIMER := "Study Session  ·  {time} left"
 const EXHAUSTION := "Exhaustion {level}%"
 const RESTING := "Resting  ·  {time} left"
@@ -135,6 +146,24 @@ static func lines() -> Dictionary[StringName, AppLine]:
 				+ " rises by {quota_rise} from next Shift. Better tools, bigger dreams!"
 			)
 		),
+		Farm.PAY_SLIP:
+		AppLine.new(
+			"Pay day! Your Shift {shift} pay slip is here. Thank you for your contribution!"
+		),
+		Farm.FELL_INTO_DEBT:
+		AppLine.new(
+			(
+				"Your account is {debt} Labour Points in Debt. Don't worry: everything you earn"
+				+ " goes to settling it first. Privileges and Upgrades can wait!"
+			)
+		),
+		Farm.DEBT_CLEARED:
+		AppLine.new(
+			(
+				"Debt cleared! Your account is in good standing again, with {points} Labour"
+				+ " Points to spend. Keep up the grateful work!"
+			)
+		),
 	}
 
 
@@ -144,9 +173,11 @@ static func store_refusals() -> Dictionary[StringName, AppLine]:
 	return {
 		Farm.IN_STUDY_SESSION:
 		AppLine.new("The store is closed during Study Sessions. Learning comes first!"),
-		Farm.REST_HOUR_TAKEN_AWAY:
+		Farm.PRIVILEGES_TAKEN_AWAY:
 		AppLine.new("Privileges are suspended this Shift. Meet your Quota to earn them back!"),
 		Farm.RESTING: AppLine.new("You are already resting. Enjoy your Privilege!"),
+		Farm.IN_DEBT:
+		AppLine.new("Not while you are in Debt. Every Labour Point you earn settles it first!"),
 		Farm.NOT_ENOUGH_LABOUR_POINTS:
 		AppLine.new("This costs {price} Labour Points. You have {points}. Keep picking!"),
 		Farm.FULLY_UPGRADED: AppLine.new("Fully upgraded! The very best the Farm can give you."),
