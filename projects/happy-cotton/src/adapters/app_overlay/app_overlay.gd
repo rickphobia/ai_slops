@@ -1,11 +1,15 @@
 class_name AppOverlay
 extends CanvasLayer
 ## The App: the bright, state-issued overlay over the grim field. A top bar with the Quota bar,
-## the Shift's time left and Labour Points; the Mascot with a speech bubble at the bottom; and
-## confetti for a met Quota. During a Study Session the plain room covers the field, under the
-## bar and the Mascot. It shows what it is given and never decides anything. Nothing here
-## catches taps, so the field underneath still gets them (the rules refuse them in a Study
+## the Shift's time left, the Worker's Exhaustion and Labour Points; the Mascot with a speech
+## bubble at the bottom; the rest hour button with its price at the bottom right; and confetti
+## for a met Quota. During a Study Session the plain room covers the field, under the bar and
+## the Mascot. It shows what it is given and never decides anything. Only the rest hour button
+## catches taps, so the field underneath still gets the rest (the rules refuse them in a Study
 ## Session).
+
+## The rest hour button was pressed; the rules decide whether he gets it.
+signal rest_hour_pressed
 
 const BAR_COLOUR := Color(1.0, 0.42, 0.62)
 const BUBBLE_COLOUR := Color(1.0, 0.98, 0.9)
@@ -27,6 +31,8 @@ var _quota_bar: ProgressBar
 var _quota_label: Label
 var _shift_label: Label
 var _points_label: Label
+var _exhaustion_label: Label
+var _rest_hour_button: Button
 var _speech: Label
 var _bubble: PanelContainer
 var _confetti: CPUParticles2D
@@ -44,6 +50,8 @@ func _ready() -> void:
 	root.add_child(_study_room)
 	root.add_child(_build_top_bar())
 	root.add_child(_build_mascot_corner())
+	_rest_hour_button = _build_rest_hour_button()
+	root.add_child(_rest_hour_button)
 	_confetti = _build_confetti()
 	add_child(_confetti)
 
@@ -57,6 +65,23 @@ func show_shift(shift: ShiftView, labour_points: int) -> void:
 		{"shift": shift.number, "time": clock_text(shift.seconds_left)}
 	)
 	_points_label.text = AppText.LABOUR_POINTS.format({"points": labour_points})
+
+
+## Shows the Worker's Exhaustion, from 0 to Exhaustion.MOST, as a whole percentage.
+func show_exhaustion(level: float) -> void:
+	_exhaustion_label.text = AppText.EXHAUSTION.format({"level": roundi(level)})
+
+
+## Shows the rest hour's price, or how long the rest has left while he rests.
+func show_rest_hour(price: int, rest_seconds_left: float) -> void:
+	if rest_seconds_left > 0.0:
+		_rest_hour_button.text = AppText.RESTING.format({"time": clock_text(rest_seconds_left)})
+	else:
+		_rest_hour_button.text = AppText.REST_HOUR_BUTTON.format({"price": price})
+
+
+func rest_hour_button() -> Button:
+	return _rest_hour_button
 
 
 ## Shows the Study Session room with the time left while there is any; hides it at 0.
@@ -126,9 +151,26 @@ func _build_top_bar() -> Control:
 	_shift_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	row.add_child(_shift_label)
+	_exhaustion_label = _label(TEXT_ON_BAR)
+	row.add_child(_exhaustion_label)
 	_points_label = _label(TEXT_ON_BAR)
 	row.add_child(_points_label)
 	return bar
+
+
+func _build_rest_hour_button() -> Button:
+	var button := Button.new()
+	button.add_theme_font_size_override("font_size", FONT_SIZE)
+	for state: String in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, _rounded(BAR_COLOUR, 20))
+	button.add_theme_color_override("font_color", TEXT_ON_BAR)
+	button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE)
+	button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	button.offset_right = -MARGIN
+	button.offset_bottom = -MARGIN
+	button.pressed.connect(rest_hour_pressed.emit)
+	return button
 
 
 func _build_mascot_corner() -> Control:

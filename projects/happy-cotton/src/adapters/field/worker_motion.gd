@@ -2,10 +2,14 @@ class_name WorkerMotion
 extends RefCounted
 ## Moves the Worker model to match what the rules say he is doing: he walks out to the
 ## Generator and runs on it, slows on his last lap, staggers and stands bent over to breathe,
-## and walks back to his place beside the plots when he is sent to the field. Only the
-## Worker's own walk, run, stagger and idle animations are used; never a fighting one.
+## and walks back to his place beside the plots when he is sent to the field or to rest. As
+## Exhaustion rises he slumps forward and every move slows. Only the Worker's own walk, run,
+## stagger and idle animations are used; never a fighting one.
 
 const WALK_SPEED := 1.4
+## How far forward he leans, and how slowly his animations play, fully exhausted.
+const MOST_SLUMP_DEGREES := 14.0
+const SLOWEST_ANIMATION_SPEED := 0.6
 const STANDING := &"Idle_Neutral"
 const WALKING := &"Walk"
 const RUNNING := &"Run"
@@ -22,6 +26,8 @@ var _run_spot: Vector3
 var _run_facing: float
 var _activity := WorkerView.Activity.IN_FIELD
 var _laps_left := 0
+## 1 rested, down to SLOWEST_ANIMATION_SPEED spent: his walk and animations together.
+var _speed := 1.0
 
 
 ## `body` starts at his place beside the plots. `player` may be null if the model has none;
@@ -42,6 +48,7 @@ func _init(body: Node3D, player: AnimationPlayer, run_spot: Vector3, run_facing:
 ## Takes the rules' latest view of the Worker. A change is shown at once if he is already
 ## where it happens; otherwise when he gets there.
 func show(view: WorkerView) -> void:
+	_slump(view.exhaustion / Exhaustion.MOST)
 	if view.activity == _activity and view.laps_left == _laps_left:
 		return
 	var was_breathing := _activity == WorkerView.Activity.BREATHING
@@ -56,7 +63,7 @@ func update(delta: float) -> void:
 	if _arrived():
 		return
 	var to_target := _target() - _body.position
-	var step := WALK_SPEED * delta
+	var step := WALK_SPEED * _speed * delta
 	if step >= to_target.length():
 		_body.position = _target()
 		_settle(true)
@@ -70,7 +77,7 @@ func update(delta: float) -> void:
 ## is a new one, so he staggers into it.
 func _settle(starting_breath: bool) -> void:
 	match _activity:
-		WorkerView.Activity.IN_FIELD:
+		WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING:
 			_body.rotation.y = _home_facing
 			_play(STANDING)
 		WorkerView.Activity.RUNNING:
@@ -88,7 +95,16 @@ func _settle(starting_breath: bool) -> void:
 
 
 func _target() -> Vector3:
-	return _home if _activity == WorkerView.Activity.IN_FIELD else _run_spot
+	var at_home := _activity in [WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING]
+	return _home if at_home else _run_spot
+
+
+## Leans him forward and slows him in step with `share` of the most Exhaustion.
+func _slump(share: float) -> void:
+	_body.rotation.x = deg_to_rad(MOST_SLUMP_DEGREES) * share
+	_speed = lerpf(1.0, SLOWEST_ANIMATION_SPEED, share)
+	if _player != null:
+		_player.speed_scale = _speed
 
 
 func _arrived() -> bool:

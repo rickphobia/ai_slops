@@ -96,6 +96,33 @@ func test_he_walks_back_to_his_place_when_sent_to_the_field() -> void:
 	assert_eq(_player.current_animation, WorkerMotion.STANDING)
 
 
+func test_he_rests_standing_at_his_place() -> void:
+	_motion.show(_view(WorkerView.Activity.RUNNING))
+	_motion.update(WALK_THERE)
+
+	_motion.show(_view(WorkerView.Activity.RESTING))
+	_motion.update(WALK_THERE)
+
+	assert_eq(_body.position, HOME)
+	assert_eq(_player.current_animation, WorkerMotion.STANDING)
+
+
+func test_he_slumps_and_slows_as_exhaustion_rises() -> void:
+	_motion.show(WorkerView.new(WorkerView.Activity.IN_FIELD, 5, Exhaustion.MOST))
+
+	assert_almost_eq(_body.rotation.x, deg_to_rad(WorkerMotion.MOST_SLUMP_DEGREES), 0.001)
+	assert_almost_eq(_player.speed_scale, WorkerMotion.SLOWEST_ANIMATION_SPEED, 0.001)
+
+
+func test_rested_again_he_straightens_up() -> void:
+	_motion.show(WorkerView.new(WorkerView.Activity.IN_FIELD, 5, Exhaustion.MOST))
+
+	_motion.show(WorkerView.new(WorkerView.Activity.IN_FIELD, 5, 0.0))
+
+	assert_eq(_body.rotation.x, 0.0)
+	assert_eq(_player.speed_scale, 1.0)
+
+
 func test_he_never_plays_a_fighting_animation() -> void:
 	var used: Array[StringName] = [WorkerMotion.STAGGERING]
 	used.append_array(WorkerMotion.LOOPING)

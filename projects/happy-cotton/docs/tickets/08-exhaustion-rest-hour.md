@@ -4,19 +4,19 @@
 
 **Blocked by:** 05 (Grounded field look), 11 (Withering and Negligence), 14 (Run the Generator)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules, config/tuning, content/app-text, adapters/app-overlay, adapters/field
 
 **Effort:** medium
 
-- [ ] Plant and pick add Exhaustion; above one threshold actions take longer, above a higher one a pick can drop part of its cotton (randomness injected so tests are deterministic)
-- [ ] The Exhaustion floor rises at the end of every Shift and never falls
-- [ ] Buying a rest hour costs Labour Points, lowers Exhaustion towards the floor and never below it; refused with the reason when unaffordable or taken away
-- [ ] A missed Quota takes the rest hour away for the next Shift
-- [ ] GUT tests cover each of the above with time and randomness driven by the test
-- [ ] The overlay shows Exhaustion and the rest hour button with its price
-- [ ] The field drains of colour and the Worker slumps as Exhaustion rises
-- [ ] All Exhaustion numbers and the rest hour price come from the tuning table
-- [ ] Offline time recovers Exhaustion at the tuning rate, never below the floor, and the away summary says how much it recovered (stories 49, 66)
-- [ ] Running the Generator adds Exhaustion at its own tuning rate; the laps he manages before stopping to breathe fall as Exhaustion rises; the rest hour takes him off the Generator, so crops halt while he rests; with GUT tests
+- [x] Plant and pick add Exhaustion; above one threshold actions take longer, above a higher one a pick can drop part of its cotton (randomness injected so tests are deterministic)
+- [x] The Exhaustion floor rises at the end of every Shift and never falls
+- [x] Buying a rest hour costs Labour Points, lowers Exhaustion towards the floor and never below it; refused with the reason when unaffordable or taken away
+- [x] A missed Quota takes the rest hour away for the next Shift
+- [x] GUT tests cover each of the above with time and randomness driven by the test
+- [x] The overlay shows Exhaustion and the rest hour button with its price
+- [x] The field drains of colour and the Worker slumps as Exhaustion rises
+- [x] All Exhaustion numbers and the rest hour price come from the tuning table
+- [x] Offline time recovers Exhaustion at the tuning rate, never below the floor, and the away summary says how much it recovered (stories 49, 66)
+- [x] Running the Generator adds Exhaustion at its own tuning rate; the laps he manages before stopping to breathe fall as Exhaustion rises; the rest hour takes him off the Generator, so crops halt while he rests; with GUT tests

@@ -58,6 +58,19 @@ func test_tapping_a_growing_plot_is_refused_by_the_rules_as_not_ripe() -> void:
 	assert_eq(_lines, ['[debug] pick refused plot=0 reason=&"not_ripe"'] as Array[String])
 
 
+func test_a_rest_hour_he_cannot_afford_is_refused_and_the_mascot_says_why() -> void:
+	GameLog.minimum_level = GameLog.Level.DEBUG
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var app: AppOverlay = main.get_node("AppOverlay")
+
+	app.rest_hour_pressed.emit()
+
+	assert_has(_lines, '[debug] rest hour refused reason=&"not_enough_labour_points"')
+	assert_string_contains(app.speech(), "You have 0")
+	assert_string_contains(app.rest_hour_button().text, "Rest hour")
+
+
 func test_the_mascot_announces_the_first_shift_on_start() -> void:
 	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
 	await wait_process_frames(1)
@@ -147,7 +160,10 @@ func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary()
 	assert_has(_lines, "[info] skip time seconds=3600.0")
 	assert_has(
 		_lines,
-		"[info] offline resume seconds=3600.0 ripened=0 withered=0" + " study_seconds_served=0.0"
+		(
+			"[info] offline resume seconds=3600.0 ripened=0 withered=0"
+			+ " study_seconds_served=0.0 exhaustion_recovered=0.0"
+		)
 	)
 	assert_string_contains(app.speech(), "Welcome back!")
 
@@ -162,7 +178,11 @@ func test_ripe_cotton_skipped_past_the_wither_time_is_logged_as_negligence_and_c
 	field.plot_tapped.emit(0)
 	main.call("_on_skip_requested", 3600.0)
 	assert_has(
-		_lines, "[info] offline resume seconds=3600.0 ripened=1 withered=0 study_seconds_served=0.0"
+		_lines,
+		(
+			"[info] offline resume seconds=3600.0 ripened=1 withered=0 study_seconds_served=0.0"
+			+ " exhaustion_recovered=0.5"
+		)
 	)
 
 	main.call("_on_skip_requested", tuning.wither_seconds)
