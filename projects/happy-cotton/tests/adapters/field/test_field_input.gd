@@ -193,3 +193,22 @@ func test_a_tap_on_bare_ground_taps_nothing() -> void:
 	_mouse_button(MOUSE_BUTTON_LEFT, ground, false)
 	assert_eq(_generator_taps, 0)
 	assert_eq(_tapped, [] as Array[int])
+
+
+func test_dragging_can_bring_every_part_of_the_track_to_the_middle_of_the_view() -> void:
+	var track := _field.track()
+	var centre := Vector2(VIEW_SIZE) / 2.0
+	for eighth in 8:
+		var along := track.length() * eighth / 8.0
+		var outer_edge := (
+			track.point_at(along)
+			+ track.heading_at(along).cross(Vector3.UP) * (-_field.track_width / 2.0)
+		)
+		# Drag a little at a time, pulling the edge towards the middle of the screen.
+		for drag in 30:
+			var towards := (centre - _camera.unproject_position(outer_edge)).limit_length(150.0)
+			_mouse_button(MOUSE_BUTTON_LEFT, centre, true)
+			_mouse_drag(centre + towards)
+			_mouse_button(MOUSE_BUTTON_LEFT, centre + towards, false)
+		var on_screen := _camera.unproject_position(outer_edge)
+		assert_almost_eq(on_screen, centre, Vector2.ONE * 2.0, "track edge at %.1f m" % along)

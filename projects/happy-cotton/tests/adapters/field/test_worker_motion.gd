@@ -1,109 +1,175 @@
 extends GutTest
-## The Worker model follows the rules' view of him: out to the Generator to run, slowing on
-## his last lap, staggering into his breath, and back to his place in the field.
+## The Worker model follows the rules' view of him: out through the gate to the turnstile,
+## laps of the track in step with the lap clock, slowing on his last lap, staggering into his
+## breath at the turnstile, and back along the track and through the gate to his place.
 
 const WORKER_MODEL := preload("res://assets/quaternius-modular-men/farmer.glb")
-const HOME := Vector3(-5.0, 0.0, 2.0)
-const RUN_SPOT := Vector3(-7.0, 0.24, 2.0)
-const RUN_FACING := PI / 2.0
-## Long enough to walk from home to the Generator in one step.
-const WALK_THERE := 10.0
+const HOME := Vector3(-5.0, 0.0, 2.5)
+const GATE := Vector3(-5.5, 0.0, 3.0)
+const HOME_FACING := 0.5
+const LAP_SECONDS := 14.0
+## Small steps, like frames, so he keeps up with the clock as he does in play.
+const STEP := 1.0 / 30.0
+## Long enough to walk from his place to the turnstile.
+const WALK_THERE := 3.0
+const RUNNING := WorkerView.Activity.RUNNING
+const BREATHING := WorkerView.Activity.BREATHING
 
 var _body: Node3D
 var _player: AnimationPlayer
+var _track := TrackPath.new(Vector2(7.0, 5.0), 1.0, 3.0)
 var _motion: WorkerMotion
 
 
 func before_each() -> void:
 	_body = WORKER_MODEL.instantiate()
 	_body.position = HOME
+	_body.rotation.y = HOME_FACING
 	add_child_autofree(_body)
 	_player = _body.find_children("*", "AnimationPlayer", true, false)[0]
-	_motion = WorkerMotion.new(_body, _player, RUN_SPOT, RUN_FACING)
+	_motion = WorkerMotion.new(_body, _player, _track, GATE)
 
 
-func _view(activity: WorkerView.Activity, laps_left := 5) -> WorkerView:
-	return WorkerView.new(activity, laps_left)
+## Shows him one view, then moves him for some seconds in frame-sized steps.
+func _hold(view: WorkerView, seconds: float) -> void:
+	_motion.show(view)
+	for frame in ceili(seconds / STEP):
+		_motion.update(STEP)
+
+
+## Plays some seconds of him running, the lap clock going round once each LAP_SECONDS
+## starting from `from_progress`.
+func _run(seconds: float, from_progress := 0.0, laps_left := 5) -> void:
+	for frame in ceili(seconds / STEP):
+		var progress := fposmod(from_progress + (frame + 1) * STEP / LAP_SECONDS, 1.0)
+		_motion.show(WorkerView.new(RUNNING, laps_left, 0.0, progress))
+		_motion.update(STEP)
+
+
+func _walk_out(progress := 0.0) -> void:
+	_hold(WorkerView.new(RUNNING, 5, 0.0, progress), WALK_THERE)
+
+
+## The distance from him to the lap clock's place, `progress` of the way round.
+func _off_the_clock(progress: float) -> float:
+	return _body.position.distance_to(_track.point_at(progress * _track.length()))
 
 
 func test_he_stands_at_his_place_at_first() -> void:
 	assert_eq(_player.current_animation, WorkerMotion.STANDING)
 
 
-func test_he_walks_to_the_generator_then_runs_on_it() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING))
-
-	_motion.update(0.5)
+func test_he_walks_out_through_the_gate_to_the_turnstile() -> void:
+	_hold(WorkerView.new(RUNNING, 5), 0.5)
 	assert_eq(_player.current_animation, WorkerMotion.WALKING)
-	assert_almost_eq(_body.position.distance_to(HOME), WorkerMotion.WALK_SPEED * 0.5, 0.001)
+	assert_almost_eq(_body.position.distance_to(HOME), WorkerMotion.WALK_SPEED * 0.5, 0.05)
 
-	_motion.update(WALK_THERE)
-	assert_eq(_body.position, RUN_SPOT)
-	assert_almost_eq(_body.rotation.y, RUN_FACING, 0.001)
+	_hold(WorkerView.new(RUNNING, 5), WALK_THERE)
+
+	assert_almost_eq(_body.position, _track.point_at(0.0), Vector3.ONE * 0.001)
+
+
+func test_he_runs_laps_in_step_with_the_lap_clock() -> void:
+	_walk_out()
+
+	_run(LAP_SECONDS * 1.5)
+
 	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
+	assert_lt(_off_the_clock(0.5), 1.0)
 
 
-func test_he_slows_to_a_walk_on_his_last_lap() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING))
-	_motion.update(WALK_THERE)
+func test_he_pushes_through_the_turnstile_as_he_starts_and_after_each_lap() -> void:
+	_walk_out()
+	watch_signals(_motion)
 
-	_motion.show(_view(WorkerView.Activity.RUNNING, 1))
+	_run(LAP_SECONDS * 2.2)
+
+	assert_signal_emit_count(_motion, "pushed_through_turnstile", 3)
+
+
+func test_he_slows_to_a_walk_as_his_last_lap_ends() -> void:
+	_walk_out()
+
+	_run(LAP_SECONDS * 0.2, 0.0, 1)
+	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
+	_run(LAP_SECONDS * 0.79, 0.2, 1)
 
 	assert_eq(_player.current_animation, WorkerMotion.WALKING)
-	assert_eq(_body.position, RUN_SPOT, "he stays on the Generator")
 
 
-func test_he_staggers_when_he_stops_to_breathe_then_stands_bent_over() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING, 1))
-	_motion.update(WALK_THERE)
+func test_he_staggers_into_his_breath_at_the_turnstile() -> void:
+	_walk_out()
+	_run(LAP_SECONDS * 0.99, 0.0, 1)
 
-	_motion.show(_view(WorkerView.Activity.BREATHING))
+	_hold(WorkerView.new(BREATHING, 5), 2.0)
 
+	assert_almost_eq(_body.position, _track.point_at(0.0), Vector3.ONE * 0.001)
 	assert_eq(_player.current_animation, WorkerMotion.STAGGERING)
 	assert_eq(Array(_player.get_queue()), [WorkerMotion.BREATHING])
 
 
 func test_he_staggers_into_a_breath_that_began_while_he_walked_out() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING, 1))
-	_motion.update(0.5)
-	_motion.show(_view(WorkerView.Activity.BREATHING))
+	_hold(WorkerView.new(RUNNING, 1), 0.5)
 
-	_motion.update(WALK_THERE)
+	_hold(WorkerView.new(BREATHING, 5), WALK_THERE)
 
+	assert_almost_eq(_body.position, _track.point_at(0.0), Vector3.ONE * 0.001)
 	assert_eq(_player.current_animation, WorkerMotion.STAGGERING)
-	assert_eq(Array(_player.get_queue()), [WorkerMotion.BREATHING])
 
 
-func test_he_runs_again_after_his_breath() -> void:
-	_motion.show(_view(WorkerView.Activity.BREATHING))
-	_motion.update(WALK_THERE)
+func test_he_runs_on_through_the_turnstile_after_his_breath() -> void:
+	_walk_out()
+	_hold(WorkerView.new(BREATHING, 5), 1.0)
+	watch_signals(_motion)
 
-	_motion.show(_view(WorkerView.Activity.RUNNING))
+	_run(1.0)
 
 	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
+	assert_signal_emit_count(_motion, "pushed_through_turnstile", 1)
 
 
-func test_he_walks_back_to_his_place_when_sent_to_the_field() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING))
-	_motion.update(WALK_THERE)
+func test_behind_the_lap_clock_he_catches_up() -> void:
+	_walk_out(0.2)
 
-	_motion.show(_view(WorkerView.Activity.IN_FIELD))
-	_motion.update(0.5)
-	assert_eq(_player.current_animation, WorkerMotion.WALKING)
-	_motion.update(WALK_THERE)
+	_run(LAP_SECONDS * 0.3, 0.2)
 
-	assert_eq(_body.position, HOME)
+	assert_lt(_off_the_clock(0.5), 1.0)
+
+
+func test_ahead_of_a_lap_clock_carried_over_he_waits_at_the_turnstile_for_it() -> void:
+	_walk_out(0.8)
+	_run(LAP_SECONDS * 0.1, 0.8)
+
+	assert_almost_eq(_body.position, _track.point_at(0.0), Vector3.ONE * 0.001)
+	assert_eq(_player.current_animation, WorkerMotion.STANDING)
+
+	_run(LAP_SECONDS * 0.4, 0.9)
+	assert_lt(_off_the_clock(0.3), 1.0)
+
+
+func test_he_goes_back_along_the_track_and_through_the_gate_to_his_place() -> void:
+	_walk_out()
+	_run(LAP_SECONDS * 0.3)
+
+	_hold(WorkerView.new(WorkerView.Activity.IN_FIELD, 5), 0.5)
+	assert_eq(_player.current_animation, WorkerMotion.RUNNING, "he jogs back")
+	var heading := _track.heading_at(0.3 * _track.length())
+	assert_almost_eq(_body.rotation.y, atan2(-heading.x, -heading.z), 0.01, "the shorter way")
+
+	_hold(WorkerView.new(WorkerView.Activity.IN_FIELD, 5), 20.0)
+
+	assert_almost_eq(_body.position, HOME, Vector3.ONE * 0.001)
+	assert_almost_eq(_body.rotation.y, HOME_FACING, 0.001)
 	assert_eq(_player.current_animation, WorkerMotion.STANDING)
 
 
 func test_he_rests_standing_at_his_place() -> void:
-	_motion.show(_view(WorkerView.Activity.RUNNING))
-	_motion.update(WALK_THERE)
+	_walk_out()
+	_run(LAP_SECONDS * 0.6)
 
-	_motion.show(_view(WorkerView.Activity.RESTING))
-	_motion.update(WALK_THERE)
+	_hold(WorkerView.new(WorkerView.Activity.RESTING, 5), 20.0)
 
-	assert_eq(_body.position, HOME)
+	assert_almost_eq(_body.position, HOME, Vector3.ONE * 0.001)
 	assert_eq(_player.current_animation, WorkerMotion.STANDING)
 
 

@@ -1,10 +1,11 @@
 class_name Field
 extends Node3D
 ## The field the Worker works: a fenced grid of plots seen from a fixed, angled camera, with
-## the Worker beside it and the Generator outside its gate. Shows each plot's growth stage as
-## a cotton plant (see CropLooks), shows the time left on a growing plot, shows the Worker
-## walking to the Generator and running on it (see WorkerMotion), and reports which plot, or
-## the Generator, was tapped. Knows nothing of the rules beyond the views it is shown.
+## the Worker beside it, a dirt track around the fence and the Generator at the track's corner,
+## outside the fence's gate. Shows each plot's growth stage as a cotton plant (see CropLooks),
+## shows the time left on a growing plot, shows the Worker walking out to the track and
+## running laps of it (see WorkerMotion), and reports which plot, or the Generator, was
+## tapped. Knows nothing of the rules beyond the views it is shown.
 ##
 ## Dragging pans the camera and pinching or the mouse wheel zooms it (within FieldCamera's
 ## limits); a tap counts on release, only if the pointer barely moved (PointerGesture).
@@ -36,6 +37,16 @@ const DRAINED_SATURATION := 0.1
 @export var time_left_shown_seconds := 3.0
 ## The fence's distance from the outer plots' edges, in metres.
 @export var fence_margin := 1.6
+## The track's centre line's distance outside the fence, its width, and how round its corners
+## are, in metres.
+@export var track_gap := 1.3
+@export var track_width := 1.6
+@export var track_corner_radius := 1.6
+## Where the gate in the fence's left side is, front to back (z); the turnstile stands on the
+## track outside it. Must fall between the track's corners.
+@export var gate_z := 4.0
+## How far inside the fence he steps on his way through the gate, in metres.
+@export var gate_inside := 0.6
 
 var _grid: PlotGrid
 var _crop_looks := CropLooks.new()
@@ -45,6 +56,7 @@ var _labelled_plot := -1
 var _label_seconds_remaining := 0.0
 var _gesture := PointerGesture.new(TAP_SLOP)
 var _worker: WorkerMotion
+var _track: TrackPath
 var _view: FieldCamera
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
 var _camera_back: Vector3
@@ -77,7 +89,12 @@ func _ready() -> void:
 		_crops.append(crop)
 		_shown_stages.append(PlotView.Stage.EMPTY)
 		add_child(plot)
-	add_child(FenceLook.build(_fence_half_size(), _generator.position.z))
+	add_child(FenceLook.build(_fence_half_size(), gate_z))
+	_track = TrackPath.new(
+		_fence_half_size() + Vector2.ONE * track_gap, track_corner_radius, gate_z
+	)
+	add_child(TrackLook.build(_track, track_width))
+	_generator.position = _track.point_at(0.0)
 	# Its own copy: the scene's environment is shared by every instance of the scene.
 	_haze.environment = _haze.environment.duplicate()
 	_full_saturation = _haze.environment.adjustment_saturation
@@ -88,6 +105,11 @@ func _ready() -> void:
 
 func plot_count() -> int:
 	return _grid.count()
+
+
+## The track's centre line, round the fence.
+func track() -> TrackPath:
+	return _track
 
 
 ## Redraws every plot from the rules' views, and keeps the time-left label current.
@@ -238,14 +260,13 @@ func _ground_under(screen_position: Vector2) -> Vector3:
 
 
 ## The camera starts where the scene puts it; from then on it keeps that angle and only
-## slides and zooms along it, over the fenced field.
+## slides and zooms along it, over the field and the track around it.
 func _start_camera() -> void:
 	_camera_back = _camera.transform.basis.z.normalized()
 	var start_distance := _camera.position.y / _camera_back.y
 	var start_focus := _camera.position - _camera_back * start_distance
-	_view = FieldCamera.new(
-		Vector2(start_focus.x, start_focus.z), start_distance, _fence_half_size()
-	)
+	var track_reach := _track.half_size + Vector2.ONE * track_width / 2.0
+	_view = FieldCamera.new(Vector2(start_focus.x, start_focus.z), start_distance, track_reach)
 	_place_camera()
 
 
@@ -274,7 +295,9 @@ func _start_worker() -> void:
 		GameLog.warning("worker has no animation player")
 	else:
 		player = players[0] as AnimationPlayer
-	_worker = WorkerMotion.new(body, player, _generator.run_spot(), _generator.run_facing())
+	var gate := Vector3(-_fence_half_size().x + gate_inside, 0.0, gate_z)
+	_worker = WorkerMotion.new(body, player, _track, gate)
+	_worker.pushed_through_turnstile.connect(_generator.push_turnstile)
 
 
 func _material(colour: Color) -> StandardMaterial3D:

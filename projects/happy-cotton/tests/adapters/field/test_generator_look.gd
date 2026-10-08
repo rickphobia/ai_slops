@@ -1,5 +1,5 @@
 extends GutTest
-## The Generator's loudspeaker lamp and tap area, and the fence's gate out to it.
+## The Generator's loudspeaker lamp, turnstile and tap area, and the fence's gate out to it.
 
 var _generator: Generator
 
@@ -24,16 +24,21 @@ func test_the_lamp_glows_while_lit_and_dims_again() -> void:
 	assert_false((_generator.get_node("LampLight") as OmniLight3D).visible)
 
 
-func test_a_tap_on_or_beside_the_treadmill_counts_and_one_far_away_does_not() -> void:
-	assert_true(_generator.covers(Vector3(-8.0, 0.0, 2.0)))
-	assert_true(_generator.covers(Vector3(-9.5, 0.0, 2.5)), "the pump")
-	assert_false(_generator.covers(Vector3(-5.0, 0.0, 2.0)))
-	assert_false(_generator.covers(Vector3(-8.0, 0.0, 4.0)))
+func test_a_tap_on_the_turnstile_or_the_machine_counts_and_one_far_away_does_not() -> void:
+	assert_true(_generator.covers(Vector3(-8.0, 0.0, 2.0)), "the turnstile")
+	assert_true(_generator.covers(Vector3(-8.0 + Generator.PUMP_SPOT.x, 0.0, 2.9)), "the pump")
+	assert_false(_generator.covers(Vector3(-5.0, 0.0, 2.0)), "inside the fence")
+	assert_false(_generator.covers(Vector3(-8.0, 0.0, 5.0)), "further along the track")
 
 
-func test_he_runs_on_the_belt_facing_along_it() -> void:
-	assert_eq(_generator.run_spot(), Vector3(-7.85, Generator.BELT_TOP, 2.0))
-	assert_almost_eq(_generator.run_facing(), PI / 2.0, 0.001)
+func test_each_push_turns_the_turnstile_a_quarter_turn() -> void:
+	var arms: Node3D = _generator.get_node("TurnstileArms")
+
+	_generator.push_turnstile()
+	_generator.push_turnstile()
+	_generator._process(10.0)
+
+	assert_almost_eq(arms.rotation.y, PI, 0.001)
 
 
 func test_the_fence_leaves_a_gate_on_the_left_side_only() -> void:
