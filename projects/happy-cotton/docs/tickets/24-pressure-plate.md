@@ -1,6 +1,6 @@
-# 24: The pressure plate
+# 24: Power tiles
 
-**What to build:** The Generator's turnstile is replaced by an electric pressure plate set into the track at the same corner. Each lap the Worker's feet strike the plate: it sparks and lights up, a pulse runs along a cable to the Generator, and the loudspeaker lamp flares. He no longer pushes anything; his running body is the power. He still stops to breathe on the plate after his last lap, where the Overseer stands (ticket 15). The rules don't change (spec: stories 90, 91, 93, 94; "Rules decisions": Generator and Toil).
+**What to build:** The turnstile goes, and the whole track is paved with power tiles: the floor tiles from Japan that turn footsteps into electricity. Every step the Worker takes lights the tile under his foot, and the light fades behind him, so his laps leave a glowing trail. The Generator at the corner gathers the power from cables under the track, and a white line across the track there marks the end of each lap. He no longer pushes anything; his feet are the power. He stops to breathe on the line after his last lap, where the Overseer stands (ticket 15). The rules don't change (spec: stories 90, 91, 93, 94; "Rules decisions": Generator and Toil).
 
 **Blocked by:** 15 (The Overseer at the Generator), 23 (Run the track)
 
@@ -10,12 +10,13 @@
 
 **Effort:** medium
 
-- [ ] The turnstile is gone. A flat metal pressure plate lies across the track where it stood (simple shapes), with a cable from it to the Generator. Tapping the plate or the Generator still sends him
-- [ ] Each time he runs over the plate it flashes and gives off a few sparks, a pulse travels along the cable, and the loudspeaker lamp flares brighter for a moment before settling to its usual glow
-- [ ] He runs over it at full stride, not pushing; he stops to breathe standing on it after his last lap, and the Overseer's spot by it is unchanged
-- [ ] The turnstile's sound from ticket 15 becomes an electric snap or buzz when he hits the plate (CC0, credited), on the same audio bus
-- [ ] The code and tests speak of the plate, not a turnstile: signal, constants, TrackPath's starting point, lap-clock comments and test names
-- [ ] GLOSSARY (Generator), the spec's "Generator and Toil" and the README describe the plate. Leave done tickets 15 and 23 as they are, since they record what was built then
-- [ ] With reduced motion on (ticket 12), the sparks and lamp flare are skipped; the plate's light and the sound stay
-- [ ] No blood, wounds or gore; the plate never hurts him on screen
-- [ ] Works in the web export on a phone-sized screen (record what was checked in the PR)
+- [ ] The turnstile is gone. The track is paved with square power tiles (simple shapes, or one shared mesh drawn many times so the web build stays fast), with a white lap line across it at the Generator and cables from under the track to the Generator. Tapping the Generator or the lap line still sends him
+- [ ] Each footstep while he runs (or walks on the track) lights the tile under that foot. The tile fades out over a second or two, so a short glowing trail follows him. Steps follow his run animation's footfalls, not a fixed timer
+- [ ] While he runs, the loudspeaker lamp pulses faintly with his steps. When he stops, the tiles go dark and the lamp dims, as now
+- [ ] He runs over the lap line at full stride. After his last lap he stops on it to breathe, and the Overseer's spot beside it is unchanged
+- [ ] Ticket 15's turnstile sound becomes a soft electric tick on each lit step, quieter than the footsteps (CC0, credited), on the same audio bus
+- [ ] The code and tests speak of the lap line and power tiles, not a turnstile: signal, constants, TrackPath's starting point, lap-clock comments and test names
+- [ ] GLOSSARY (Generator), the spec's "Generator and Toil" and the README describe the tiles. Leave done tickets 15 and 23 as they are, since they record what was built then. The power tiles are presented as the state's cheerful invention, not as how the real tiles are used
+- [ ] With reduced motion on (ticket 12), the trail fades instantly and the lamp doesn't pulse; the sound stays
+- [ ] No blood, wounds or gore; the tiles never hurt him on screen
+- [ ] Works in the web export on a phone-sized screen, with no drop in frame rate from the tiles (record what was checked in the PR)
