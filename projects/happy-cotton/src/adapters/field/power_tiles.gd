@@ -31,12 +31,15 @@ const GLOW_LIFT := 0.003
 const GLOWS := 8
 ## How long a lit tile takes to fade out, in seconds.
 const FADE_SECONDS := 1.5
+## With reduced motion, how long the tile under his latest step stays lit: about one stride,
+## so the tiles go dark soon after he stops.
+const INSTANT_HOLD_SECONDS := 0.5
 const LAP_LINE_COLOUR := Color(0.95, 0.95, 0.92)
 ## How wide the lap line is, along the track, in metres.
 const LAP_LINE_WIDTH := 0.12
 
 ## Reduced motion: a tile goes dark at once instead of fading, so only the tile under his
-## latest step is lit, until FADE_SECONDS pass or he steps again.
+## latest step is lit, until INSTANT_HOLD_SECONDS pass or he steps again.
 var instant_fade := false:
 	set(on):
 		instant_fade = on
@@ -80,7 +83,8 @@ func _init(track: TrackPath, width: float) -> void:
 func update(delta: float) -> void:
 	for glow in GLOWS:
 		if _glow_levels[glow] > 0.0:
-			_glow_levels[glow] = maxf(_glow_levels[glow] - delta / FADE_SECONDS, 0.0)
+			var seconds := INSTANT_HOLD_SECONDS if instant_fade else FADE_SECONDS
+			_glow_levels[glow] = maxf(_glow_levels[glow] - delta / seconds, 0.0)
 			_show(glow)
 
 

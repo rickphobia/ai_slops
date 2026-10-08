@@ -101,9 +101,9 @@ func test_with_instant_fade_only_the_tile_under_his_last_step_is_lit_and_it_neve
 	_tiles.light_at(first)
 	_tiles.light_at(second)
 	assert_eq(_tiles.glow_shown(_tiles.tile_at(first)), 0.0)
-	_tiles.update(PowerTiles.FADE_SECONDS / 2.0)
+	_tiles.update(PowerTiles.INSTANT_HOLD_SECONDS / 2.0)
 	assert_eq(_tiles.glow_shown(_tiles.tile_at(second)), 1.0)
-	_tiles.update(PowerTiles.FADE_SECONDS)
+	_tiles.update(PowerTiles.INSTANT_HOLD_SECONDS)
 
 	assert_eq(_tiles.glow_shown(_tiles.tile_at(second)), 0.0)
 	assert_eq(_tiles.lit_count(), 0)

@@ -124,10 +124,7 @@ func flinch() -> void:
 	if skip_stagger:
 		return
 	_flinch_left = FLINCH_SECONDS
-	_animation = STAGGERING
-	if _player != null:
-		_player.speed_scale = 1.0
-		_player.play(STAGGERING)
+	_stagger(1.0)
 
 
 ## How fast he is running along the track, in metres a second; 0 when he isn't.
@@ -240,11 +237,10 @@ func _breathe() -> void:
 	_breath_shown = true
 	if skip_stagger:
 		_play(BREATHING)
-	elif _player != null:
-		_animation = STAGGERING
-		_player.speed_scale = _speed
-		_player.play(STAGGERING)
-		_player.queue(BREATHING)
+	else:
+		_stagger(_speed)
+		if _player != null:
+			_player.queue(BREATHING)
 
 
 ## Walks or runs on the track, in step with how fast he is moving over the ground, for some
@@ -284,7 +280,16 @@ func _face(direction: Vector3) -> void:
 		_body.rotation.y = atan2(direction.x, direction.z)
 
 
-## `pace` is the animation's speed relative to normal; standing and breathing play at the
+## Plays the stagger once from its start, at `pace` of its normal speed.
+func _stagger(pace: float) -> void:
+	_animation = STAGGERING
+	if _player != null:
+		_player.speed_scale = pace
+		_player.play(STAGGERING)
+
+
+## `pace` is the animation's speed relative to normal, already kept within SLOWEST_STRIDE and
+## FASTEST_STRIDE; standing and breathing play at the
 ## Exhaustion slowdown. A new animation starts its cycle from the beginning.
 func _play(animation: StringName, pace := -1.0) -> void:
 	if animation != _animation:
@@ -292,6 +297,6 @@ func _play(animation: StringName, pace := -1.0) -> void:
 		_stride_phase = 0.0
 	if _player == null:
 		return
-	_player.speed_scale = _speed if pace < 0.0 else clampf(pace, SLOWEST_STRIDE, FASTEST_STRIDE)
+	_player.speed_scale = _speed if pace < 0.0 else pace
 	if _player.current_animation != animation:
 		_player.play(animation)
