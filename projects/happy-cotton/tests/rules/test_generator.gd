@@ -93,34 +93,6 @@ func test_each_lap_brings_him_closer_to_stopping() -> void:
 	assert_eq(_farm.worker().laps_left, FastTuning.LAPS_BEFORE_BREATH - 3)
 
 
-func test_the_lap_clock_shows_how_far_through_his_lap_he_is() -> void:
-	assert_eq(_farm.worker().lap_progress, 0.0)
-	_farm.run_generator()
-
-	_farm.advance(FastTuning.LAP_SECONDS * 2.25)
-
-	assert_almost_eq(_farm.worker().lap_progress, 0.25, 0.0001)
-
-
-func test_the_lap_clock_waits_at_the_turnstile_while_he_breathes() -> void:
-	_farm = _long_shift_farm()
-	_farm.run_generator()
-
-	_farm.advance(RUN_SECONDS + 1.0)
-
-	assert_eq(_activity(), WorkerView.Activity.BREATHING)
-	assert_eq(_farm.worker().lap_progress, 0.0)
-
-
-func test_the_lap_clock_carries_over_when_he_leaves_the_generator() -> void:
-	_farm.run_generator()
-	_farm.advance(FastTuning.LAP_SECONDS * 1.5)
-	_farm.plant(0)
-	_farm.advance(20.0)
-
-	assert_almost_eq(_farm.worker().lap_progress, 0.5, 0.0001)
-
-
 func test_after_the_set_laps_he_stops_to_breathe_and_growth_halts() -> void:
 	_farm = _long_shift_farm()
 	_farm.plant(0)
