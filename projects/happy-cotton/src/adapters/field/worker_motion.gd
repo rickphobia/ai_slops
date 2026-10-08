@@ -1,18 +1,17 @@
 class_name WorkerMotion
 extends RefCounted
 ## Moves the Worker model to match what the rules say he is doing. Sent to the Generator, he
-## walks out through the fence's gate to the turnstile and runs laps of the track, keeping in
-## step with the rules' lap clock so he passes the turnstile as each lap ends. He slows on his
-## last lap, staggers and stands bent over at the turnstile to breathe, and goes back along the
+## walks out through the fence's gate to the lap line and runs laps of the track, keeping in
+## step with the rules' lap clock so he crosses the lap line as each lap ends. He slows on his
+## last lap, staggers and stands bent over on the lap line to breathe, and goes back along the
 ## track and through the gate to his place beside the plots when he is sent to the field or to
 ## rest. As Exhaustion rises he slumps forward and his walk slows. When the Overseer whips him
 ## he flinches and staggers where he stands, then runs on. Only the Worker's own walk, run,
 ## stagger and idle animations are used; never a fighting one.
 
-## Emitted each time he runs through the turnstile, so the field can turn it.
-signal pushed_through_turnstile
-## Emitted each time a foot strikes the track as he runs it, for the footstep sound.
-signal stepped
+## Emitted each time a foot strikes the track as he runs or walks on it, with where it
+## landed, for the footstep sound and the power tile under it.
+signal stepped(foot: Vector3)
 
 const WALK_SPEED := 1.4
 ## On the way back he jogs along the track to the gate, at this speed, in metres a second.
@@ -26,7 +25,7 @@ const FASTEST_RUN_SPEED := 6.0
 const RUN_FROM_SPEED := 2.0
 ## The ground speed the Run animation's stride matches at its normal speed.
 const RUN_STRIDE_SPEED := 3.5
-## His pace as he reaches the turnstile at the end of his last lap, as a share of his usual.
+## His pace as he reaches the lap line at the end of his last lap, as a share of his usual.
 const LAST_LAP_END_PACE := 0.5
 ## The walk and run animations play between these shares of their normal speed, however
 ## slowly or fast he moves.
@@ -44,8 +43,12 @@ const WALKING := &"Walk"
 const RUNNING := &"Run"
 const STAGGERING := &"HitRecieve"
 const BREATHING := &"Idle"
-## How far he runs between one foot striking the track and the next, in metres.
-const STRIDE_LENGTH := 1.3
+## How long one cycle of the Walk and Run animations lasts at their normal speed, in seconds:
+## the model's own, used when it has no animation player. Each cycle has two footfalls.
+const WALK_CYCLE_SECONDS := 4.0 / 3.0
+const RUN_CYCLE_SECONDS := 0.8
+## How far each foot lands from the line he runs along, to the left or the right, in metres.
+const FOOT_SPREAD := 0.15
 ## How long he stands flinching and staggering after the whip before he runs on, in seconds:
 ## the stagger animation's length.
 const FLINCH_SECONDS := 0.6
@@ -60,7 +63,7 @@ var skip_slump := false
 var _body: Node3D
 var _player: AnimationPlayer
 var _track: TrackPath
-## The way from his place beside the plots, through the gate, to the turnstile.
+## The way from his place beside the plots, through the gate, to the lap line.
 var _gate_way: Curve3D = Curve3D.new()
 var _home_facing: float
 var _activity := WorkerView.Activity.IN_FIELD
@@ -68,10 +71,10 @@ var _laps_left := 0
 var _lap_progress := 0.0
 ## On the track, or somewhere on the way between it and his place.
 var _on_track := false
-## Off the track: how far along the way to the turnstile he is.
+## Off the track: how far along the way to the lap line he is.
 var _way_distance := 0.0
-## On the track: how far past the turnstile he is, above 0 and up to one lap. A whole lap
-## means he stands at the turnstile, not yet through it.
+## On the track: how far past the lap line he is, above 0 and up to one lap. A whole lap
+## means he stands on the lap line, not yet over it.
 var _track_distance := 0.0
 var _breath_shown := false
 ## 1 rested, down to SLOWEST_ANIMATION_SPEED spent: his walk and animations together.
@@ -80,8 +83,13 @@ var _speed := 1.0
 var _flinch_left := 0.0
 ## His speed along the track in the last update, in metres a second; 0 unless he ran it.
 var _track_speed := 0.0
-## Metres run since his last foot struck the track.
-var _since_step := 0.0
+## The animation he was last set playing, and how far through its cycle he is (0 to 1).
+var _animation: StringName
+var _stride_phase := 0.0
+var _left_foot_next := true
+var _cycle_seconds: Dictionary[StringName, float] = {
+	WALKING: WALK_CYCLE_SECONDS, RUNNING: RUN_CYCLE_SECONDS
+}
 
 
 ## `body` starts at his place beside the plots. `player` may be null if the model has none;
@@ -96,6 +104,8 @@ func _init(body: Node3D, player: AnimationPlayer, track: TrackPath, gate: Vector
 	if _player != null:
 		for animation in LOOPING:
 			_player.get_animation(animation).loop_mode = Animation.LOOP_LINEAR
+		for animation: StringName in _cycle_seconds:
+			_cycle_seconds[animation] = _player.get_animation(animation).length
 	_play(STANDING)
 
 
@@ -114,6 +124,7 @@ func flinch() -> void:
 	if skip_stagger:
 		return
 	_flinch_left = FLINCH_SECONDS
+	_animation = STAGGERING
 	if _player != null:
 		_player.speed_scale = 1.0
 		_player.play(STAGGERING)
@@ -148,7 +159,7 @@ func _is_home() -> bool:
 	return _activity in [WorkerView.Activity.IN_FIELD, WorkerView.Activity.RESTING]
 
 
-## Walks a distance along the way to the turnstile (negative: back towards his place).
+## Walks a distance along the way to the lap line (negative: back towards his place).
 func _walk_way(distance: float) -> void:
 	var way_length := _gate_way.get_baked_length()
 	var was := _way_distance
@@ -166,7 +177,7 @@ func _walk_way(distance: float) -> void:
 		_track_distance = _track.length()
 
 
-## Back along the track the shorter way to the turnstile, then off it towards the gate.
+## Back along the track the shorter way to the lap line, then off it towards the gate.
 func _jog_back(delta: float) -> void:
 	var lap := _track.length()
 	var forwards := _track_distance >= lap / 2.0
@@ -178,19 +189,19 @@ func _jog_back(delta: float) -> void:
 	_track_distance += step if forwards else -step
 	_body.position = _track.point_at(_track_distance)
 	_face(_track.heading_at(_track_distance) * (1.0 if forwards else -1.0))
-	_play_moving(step / delta)
+	_play_moving(step / delta, delta)
 	if is_equal_approx(step, left):
 		_on_track = false
 
 
-## Runs towards the lap clock's place on the track, or towards the turnstile to breathe.
+## Runs towards the lap clock's place on the track, or towards the lap line to breathe.
 func _keep_up(delta: float) -> void:
 	var lap := _track.length()
 	var breathing := _activity == WorkerView.Activity.BREATHING
 	var target := 0.0 if breathing else _clock_distance() * lap
 	var gap := fposmod(target - _track_distance, lap)
 	if gap > lap / 2.0 and not breathing:
-		# The clock is behind him, which only happens when he comes back to the turnstile
+		# The clock is behind him, which only happens when he comes back to the lap line
 		# part way through a lap: he waits there for it to come round.
 		_face(_track.heading_at(_track_distance))
 		_play(STANDING)
@@ -203,20 +214,15 @@ func _keep_up(delta: float) -> void:
 	var step := minf(gap * (1.0 - exp(-KEEP_UP_RATE * delta)), FASTEST_RUN_SPEED * delta)
 	_track_distance += step
 	_track_speed = step / delta
-	_since_step += step
-	if _since_step >= STRIDE_LENGTH:
-		_since_step -= STRIDE_LENGTH
-		stepped.emit()
 	if _track_distance > lap:
 		_track_distance -= lap
-		pushed_through_turnstile.emit()
 	_body.position = _track.point_at(_track_distance)
 	_face(_track.heading_at(_track_distance))
-	_play_moving(step / delta)
+	_play_moving(step / delta, delta)
 
 
 ## How far round the track the lap clock has him, as a share of a lap. On his last lap he
-## starts at his usual pace and eases to LAST_LAP_END_PACE of it by the turnstile.
+## starts at his usual pace and eases to LAST_LAP_END_PACE of it by the lap line.
 func _clock_distance() -> float:
 	var progress := _lap_progress
 	if _laps_left > 1:
@@ -225,7 +231,7 @@ func _clock_distance() -> float:
 	return progress + ease * progress * progress * (1.0 - progress)
 
 
-## Stands him bent over at the turnstile. He staggers into each breath once.
+## Stands him bent over on the lap line. He staggers into each breath once.
 func _breathe() -> void:
 	_body.position = _track.point_at(0.0)
 	_face(_track.heading_at(0.0))
@@ -235,17 +241,33 @@ func _breathe() -> void:
 	if skip_stagger:
 		_play(BREATHING)
 	elif _player != null:
+		_animation = STAGGERING
 		_player.speed_scale = _speed
 		_player.play(STAGGERING)
 		_player.queue(BREATHING)
 
 
-## Walks or runs, in step with how fast he is moving over the ground.
-func _play_moving(ground_speed: float) -> void:
-	if ground_speed < RUN_FROM_SPEED:
-		_play(WALKING, ground_speed / WALK_SPEED)
-	else:
-		_play(RUNNING, ground_speed / RUN_STRIDE_SPEED)
+## Walks or runs on the track, in step with how fast he is moving over the ground, for some
+## seconds. A foot strikes the track at each footfall of the animation: two a cycle, so the
+## steps keep to the stride shown, however fast it plays.
+func _play_moving(ground_speed: float, delta: float) -> void:
+	var running := ground_speed >= RUN_FROM_SPEED
+	var animation := RUNNING if running else WALKING
+	var stride_speed := RUN_STRIDE_SPEED if running else WALK_SPEED
+	var pace := clampf(ground_speed / stride_speed, SLOWEST_STRIDE, FASTEST_STRIDE)
+	_play(animation, pace)
+	_stride_phase += delta * pace / _cycle_seconds[animation]
+	while _stride_phase >= 0.5:
+		_stride_phase -= 0.5
+		_strike_foot()
+
+
+## One foot strikes the ground, left and right in turn, either side of where he is.
+func _strike_foot() -> void:
+	var facing := Vector3(sin(_body.rotation.y), 0.0, cos(_body.rotation.y))
+	var side := -FOOT_SPREAD if _left_foot_next else FOOT_SPREAD
+	_left_foot_next = not _left_foot_next
+	stepped.emit(_body.position + facing.cross(Vector3.UP) * side)
 
 
 ## Leans him forward and slows him in step with `share` of the most Exhaustion.
@@ -263,8 +285,11 @@ func _face(direction: Vector3) -> void:
 
 
 ## `pace` is the animation's speed relative to normal; standing and breathing play at the
-## Exhaustion slowdown.
+## Exhaustion slowdown. A new animation starts its cycle from the beginning.
 func _play(animation: StringName, pace := -1.0) -> void:
+	if animation != _animation:
+		_animation = animation
+		_stride_phase = 0.0
 	if _player == null:
 		return
 	_player.speed_scale = _speed if pace < 0.0 else clampf(pace, SLOWEST_STRIDE, FASTEST_STRIDE)

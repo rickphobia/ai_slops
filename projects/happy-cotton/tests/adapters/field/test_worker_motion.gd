@@ -1,7 +1,7 @@
 extends GutTest
-## The Worker model follows the rules' view of him: out through the gate to the turnstile,
+## The Worker model follows the rules' view of him: out through the gate to the lap line,
 ## laps of the track in step with the lap clock, slowing on his last lap, staggering into his
-## breath at the turnstile, and back along the track and through the gate to his place.
+## breath on the lap line, and back along the track and through the gate to his place.
 
 const WORKER_MODEL := preload("res://assets/quaternius-modular-men/farmer.glb")
 const HOME := Vector3(-5.0, 0.0, 2.5)
@@ -10,7 +10,7 @@ const HOME_FACING := 0.5
 const LAP_SECONDS := 14.0
 ## Small steps, like frames, so he keeps up with the clock as he does in play.
 const STEP := 1.0 / 30.0
-## Long enough to walk from his place to the turnstile.
+## Long enough to walk from his place to the lap line.
 const WALK_THERE := 3.0
 const RUNNING := WorkerView.Activity.RUNNING
 const BREATHING := WorkerView.Activity.BREATHING
@@ -59,7 +59,7 @@ func test_he_stands_at_his_place_at_first() -> void:
 	assert_eq(_player.current_animation, WorkerMotion.STANDING)
 
 
-func test_he_walks_out_through_the_gate_to_the_turnstile() -> void:
+func test_he_walks_out_through_the_gate_to_the_lap_line() -> void:
 	_hold(WorkerView.new(RUNNING, 5), 0.5)
 	assert_eq(_player.current_animation, WorkerMotion.WALKING)
 	assert_almost_eq(_body.position.distance_to(HOME), WorkerMotion.WALK_SPEED * 0.5, 0.05)
@@ -78,13 +78,21 @@ func test_he_runs_laps_in_step_with_the_lap_clock() -> void:
 	assert_lt(_off_the_clock(0.5), 1.0)
 
 
-func test_he_pushes_through_the_turnstile_as_he_starts_and_after_each_lap() -> void:
+func test_he_runs_over_the_lap_line_at_full_stride() -> void:
 	_walk_out()
-	watch_signals(_motion)
+	_run(LAP_SECONDS * 1.5)
+	var mid_lap_speed := _motion.track_speed()
+	var slowest_near_the_line := INF
+	_run(LAP_SECONDS * 0.35, 0.5)
 
-	_run(LAP_SECONDS * 2.2)
+	for frame in ceili(LAP_SECONDS * 0.3 / STEP):
+		_run(STEP, 0.85 + frame * STEP / LAP_SECONDS)
+		if _body.position.distance_to(_track.point_at(0.0)) < 1.0:
+			slowest_near_the_line = minf(slowest_near_the_line, _motion.track_speed())
 
-	assert_signal_emit_count(_motion, "pushed_through_turnstile", 3)
+	assert_lt(slowest_near_the_line, INF, "he passed the line")
+	assert_gt(slowest_near_the_line, mid_lap_speed * 0.9)
+	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
 
 
 func test_he_slows_to_a_walk_as_his_last_lap_ends() -> void:
@@ -97,7 +105,7 @@ func test_he_slows_to_a_walk_as_his_last_lap_ends() -> void:
 	assert_eq(_player.current_animation, WorkerMotion.WALKING)
 
 
-func test_he_staggers_into_his_breath_at_the_turnstile() -> void:
+func test_he_staggers_into_his_breath_on_the_lap_line() -> void:
 	_walk_out()
 	_run(LAP_SECONDS * 0.99, 0.0, 1)
 
@@ -117,15 +125,14 @@ func test_he_staggers_into_a_breath_that_began_while_he_walked_out() -> void:
 	assert_eq(_player.current_animation, WorkerMotion.STAGGERING)
 
 
-func test_he_runs_on_through_the_turnstile_after_his_breath() -> void:
+func test_he_runs_on_over_the_lap_line_after_his_breath() -> void:
 	_walk_out()
 	_hold(WorkerView.new(BREATHING, 5), 1.0)
-	watch_signals(_motion)
 
 	_run(1.0)
 
 	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
-	assert_signal_emit_count(_motion, "pushed_through_turnstile", 1)
+	assert_gt(_body.position.distance_to(_track.point_at(0.0)), 1.0)
 
 
 func test_behind_the_lap_clock_he_catches_up() -> void:
@@ -136,7 +143,7 @@ func test_behind_the_lap_clock_he_catches_up() -> void:
 	assert_lt(_off_the_clock(0.5), 1.0)
 
 
-func test_ahead_of_a_lap_clock_carried_over_he_waits_at_the_turnstile_for_it() -> void:
+func test_ahead_of_a_lap_clock_carried_over_he_waits_on_the_lap_line_for_it() -> void:
 	_walk_out(0.8)
 	_run(LAP_SECONDS * 0.1, 0.8)
 
@@ -197,7 +204,7 @@ func test_he_never_plays_a_fighting_animation() -> void:
 			assert_false(String(animation).contains(fighting), "%s is a fighting move" % animation)
 
 
-func test_whipped_he_flinches_and_staggers_at_the_turnstile_then_runs_again() -> void:
+func test_whipped_he_flinches_and_staggers_on_the_lap_line_then_runs_again() -> void:
 	_walk_out()
 	_hold(WorkerView.new(BREATHING, 5), 1.0)
 
@@ -222,17 +229,6 @@ func test_with_the_stagger_skipped_he_breathes_and_runs_on_without_it() -> void:
 
 	assert_ne(_player.current_animation, WorkerMotion.STAGGERING)
 	assert_gt(_body.position.distance_to(_track.point_at(0.0)), 0.05)
-
-
-func test_his_feet_strike_the_track_in_step_with_his_running() -> void:
-	_walk_out()
-	watch_signals(_motion)
-
-	_run(LAP_SECONDS)
-
-	var strides := _track.length() / WorkerMotion.STRIDE_LENGTH
-	var steps: int = get_signal_emit_count(_motion, "stepped")
-	assert_almost_eq(float(steps), strides, 2.0)
 
 
 func test_his_speed_on_the_track_is_zero_unless_he_runs_it() -> void:

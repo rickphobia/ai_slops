@@ -18,7 +18,7 @@ var laps_left: int:
 var exhaustion: float:
 	get:
 		return _exhaustion
-## How far through his current lap he is, from 0 (at the turnstile) to just under 1. Kept
+## How far through his current lap he is, from 0 (at the lap line) to just under 1. Kept
 ## while he is off the Generator, as his laps carry over; 0 while he breathes.
 var lap_progress: float:
 	get:

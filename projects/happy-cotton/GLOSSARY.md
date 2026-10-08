@@ -95,8 +95,8 @@ The Worker running on the Generator: the work between planting and picking. It i
 _Avoid_: idle, chores, waiting, downtime, drill, punishment (that is a Study Session)
 
 **Generator**:
-The machine at the corner of the Farm that the Worker powers by running laps of the track around the fence, pushing through its turnstile once a lap. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
-_Avoid_: treadmill, wheel, machine, pump, turnstile (that is one part of it)
+The machine at the corner of the Farm that the Worker powers by running laps of the track around the fence. The track is paved with power tiles, the state's cheerful invention: each footstep lights the tile under it and sends its power down cables to the Generator, and a white lap line across the track there marks the end of each lap. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
+_Avoid_: treadmill, wheel, machine, pump, turnstile (the track had one before the power tiles), pressure plate
 
 ### Small acts
 

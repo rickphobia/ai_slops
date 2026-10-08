@@ -22,7 +22,7 @@ func test_the_lap_clock_shows_how_far_through_his_lap_he_is() -> void:
 	assert_almost_eq(_farm.worker().lap_progress, 0.25, 0.0001)
 
 
-func test_the_lap_clock_waits_at_the_turnstile_while_he_breathes() -> void:
+func test_the_lap_clock_waits_at_the_lap_line_while_he_breathes() -> void:
 	var tuning := FastTuning.table()
 	tuning.shift_seconds = 1000.0
 	_farm = Farm.new(tuning, PLOTS)

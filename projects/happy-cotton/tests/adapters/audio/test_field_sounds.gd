@@ -1,6 +1,6 @@
 extends GutTest
-## The field's sounds: footsteps, the turnstile, the Generator's whine, the Overseer's whistle
-## and whip, all on one bus, and silent until the player's first tap.
+## The field's sounds: footsteps, the power tiles' tick, the Generator's whine, the Overseer's
+## whistle and whip, all on one bus, and silent until the player's first tap.
 
 var _sounds: FieldSounds
 
@@ -24,11 +24,15 @@ func test_every_sound_goes_through_the_field_bus() -> void:
 		assert_eq(player.bus, FieldSounds.BUS, player.name)
 
 
+func test_the_tile_tick_is_quieter_than_the_footsteps() -> void:
+	assert_lt(FieldSounds.TILE_TICK_DB, FieldSounds.FOOTSTEP_DB)
+
+
 func test_nothing_plays_before_the_first_tap() -> void:
 	_sounds.whistle()
 	_sounds.whip_crack()
 	_sounds.footstep()
-	_sounds.turnstile()
+	_sounds.tile_tick()
 	_sounds.set_generator_speed(FieldSounds.FULL_WHINE_SPEED)
 	_sounds.update_whine(1.0)
 
@@ -42,7 +46,7 @@ func test_after_the_first_tap_the_sounds_play() -> void:
 	_sounds.whistle()
 	_sounds.whip_crack()
 	_sounds.footstep()
-	_sounds.turnstile()
+	_sounds.tile_tick()
 
 	assert_eq(_sounds.sounds_played(), 4)
 

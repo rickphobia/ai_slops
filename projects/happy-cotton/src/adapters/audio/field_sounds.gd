@@ -1,10 +1,10 @@
 class_name FieldSounds
 extends Node
-## The field's sounds: the Worker's footsteps on the track, the turnstile turning as he
-## pushes through it, the Generator's whine, which rises with his speed and winds down when he
-## stops, and the Overseer's whistle and whip crack. All play through one bus, BUS (in
-## default_bus_layout.tres), which sends to Master, where the player's volume and mute apply
-## (SettingsEffects.apply_volume). Browsers block sound until the page is touched, so
+## The field's sounds: the Worker's footsteps on the track, a soft electric tick from each
+## power tile his steps light, the Generator's whine, which rises with his speed and winds
+## down when he stops, and the Overseer's whistle and whip crack. All play through one bus,
+## BUS (in default_bus_layout.tres), which sends to Master, where the player's volume and mute
+## apply (SettingsEffects.apply_volume). Browsers block sound until the page is touched, so
 ## nothing plays before the player's first tap or click.
 
 const BUS := &"Field"
@@ -13,12 +13,13 @@ const FOOTSTEPS: Array[AudioStream] = [
 	preload("res://assets/kenney-impact-sounds/footstep_grass_001.ogg"),
 	preload("res://assets/kenney-impact-sounds/footstep_grass_002.ogg"),
 ]
-const TURNSTILE := preload("res://assets/kenney-impact-sounds/impactMetal_light_000.ogg")
+const TILE_TICK := preload("res://assets/kenney-interface-sounds/tick_002.ogg")
 const WHISTLE := preload("res://assets/bigsoundbank/whistle.ogg")
 const WHIP_CRACK := preload("res://assets/bigsoundbank/whip_crack.ogg")
 ## The loudness of each sound, in decibels.
 const FOOTSTEP_DB := -8.0
-const TURNSTILE_DB := -10.0
+## The tick sits well under the footsteps: heard, but never louder than his feet.
+const TILE_TICK_DB := -20.0
 const WHISTLE_DB := -4.0
 const WHIP_CRACK_DB := -2.0
 const WHINE_DB := -16.0
@@ -41,7 +42,7 @@ var _whine_target := 0.0
 var _whine_level := 0.0
 var _whining := false
 var _footsteps := _add_player("Footsteps", FOOTSTEP_DB)
-var _turnstile := _add_player("Turnstile", TURNSTILE_DB)
+var _tile_tick := _add_player("TileTick", TILE_TICK_DB)
 var _whistle := _add_player("Whistle", WHISTLE_DB)
 var _whip_crack := _add_player("WhipCrack", WHIP_CRACK_DB)
 var _whine := _add_player("Whine", WHINE_DB)
@@ -54,7 +55,7 @@ func _init() -> void:
 	# Up to 10% higher or lower each step, so the same three steps don't sound looped.
 	steps.random_pitch = 1.1
 	_footsteps.stream = steps
-	_turnstile.stream = TURNSTILE
+	_tile_tick.stream = TILE_TICK
 	_whistle.stream = WHISTLE
 	_whip_crack.stream = WHIP_CRACK
 	_whine.stream = build_whine()
@@ -81,8 +82,9 @@ func footstep() -> void:
 	_play(_footsteps)
 
 
-func turnstile() -> void:
-	_play(_turnstile)
+## A power tile lighting under his foot.
+func tile_tick() -> void:
+	_play(_tile_tick)
 
 
 func whistle() -> void:
@@ -124,7 +126,7 @@ func is_whining() -> bool:
 	return _whining
 
 
-## How many one-off sounds (steps, turnstile turns, whistles, cracks) have played; for tests
+## How many one-off sounds (steps, tile ticks, whistles, cracks) have played; for tests
 ## and debugging.
 func sounds_played() -> int:
 	return _played

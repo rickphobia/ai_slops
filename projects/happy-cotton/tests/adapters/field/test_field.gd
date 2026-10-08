@@ -1,5 +1,6 @@
 extends GutTest
-## The field's time-left text, and the world's colour draining as the Worker tires.
+## The field's time-left text, the world's colour draining as the Worker tires, the Overseer,
+## and the power tiles lighting under his steps.
 
 const FIELD_SCENE := preload("res://src/adapters/field/field.tscn")
 
@@ -42,9 +43,9 @@ func test_the_overseer_stands_outside_the_track_by_the_generator() -> void:
 	var field: Field = FIELD_SCENE.instantiate()
 	add_child_autofree(field)
 	var overseer: Node3D = field.get_node("Overseer")
-	var turnstile := (field.get_node("Generator") as Node3D).position
+	var lap_line := (field.get_node("Generator") as Node3D).position
 
-	assert_almost_eq(overseer.position.distance_to(turnstile), Field.OVERSEER_SPOT.length(), 0.01)
+	assert_almost_eq(overseer.position.distance_to(lap_line), Field.OVERSEER_SPOT.length(), 0.01)
 
 
 func test_the_whip_makes_the_overseer_crack_it_and_the_worker_stagger() -> void:
@@ -76,3 +77,38 @@ func test_the_whistle_makes_the_overseer_blow_it() -> void:
 		field.get_node("Overseer").find_children("*", "AnimationPlayer", true, false)[0]
 	)
 	assert_eq(overseer.current_animation, OverseerLook.WHISTLING)
+
+
+func test_the_lap_line_is_at_the_generator() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+	var line: Node3D = field.get_node("PowerTiles/LapLine")
+	var generator: Node3D = field.get_node("Generator")
+
+	assert_almost_eq(line.position.x, generator.position.x, 0.001)
+	assert_almost_eq(line.position.z, generator.position.z, 0.001)
+
+
+func test_a_step_while_he_runs_lights_its_tile_and_pulses_the_lamp() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+	var tiles: PowerTiles = field.get_node("PowerTiles")
+	var generator: Generator = field.get_node("Generator")
+	field.show_worker(WorkerView.new(WorkerView.Activity.RUNNING, 5))
+
+	field._on_worker_stepped(field.track().point_at(3.0))
+
+	assert_eq(tiles.lit_count(), 1)
+	assert_true(generator.is_pulsing())
+
+
+func test_reduced_motion_stops_the_trail_fading_and_the_lamp_pulsing() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+	var tiles: PowerTiles = field.get_node("PowerTiles")
+	var generator: Generator = field.get_node("Generator")
+
+	field.set_reduced_motion(true)
+
+	assert_true(tiles.instant_fade)
+	assert_true(generator.skip_pulse)

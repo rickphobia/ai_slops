@@ -1,11 +1,12 @@
 class_name Generator
 extends Node3D
-## The Generator at the corner of the track, built from simple shapes: a turnstile across the
-## track that the Worker pushes through once a lap, a shaft from it to the pump beside the
-## track, a pipe from the pump to the plots, and the loudspeaker pole it powers, with a lamp
-## that glows while he runs. Its origin is the middle of the track at the turnstile; the track
-## runs along its z axis (he runs towards -z) and the machine stands outside it, towards -x.
-## It is the game's own invention, not documented practice (see the spec's content rules).
+## The Generator at the corner of the track, built from simple shapes: cables from under the
+## power tiles (PowerTiles) to the machine beside the track, which gathers their power and
+## pumps water through a pipe to the plots, and the loudspeaker pole it powers, with a lamp
+## that glows while he runs and pulses faintly with his steps. Its origin is the middle of the
+## track on the lap line; the track runs along its z axis (he runs towards -z) and the machine
+## stands outside it, towards -x. It is the game's own invention, not documented practice
+## (see the spec's content rules).
 
 const METAL_COLOUR := Color(0.3, 0.3, 0.29)
 const PUMP_COLOUR := Color(0.4, 0.27, 0.18)
@@ -13,58 +14,46 @@ const PUMP_COLOUR := Color(0.4, 0.27, 0.18)
 const LAMP_LIT_COLOUR := Color(1.0, 0.62, 0.22)
 const LAMP_DARK_COLOUR := Color(0.22, 0.2, 0.18)
 const LAMP_LIGHT_ENERGY := 1.6
-## The turnstile's post stands at the track's outer edge; its arms reach right across it.
-const TURNSTILE_POST_X := -0.85
-const TURNSTILE_ARM_HEIGHT := 0.9
-const TURNSTILE_ARM_LENGTH := 1.6
-## How fast the turnstile turns its quarter turn when pushed, in radians a second.
-const TURNSTILE_TURN_SPEED := 5.0
-## Where the pump stands, from the turnstile.
+const CABLE_COLOUR := Color(0.12, 0.12, 0.12)
+## Each step brightens the lamp by up to this share, fading back over PULSE_SECONDS.
+const PULSE_STRENGTH := 0.3
+const PULSE_SECONDS := 0.3
+## How far the track reaches either side of the lap line's middle (x), in metres.
+const TRACK_EDGE_X := 0.8
+## The cables come out from under the track's outer edge at these places along it (z), and
+## run to the machine. They lie flat, no higher than the tiles, so he never trips on them.
+const CABLE_ALONG: Array[float] = [-0.5, 0.0, 0.5]
+const CABLE_THICKNESS := 0.024
+## Where the pump stands, from the lap line.
 const PUMP_SPOT := Vector3(-2.1, 0.0, 0.9)
-## Where the loudspeaker pole stands, from the turnstile.
+## Where the loudspeaker pole stands, from the lap line.
 const POLE_SPOT := Vector3(-2.3, 0.0, -0.3)
 const POLE_HEIGHT := 2.6
 ## The pipe runs from the pump along +x to the nearest plots, ending this far from the
-## turnstile, and this far in front of it (+z) or behind (-z).
+## lap line, and this far in front of it (+z) or behind (-z).
 const PIPE_END_X := 2.9
 const PIPE_Z := -0.9
-## How far a tap may land from the turnstile, outwards (-x) and inwards (+x) across the track
+## How far a tap may land from the lap line, outwards (-x) and inwards (+x) across the track
 ## and either way along it (z), in metres, and still count as a tap on the Generator.
 const TAP_OUTWARDS := 3.0
 const TAP_INWARDS := 1.0
 const TAP_ALONG := 1.6
 
+## Reduced motion: the lamp glows steadily, without pulsing.
+var skip_pulse := false
+
 var _lamp_material := StandardMaterial3D.new()
 var _lamp_light := OmniLight3D.new()
 var _lit := false
-var _turnstile_arms := Node3D.new()
-## Quarter turns the turnstile has been pushed; its arms turn to catch up.
-var _turnstile_turns := 0
+## From 1 (a step just landed) down to 0 (steady).
+var _pulse := 0.0
 
 
 func _ready() -> void:
 	var metal := _material(METAL_COLOUR)
-	_build_turnstile(metal)
 	var pump := _material(PUMP_COLOUR)
 	_add_box("Pump", Vector3(0.8, 0.8, 0.8), PUMP_SPOT + Vector3(0.0, 0.4, 0.0), pump)
-	var flywheel_mesh := CylinderMesh.new()
-	flywheel_mesh.top_radius = 0.45
-	flywheel_mesh.bottom_radius = 0.45
-	flywheel_mesh.height = 0.1
-	var flywheel := _add_mesh(
-		"Flywheel", flywheel_mesh, PUMP_SPOT + Vector3(0.0, 0.55, -0.48), metal
-	)
-	flywheel.rotation.x = PI / 2.0
-	# The shaft runs under the track from the turnstile's post to the pump.
-	var shaft_start := Vector3(TURNSTILE_POST_X, 0.03, 0.0)
-	var shaft_end := PUMP_SPOT + Vector3(0.0, 0.03, -0.4)
-	var shaft := _add_box(
-		"Shaft",
-		Vector3(0.06, 0.06, shaft_start.distance_to(shaft_end)),
-		(shaft_start + shaft_end) / 2.0,
-		metal
-	)
-	shaft.basis = Basis.looking_at(shaft_end - shaft_start)
+	_build_cables()
 	var pipe_start_x := PUMP_SPOT.x + 0.4
 	var pipe_length := PIPE_END_X - pipe_start_x
 	var pipe_centre := Vector3(pipe_start_x + pipe_length / 2.0, 0.04, PIPE_Z)
@@ -75,9 +64,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_turnstile_arms.rotation.y = move_toward(
-		_turnstile_arms.rotation.y, turnstile_turn(), TURNSTILE_TURN_SPEED * delta
-	)
+	if _pulse > 0.0:
+		_pulse = maxf(_pulse - delta / PULSE_SECONDS, 0.0)
+		_show_pulse()
 
 
 ## The lamp glows while the Generator turns and goes dark when it stops.
@@ -86,20 +75,23 @@ func set_lit(lit: bool) -> void:
 	_lamp_material.albedo_color = LAMP_LIT_COLOUR if lit else LAMP_DARK_COLOUR
 	_lamp_material.emission_enabled = lit
 	_lamp_light.visible = lit
+	_pulse = 0.0
+	_show_pulse()
 
 
 func is_lit() -> bool:
 	return _lit
 
 
-## Turns the turnstile a quarter turn, as he pushes through it.
-func push_turnstile() -> void:
-	_turnstile_turns += 1
+## A step on a power tile: the lit lamp brightens faintly, then settles.
+func pulse() -> void:
+	if _lit and not skip_pulse:
+		_pulse = 1.0
+		_show_pulse()
 
 
-## The turn the turnstile's arms are heading for, in radians: a quarter turn per push.
-func turnstile_turn() -> float:
-	return _turnstile_turns * PI / 2.0
+func is_pulsing() -> bool:
+	return _pulse > 0.0
 
 
 ## Whether a point on the ground counts as a tap on the Generator.
@@ -108,25 +100,26 @@ func covers(ground_point: Vector3) -> bool:
 	return local.x >= -TAP_OUTWARDS and local.x <= TAP_INWARDS and absf(local.z) <= TAP_ALONG
 
 
-func _build_turnstile(metal: StandardMaterial3D) -> void:
-	var post_mesh := CylinderMesh.new()
-	post_mesh.top_radius = 0.07
-	post_mesh.bottom_radius = 0.07
-	post_mesh.height = 1.2
-	_add_mesh("TurnstilePost", post_mesh, Vector3(TURNSTILE_POST_X, 0.6, 0.0), metal)
-	_turnstile_arms.name = "TurnstileArms"
-	_turnstile_arms.position = Vector3(TURNSTILE_POST_X, TURNSTILE_ARM_HEIGHT, 0.0)
-	add_child(_turnstile_arms)
-	for arm in 4:
-		var bar := BoxMesh.new()
-		bar.size = Vector3(TURNSTILE_ARM_LENGTH, 0.05, 0.05)
-		bar.material = metal
-		var instance := MeshInstance3D.new()
-		instance.mesh = bar
-		var pointing := Vector3.RIGHT.rotated(Vector3.UP, arm * PI / 2.0)
-		instance.position = pointing * TURNSTILE_ARM_LENGTH / 2.0
-		instance.rotation.y = arm * PI / 2.0
-		_turnstile_arms.add_child(instance)
+func _build_cables() -> void:
+	var rubber := _material(CABLE_COLOUR)
+	for index in CABLE_ALONG.size():
+		var start := Vector3(-TRACK_EDGE_X + 0.1, CABLE_THICKNESS / 2.0, CABLE_ALONG[index])
+		# They meet the machine's side facing the track, side by side.
+		var end_z := PUMP_SPOT.z + (index - 1) * 0.2
+		var end := Vector3(PUMP_SPOT.x + 0.4, CABLE_THICKNESS / 2.0, end_z)
+		var cable := _add_box(
+			"Cable%d" % index,
+			Vector3(CABLE_THICKNESS, CABLE_THICKNESS, start.distance_to(end)),
+			(start + end) / 2.0,
+			rubber
+		)
+		cable.basis = Basis.looking_at(end - start)
+
+
+func _show_pulse() -> void:
+	var brightness := 1.0 + PULSE_STRENGTH * _pulse
+	_lamp_light.light_energy = LAMP_LIGHT_ENERGY * brightness
+	_lamp_material.emission_energy_multiplier = brightness
 
 
 func _build_loudspeaker(metal: StandardMaterial3D) -> void:
