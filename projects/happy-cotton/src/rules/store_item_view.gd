@@ -5,7 +5,7 @@ extends RefCounted
 
 enum Kind { UPGRADE, PRIVILEGE }
 
-## Which item: an Upgrade (Farm.GENERATOR) or a Privilege (Farm.REST_HOUR).
+## Which item: an Upgrade (Farm.GENERATOR, Farm.TOOLS) or a Privilege (Farm.REST_HOUR).
 var id: StringName:
 	get:
 		return _id
@@ -24,8 +24,8 @@ var top_tier: int:
 var price: int:
 	get:
 		return _price
-## What the next tier does (the Generator's growth multiplier); the owned tier's when fully
-## upgraded. 0 for a Privilege.
+## What the next tier does (the Generator's growth multiplier, the tools' work share); the
+## owned tier's when fully upgraded. 0 for a Privilege.
 var effect: float:
 	get:
 		return _effect

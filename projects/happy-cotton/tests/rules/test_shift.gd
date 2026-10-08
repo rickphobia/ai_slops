@@ -230,5 +230,6 @@ func test_every_key_the_rules_emit_is_listed() -> void:
 		Farm.REST_ENDED,
 		Farm.COTTON_DROPPED,
 		Farm.GENERATOR_UPGRADED,
+		Farm.TOOLS_UPGRADED,
 	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)

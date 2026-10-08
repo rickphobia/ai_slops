@@ -4,16 +4,16 @@
 
 **Blocked by:** 17 (The store, with Generator Upgrades)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules, config/tuning, content/app-text, adapters/app-overlay, adapters/field, adapters/save
 
 **Effort:** low
 
-- [ ] Buying a tools tier shortens a pick and lowers the share of cotton dropped above the Exhaustion mistake threshold, straight away
-- [ ] Its Quota rise follows the same rule as the Generator's
-- [ ] The store lists tools with price, effect and Quota rise, and marks the top tier
-- [ ] The tools look different in the field at each tier
-- [ ] The tuning table holds the tools tier list with the same validation as the Generator's, and effects may only improve from tier to tier
-- [ ] Tools tiers are saved; a save without them restores with none
-- [ ] GUT tests through Farm (randomness injected for drops) and tuning validation tests
+- [x] Buying a tools tier shortens a pick and lowers the share of cotton dropped above the Exhaustion mistake threshold, straight away
+- [x] Its Quota rise follows the same rule as the Generator's
+- [x] The store lists tools with price, effect and Quota rise, and marks the top tier
+- [x] The tools look different in the field at each tier
+- [x] The tuning table holds the tools tier list with the same validation as the Generator's, and effects may only improve from tier to tier
+- [x] Tools tiers are saved; a save without them restores with none
+- [x] GUT tests through Farm (randomness injected for drops) and tuning validation tests

@@ -227,6 +227,57 @@ func test_a_save_from_before_the_store_restores_with_no_upgrades() -> void:
 	assert_eq(restored.store()[0].tier, 0)
 
 
+func test_tools_tiers_survive_a_save() -> void:
+	var saved := _played_farm()
+	saved.debug_add_labour_points(FastTuning.TOOLS_PRICES[0])
+	saved.buy_upgrade(Farm.TOOLS)
+	saved.take_messages()
+	var restored := _new_farm()
+
+	var problems := restored.restore(_through_json(saved.to_save()))
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(_seen(restored), _seen(saved), "as restored")
+	assert_eq(_tools(restored).tier, 1)
+	var end_shift := func(farm: Farm) -> void: farm.advance(farm.shift().seconds_left)
+	_assert_play_alike(saved, restored, end_shift, "through the end of the Shift")
+
+
+func test_a_save_from_before_the_tools_restores_with_none() -> void:
+	var saved := _played_farm()
+	saved.debug_add_labour_points(FastTuning.GENERATOR_PRICES[0])
+	saved.buy_upgrade(Farm.GENERATOR)
+	var save := _through_json(saved.to_save())
+	save["version"] = 2
+	var store: Dictionary = save["store"]
+	store.erase("tools_tier")
+	var restored := _new_farm()
+
+	var problems := restored.restore(save)
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(_tools(restored).tier, 0)
+	assert_eq(restored.store()[0].tier, 1, "the Generator tier is kept")
+
+
+func test_a_save_of_this_version_without_the_tools_tier_is_damaged() -> void:
+	var save := _through_json(_played_farm().to_save())
+	var store: Dictionary = save["store"]
+	store.erase("tools_tier")
+
+	var problems := _new_farm().restore(save)
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "tools_tier")
+
+
+func _tools(farm: Farm) -> StoreItemView:
+	for item in farm.store():
+		if item.id == Farm.TOOLS:
+			return item
+	return null
+
+
 func test_a_save_of_this_version_without_the_store_is_damaged() -> void:
 	var save := _through_json(_played_farm().to_save())
 	save.erase("store")

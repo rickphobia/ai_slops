@@ -17,6 +17,7 @@ const SAMPLE_VALUES := {
 	"price": 20,
 	"tier": 2,
 	"multiplier": 1.25,
+	"share": 0.5,
 	"quota_rise": 3,
 }
 

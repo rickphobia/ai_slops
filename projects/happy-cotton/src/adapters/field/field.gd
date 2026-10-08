@@ -6,7 +6,8 @@ extends Node3D
 ## stage as a cotton plant (see CropLooks), shows the time left on a growing plot, shows the
 ## Worker walking out to the track and running laps of it (see WorkerMotion), lights the tile
 ## under each of his steps, shows the Overseer beside the Generator whistling and whipping
-## when the rules say so (see OverseerLook), plays the field's sounds (see FieldSounds), and
+## when the rules say so (see OverseerLook), shows the Worker's tools on a rack by the
+## Generator at their Upgrade tier (see ToolRack), plays the field's sounds (see FieldSounds), and
 ## reports which plot, or the Generator, was tapped. Knows nothing of the rules beyond the
 ## views and events it is shown.
 ##
@@ -35,6 +36,8 @@ const MOUSE_POINTER := -2
 ## Where the Overseer stands from the lap line: outside the track, by the loudspeaker pole,
 ## watching the lap line where the Worker stops.
 const OVERSEER_SPOT := Vector3(-1.9, 0.0, -1.7)
+## Where the tool rack stands, from the Generator: beyond its pump, away from the Overseer.
+const TOOL_RACK_SPOT := Vector3(-2.2, 0.0, 2.4)
 ## How much colour is left in the world when the Worker is fully exhausted: nearly grey.
 const DRAINED_SATURATION := 0.1
 
@@ -70,6 +73,7 @@ var _sounds := FieldSounds.new()
 var _track: TrackPath
 var _tiles: PowerTiles
 var _view: FieldCamera
+var _tool_rack := ToolRack.new()
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
 var _camera_back: Vector3
 ## The scene's own colour saturation, shown while he is rested.
@@ -110,6 +114,9 @@ func _ready() -> void:
 	_tiles.name = "PowerTiles"
 	add_child(_tiles)
 	_generator.position = _track.point_at(0.0)
+	_tool_rack.name = "ToolRack"
+	_tool_rack.position = _generator.position + TOOL_RACK_SPOT
+	add_child(_tool_rack)
 	# Its own copy: the scene's environment is shared by every instance of the scene.
 	_haze.environment = _haze.environment.duplicate()
 	_full_saturation = _haze.environment.adjustment_saturation
@@ -160,6 +167,11 @@ func show_worker(view: WorkerView) -> void:
 ## Shows the Generator Upgrade tier owned, from 0 (none).
 func show_generator_tier(tier: int) -> void:
 	_generator.show_tier(tier)
+
+
+## Shows the tools Upgrade tier owned, from 0 (none).
+func show_tools_tier(tier: int) -> void:
+	_tool_rack.show_tier(tier)
 
 
 ## Reduced motion: the Worker neither slumps nor staggers, the power tiles' trail goes dark

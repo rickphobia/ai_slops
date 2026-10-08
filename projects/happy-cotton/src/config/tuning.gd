@@ -52,6 +52,11 @@ const NO_UPGRADE_GROWTH := 1.0
 ## The most a tier can cost, multiply growth by, or raise the Quota by.
 const MOST_TIER_PRICE := 1000000.0
 const MOST_GROWTH_MULTIPLIER := 100.0
+## What a tools tier's work share is measured against: no Upgrade at all.
+const NO_UPGRADE_WORK_SHARE := 1.0
+## The least share of a slow pick and of the drop chance a tools tier can leave: tools never
+## make a pick instant or a drop impossible.
+const LEAST_WORK_SHARE := 0.01
 const MOST_TIER_QUOTA_RISE := 10000.0
 
 ## How long a planted plot takes to ripen, in seconds of real time.
@@ -130,6 +135,9 @@ const MOST_TIER_QUOTA_RISE := 10000.0
 ## The Generator Upgrade's tiers, bought in order: each one's price, growth per second of
 ## running, and Quota rise. At least one tier.
 @export var generator_tiers: Array[GeneratorTier] = []
+## The tools Upgrade's tiers, bought in order: each one's price, share of a slow pick's time and
+## of the drop chance, and Quota rise. At least one tier.
+@export var tools_tiers: Array[ToolsTier] = []
 
 
 static func load_file(path: String) -> Tuning:
@@ -175,6 +183,7 @@ func problems() -> Array[String]:
 		)
 		found.append(laps_problem % [fewest_laps_before_breath, laps_before_breath])
 	found.append_array(_generator_tier_problems())
+	found.append_array(_tools_tier_problems())
 	return found
 
 
@@ -211,6 +220,36 @@ func _generator_tier_problems() -> Array[String]:
 		found.append_array(multiplier_problems)
 		if multiplier_problems.is_empty():
 			previous_multiplier = tier.growth_multiplier
+	return found
+
+
+## As for the Generator, but each tier's work share must be above 0 and no higher than the
+## tier before it (or than no Upgrade, for the first): better tools never make work worse.
+func _tools_tier_problems() -> Array[String]:
+	if tools_tiers.is_empty():
+		return ["tools_tiers has no tiers"]
+	var found: Array[String] = []
+	var previous_share := NO_UPGRADE_WORK_SHARE
+	for index in tools_tiers.size():
+		var where := "tools_tiers[%d]" % (index + 1)
+		var tier := tools_tiers[index]
+		if tier == null:
+			found.append("%s is missing" % where)
+			continue
+		found.append_array(
+			_tier_value_problems(where + ".price", tier.price, 1.0, MOST_TIER_PRICE, true)
+		)
+		found.append_array(
+			_tier_value_problems(
+				where + ".quota_rise", tier.quota_rise, 1.0, MOST_TIER_QUOTA_RISE, true
+			)
+		)
+		var share_problems := _tier_value_problems(
+			where + ".work_share", tier.work_share, LEAST_WORK_SHARE, previous_share, false
+		)
+		found.append_array(share_problems)
+		if share_problems.is_empty():
+			previous_share = tier.work_share
 	return found
 
 
