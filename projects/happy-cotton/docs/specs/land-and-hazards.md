@@ -55,106 +55,111 @@ Disasters and Bollworms happen only while the game is open.
 22. As a player, I want the Hand-in to show how what I hand in compares with the Quota as I move the slider, so that I know whether keeping back will make me miss it.
 23. As a player, I want only the cotton I hand in to count towards the Quota, so that keeping back is a real risk.
 24. As a player, I want Labour Points paid at the Hand-in for the cotton handed in, not at each pick, so that keeping cotton back costs me wages.
-25. As a player, I want to see the cotton in hand during the Shift, so that I know what I'll have to hand in.
-26. As a player, I want the Farm to wait while the Hand-in is open, so that I'm never rushed into the choice.
-27. As a player who closes the game at the Hand-in, I want it still waiting when I come back, so that closing the game never decides for me.
-28. As a player, I want kept cotton to turn into hidden savings at a better rate than Labour Points, so that it's worth the risk to his Family.
-29. As a player, I want hidden savings kept apart from Labour Points, in a hand-drawn tin under his mattress and never in The App, so that the state's voice never knows about them.
-30. As a player, I want to choose whether to pay for something in the store with Labour Points or hidden savings, so that I decide what the savings are for.
-31. As a player, I want spending hidden savings in the state's store to raise the audit risk a little, so that I have to weigh what I buy with them.
-32. As a player, I want the store to say nothing about that risk, so that I learn it the way the Worker would.
-33. As a player, I want hidden savings to pay a Bill my Labour Points can't cover before it becomes Debt, so that his Children's school fees get paid when the wage doesn't.
-34. As a player, I want paying Bills from hidden savings not to raise the audit risk, so that keeping the Children in school is never what gives him away.
-35. As a player, I want Debt to keep blocking the store even when I have hidden savings, so that Debt stays never forgiven.
-36. As a player, I want Negligence to dock only Labour Points, never hidden savings, so that the state only takes what it knows about.
+25. As a player, I want a crop counter in The App's top bar, beside Labour Points, showing how many crops I've picked this Shift, so that I know how much cotton is in hand.
+26. As a player, I want the counter to go up by one with every pick, with a "+1" rising from the Plot, so that each pick still feels rewarded now that Labour Points wait for the Hand-in.
+27. As a player, I want a pick that drops its cotton not to add to the counter, so that the count is only cotton I can hand in.
+28. As a player, I want the Quota bar to fill with the counter during the Shift, so that I can see how close the cotton in hand is to the Quota.
+29. As a player, I want the counter to go back to zero when the next Shift starts, so that each Shift's count stands on its own.
+30. As a player, I want the Hand-in to start from the counter's number, so that the slider's "everything" is exactly what I picked.
+31. As a player, I want the Farm to wait while the Hand-in is open, so that I'm never rushed into the choice.
+32. As a player who closes the game at the Hand-in, I want it still waiting when I come back, so that closing the game never decides for me.
+33. As a player, I want kept cotton to turn into hidden savings at a better rate than Labour Points, so that it's worth the risk to his Family.
+34. As a player, I want hidden savings kept apart from Labour Points, in a hand-drawn tin under his mattress and never in The App, so that the state's voice never knows about them.
+35. As a player, I want to choose whether to pay for something in the store with Labour Points or hidden savings, so that I decide what the savings are for.
+36. As a player, I want spending hidden savings in the state's store to raise the audit risk a little, so that I have to weigh what I buy with them.
+37. As a player, I want the store to say nothing about that risk, so that I learn it the way the Worker would.
+38. As a player, I want hidden savings to pay a Bill my Labour Points can't cover before it becomes Debt, so that his Children's school fees get paid when the wage doesn't.
+39. As a player, I want paying Bills from hidden savings not to raise the audit risk, so that keeping the Children in school is never what gives him away.
+40. As a player, I want Debt to keep blocking the store even when I have hidden savings, so that Debt stays never forgiven.
+41. As a player, I want Negligence to dock only Labour Points, never hidden savings, so that the state only takes what it knows about.
 
 ### Harmony Audits
 
-37. As a player, I want a Harmony Audit now and then at the end of a Shift, so that keeping back always carries a risk.
-38. As a player, I want audits to come even when I've kept nothing back, and to find nothing then, so that an audit isn't proof on its own.
-39. As a player, I want the chance of an audit to grow with how much I kept back over the last few Shifts, compared with what my Plots should yield, so that greed is what gets the Worker caught.
-40. As a player, I want a small cut to be safe from an ordinary audit, and the safe cut to grow with my land, so that more Plots make a small cut harder to spot.
-41. As a player, I want a tell before an audit, the Overseer watching the scale during the Shift, so that I can hand in everything this time.
-42. As a player, I want the audit to look back over the last few Shifts, so that one honest Shift doesn't wipe the record.
-43. As a player, I want a run of Shifts without keeping back to bring the risk down, as the old Shifts drop out of what the audit looks at, so that I can lie low.
-44. As a player, I want an audit that finds nothing to be cheered by The App ("Your harmony is exemplary!"), so that the state's voice stays cheerful either way.
-45. As a player, I want being caught the first time to take all my hidden savings and start the longest Study Session yet, so that the cost is heavy but survivable.
-46. As a player, I want to be put on watch after being caught, with audits more often and any cut at all found, for a few Shifts, so that I have to lie low for a while.
-47. As a player, I want to see that I'm on watch and for how many more Shifts, in The App's voice ("You have been selected for Harmony Support!"), so that I can plan around it.
-48. As a player, I want being caught a second time to lead to the Caught ending, so that the choice I kept making has an end.
-49. As a player, I want being caught shown as the state's paperwork, never as violence, so that the game condemns the system without displaying harm.
-50. As a player, I want a missed Quota and being caught in the same Shift to start only the longer Study Session, so that I'm punished once, heavily, not twice.
+42. As a player, I want a Harmony Audit now and then at the end of a Shift, so that keeping back always carries a risk.
+43. As a player, I want audits to come even when I've kept nothing back, and to find nothing then, so that an audit isn't proof on its own.
+44. As a player, I want the chance of an audit to grow with how much I kept back over the last few Shifts, compared with what my Plots should yield, so that greed is what gets the Worker caught.
+45. As a player, I want a small cut to be safe from an ordinary audit, and the safe cut to grow with my land, so that more Plots make a small cut harder to spot.
+46. As a player, I want a tell before an audit, the Overseer watching the scale during the Shift, so that I can hand in everything this time.
+47. As a player, I want the audit to look back over the last few Shifts, so that one honest Shift doesn't wipe the record.
+48. As a player, I want a run of Shifts without keeping back to bring the risk down, as the old Shifts drop out of what the audit looks at, so that I can lie low.
+49. As a player, I want an audit that finds nothing to be cheered by The App ("Your harmony is exemplary!"), so that the state's voice stays cheerful either way.
+50. As a player, I want being caught the first time to take all my hidden savings and start the longest Study Session yet, so that the cost is heavy but survivable.
+51. As a player, I want to be put on watch after being caught, with audits more often and any cut at all found, for a few Shifts, so that I have to lie low for a while.
+52. As a player, I want to see that I'm on watch and for how many more Shifts, in The App's voice ("You have been selected for Harmony Support!"), so that I can plan around it.
+53. As a player, I want being caught a second time to lead to the Caught ending, so that the choice I kept making has an end.
+54. As a player, I want being caught shown as the state's paperwork, never as violence, so that the game condemns the system without displaying harm.
+55. As a player, I want a missed Quota and being caught in the same Shift to start only the longer Study Session, so that I'm punished once, heavily, not twice.
 
 ### Supplies
 
-51. As a player, I want the store to sell Fertiliser and Pesticide, so that I can prepare for slow growth and pests.
-52. As a player, I want to hold a small stock of each supply, with the most I can hold shown, so that I can buy ahead without hoarding forever.
-53. As a player, I want a supplies bar in the field showing how many of each I hold, so that I know what I can use without opening the store.
-54. As a player, I want to pick a supply from the bar and tap a Plot to use it, so that it works like Hay Day's tools.
-55. As a player, I want my next tap after using a supply to do the normal thing again, so that I don't spread Fertiliser by accident.
-56. As a player, I want to be told plainly why a supply can't be used on a Plot (none held, wrong Stage, already fertilised, already protected, Bollworms on it), so that I'm never confused.
+56. As a player, I want the store to sell Fertiliser and Pesticide, so that I can prepare for slow growth and pests.
+57. As a player, I want to hold a small stock of each supply, with the most I can hold shown, so that I can buy ahead without hoarding forever.
+58. As a player, I want a supplies bar in the field showing how many of each I hold, so that I know what I can use without opening the store.
+59. As a player, I want to pick a supply from the bar and tap a Plot to use it, so that it works like Hay Day's tools.
+60. As a player, I want my next tap after using a supply to do the normal thing again, so that I don't spread Fertiliser by accident.
+61. As a player, I want to be told plainly why a supply can't be used on a Plot (none held, wrong Stage, already fertilised, already protected, Bollworms on it), so that I'm never confused.
 
 ### Fertiliser
 
-57. As a player, I want to spread Fertiliser on a Plot at its Seedling Stage, so that the crop in it grows faster.
-58. As a player, I want a fertilised crop to grow faster for the rest of its growth, by a set amount, so that the gain is clear.
-59. As a player, I want a fertilised Plot to look different, so that I can see which crops I've fertilised.
-60. As a player, I want Fertiliser used up by one crop, so that I have to buy it again.
-61. As a player, I want Fertiliser not to raise the Quota, since it's used up rather than kept, so that it feels different from an Upgrade.
-62. As a player, I want the price of Fertiliser to rise every Shift and never fall, so that The App's cheerful brand feels ever dearer.
-63. As a player, I want the store to tell me tomorrow's Fertiliser price, cheerfully, so that the rise is out in the open.
+62. As a player, I want to spread Fertiliser on a Plot at its Seedling Stage, so that the crop in it grows faster.
+63. As a player, I want a fertilised crop to grow faster for the rest of its growth, by a set amount, so that the gain is clear.
+64. As a player, I want a fertilised Plot to look different, so that I can see which crops I've fertilised.
+65. As a player, I want Fertiliser used up by one crop, so that I have to buy it again.
+66. As a player, I want Fertiliser not to raise the Quota, since it's used up rather than kept, so that it feels different from an Upgrade.
+67. As a player, I want the price of Fertiliser to rise every Shift and never fall, so that The App's cheerful brand feels ever dearer.
+68. As a player, I want the store to tell me tomorrow's Fertiliser price, cheerfully, so that the rise is out in the open.
 
 ### Pesticide
 
-64. As a player, I want to spray Pesticide on any Plot without Bollworms, so that the crop in it, or the next one planted there, is safe from them.
-65. As a player, I want the protection to last until that crop is picked, eaten or Withered, so that one spray covers one crop.
-66. As a player, I want a protected Plot to look different, so that I know which Plots are safe.
+69. As a player, I want to spray Pesticide on any Plot without Bollworms, so that the crop in it, or the next one planted there, is safe from them.
+70. As a player, I want the protection to last until that crop is picked, eaten or Withered, so that one spray covers one crop.
+71. As a player, I want a protected Plot to look different, so that I know which Plots are safe.
 
 ### Disasters
 
-67. As a player, I want a Disaster to strike now and then during a Shift, so that the Farm feels at nature's mercy.
-68. As a player, I want The App to warn me a little before a Disaster strikes, so that I can prepare.
-69. As a player, I want at most one Disaster in a Shift, and none in the first Shift, so that I learn the game before it gets harder.
-70. As a player, I want a Sandstorm to turn the sky orange and blow dust across the field, so that I can see it.
-71. As a player, I want crops to grow slower while a Sandstorm lasts, so that it costs me cotton.
-72. As a player, I want a Heatwave to show as shimmer and a harsher light, so that I can see it.
-73. As a player, I want every lap during a Heatwave to add more Exhaustion, so that it costs the Worker's body.
-74. As a player, I want The App to cheer "Nature cannot stop us!" and keep the Quota where it was, so that I feel the state blaming him for the weather.
-75. As a player, I want to see how long the Disaster has left, so that I can plan around it.
-76. As a player, I want a Disaster never to make a Quota impossible on its own, so that the game stays hard but fair.
-77. As a player, I want a Disaster to end when I close the game, so that closing the game never costs me more than playing it.
-78. As a player who prefers less motion, I want the blowing dust and heat shimmer toned down, so that the effects stay comfortable.
+72. As a player, I want a Disaster to strike now and then during a Shift, so that the Farm feels at nature's mercy.
+73. As a player, I want The App to warn me a little before a Disaster strikes, so that I can prepare.
+74. As a player, I want at most one Disaster in a Shift, and none in the first Shift, so that I learn the game before it gets harder.
+75. As a player, I want a Sandstorm to turn the sky orange and blow dust across the field, so that I can see it.
+76. As a player, I want crops to grow slower while a Sandstorm lasts, so that it costs me cotton.
+77. As a player, I want a Heatwave to show as shimmer and a harsher light, so that I can see it.
+78. As a player, I want every lap during a Heatwave to add more Exhaustion, so that it costs the Worker's body.
+79. As a player, I want The App to cheer "Nature cannot stop us!" and keep the Quota where it was, so that I feel the state blaming him for the weather.
+80. As a player, I want to see how long the Disaster has left, so that I can plan around it.
+81. As a player, I want a Disaster never to make a Quota impossible on its own, so that the game stays hard but fair.
+82. As a player, I want a Disaster to end when I close the game, so that closing the game never costs me more than playing it.
+83. As a player who prefers less motion, I want the blowing dust and heat shimmer toned down, so that the effects stay comfortable.
 
 ### Bollworms
 
-79. As a player, I want Bollworms to appear on growing Plots now and then, so that the crops need tending, not just watering.
-80. As a player, I want Plots with Bollworms to be easy to spot, so that I can react before they eat the crop.
-81. As a player, I want tapping a Plot with Bollworms to pick them off, so that I can save the crop.
-82. As a player, I want picking off Bollworms to take time and add Exhaustion, so that saving a crop has a cost.
-83. As a player, I want a protected Plot never to get Bollworms, so that Pesticide is worth buying.
-84. As a player, I want Bollworms left too long to eat the crop, emptying the Plot, so that ignoring them costs the cotton.
-85. As a player, I want The App to log an eaten crop as Negligence, punished like a Withered one, so that pests are the Worker's fault too.
-86. As a player, I want Bollworms to come and eat only while the game is open, so that closing the game never costs me more than playing it.
-87. As a player, I want Bollworms not to come or eat during a Study Session, when the state has taken the Worker off the field, so that I'm never punished for something I couldn't stop.
-88. As a player, I want a crop that ripens with Bollworms on it to stay unpickable until I pick them off, so that I always deal with them first.
+84. As a player, I want Bollworms to appear on growing Plots now and then, so that the crops need tending, not just watering.
+85. As a player, I want Plots with Bollworms to be easy to spot, so that I can react before they eat the crop.
+86. As a player, I want tapping a Plot with Bollworms to pick them off, so that I can save the crop.
+87. As a player, I want picking off Bollworms to take time and add Exhaustion, so that saving a crop has a cost.
+88. As a player, I want a protected Plot never to get Bollworms, so that Pesticide is worth buying.
+89. As a player, I want Bollworms left too long to eat the crop, emptying the Plot, so that ignoring them costs the cotton.
+90. As a player, I want The App to log an eaten crop as Negligence, punished like a Withered one, so that pests are the Worker's fault too.
+91. As a player, I want Bollworms to come and eat only while the game is open, so that closing the game never costs me more than playing it.
+92. As a player, I want Bollworms not to come or eat during a Study Session, when the state has taken the Worker off the field, so that I'm never punished for something I couldn't stop.
+93. As a player, I want a crop that ripens with Bollworms on it to stay unpickable until I pick them off, so that I always deal with them first.
 
 ### Saving
 
-89. As a returning player, I want my land, my supplies, which Plots are fertilised or protected, Bollworms on Plots, my hidden savings, what I kept back lately, a planned audit, being on watch and a Hand-in still open all saved, so that nothing about the Farm resets and reloading never dodges an audit.
-90. As a player with a save from before this update, I want my game to carry on with the first twelve Plots, no supplies, no Bollworms, no hidden savings and a clean record, so that the update doesn't wipe my progress.
+94. As a returning player, I want my land, my supplies, which Plots are fertilised or protected, Bollworms on Plots, my hidden savings, what I kept back lately, a planned audit, being on watch and a Hand-in still open all saved, so that nothing about the Farm resets and reloading never dodges an audit.
+95. As a player with a save from before this update, I want my game to carry on with the first twelve Plots, no supplies, no Bollworms, no hidden savings and a clean record, so that the update doesn't wipe my progress.
 
 ### Owner and developer
 
-91. As a developer, I want every price, rise, chance, length, rate and size (land, keeping back, audits, supplies, Disasters, Bollworms) in the tuning table, so that balancing never means hunting through code.
-92. As a developer, I want the tuning table to reject values that would let a Disaster make a Quota impossible (a Disaster longer than a quarter of a Shift, a Sandstorm slowing growth below half), so that the fairness promise can't be broken by accident.
-93. As a developer, I want the tuning table to reject a Plot that adds as much to the Quota as it yields, and a caught Study Session no longer than the Negligence one, so that land always leaves a margin and being caught is always the heaviest punishment.
-94. As a developer, I want audits, Disasters and Bollworms to draw on the Farm's one source of chance, so that tests decide them.
-95. As a developer, I want the rules to count how many times the Worker has been caught, so that the story and endings spec can build the Caught ending on it without changing these rules.
-96. As a developer, I want the rules to emit Disaster warnings, starts and ends, Bollworms arriving and a crop eaten as App messages or field events, as data, so that I can test them without rendering anything.
-97. As a developer, I want debug buttons to start a Sandstorm, a Heatwave or Bollworms now, and to plan an audit for this Shift, so that I can see each without waiting.
-98. As a developer, I want structured logs for each Hand-in (handed in, kept), audits planned and their result, being caught, hidden savings spent and taken, land and supplies bought, supplies used, Disasters starting and ending, and Bollworms arriving, picked off and eating a crop, so that I can debug a player's report.
-99. As the owner, I want any factual claim about Bollworms, Sandstorms or Pesticide in The App or on the Sources page to cite a source, so that ground rule 1 holds.
-100. As the owner, I want cotton kept back and sold on the side, and Harmony Audits and their penalties, treated as the game's invention unless a source documents them, so that the game never presents them as fact.
+96. As a developer, I want every price, rise, chance, length, rate and size (land, keeping back, audits, supplies, Disasters, Bollworms) in the tuning table, so that balancing never means hunting through code.
+97. As a developer, I want the tuning table to reject values that would let a Disaster make a Quota impossible (a Disaster longer than a quarter of a Shift, a Sandstorm slowing growth below half), so that the fairness promise can't be broken by accident.
+98. As a developer, I want the tuning table to reject a Plot that adds as much to the Quota as it yields, and a caught Study Session no longer than the Negligence one, so that land always leaves a margin and being caught is always the heaviest punishment.
+99. As a developer, I want audits, Disasters and Bollworms to draw on the Farm's one source of chance, so that tests decide them.
+100. As a developer, I want the rules to count how many times the Worker has been caught, so that the story and endings spec can build the Caught ending on it without changing these rules.
+101. As a developer, I want the rules to emit Disaster warnings, starts and ends, Bollworms arriving and a crop eaten as App messages or field events, as data, so that I can test them without rendering anything.
+102. As a developer, I want debug buttons to start a Sandstorm, a Heatwave or Bollworms now, and to plan an audit for this Shift, so that I can see each without waiting.
+103. As a developer, I want structured logs for each Hand-in (handed in, kept), audits planned and their result, being caught, hidden savings spent and taken, land and supplies bought, supplies used, Disasters starting and ending, and Bollworms arriving, picked off and eating a crop, so that I can debug a player's report.
+104. As the owner, I want any factual claim about Bollworms, Sandstorms or Pesticide in The App or on the Sources page to cite a source, so that ground rule 1 holds.
+105. As the owner, I want cotton kept back and sold on the side, and Harmony Audits and their penalties, treated as the game's invention unless a source documents them, so that the game never presents them as fact.
 
 ## Implementation Decisions
 
@@ -162,12 +167,12 @@ Disasters and Bollworms happen only while the game is open.
 
 - **Farm rules (the seam, modified).** Still the one object the game and the tests drive.
   - **Commands:** hand in (how much of the cotton in hand), buy a Plot, buy a supply (Fertiliser or Pesticide), fertilise a Plot, spray a Plot, and pick off Bollworms. Tapping a Plot with Bollworms goes to "pick off Bollworms" before planting or picking. Every store purchase (these, and the economy spec's Upgrades and Privileges) now says what pays for it: Labour Points or hidden savings. Each returns whether it happened and, if not, why: not enough Labour Points, not enough hidden savings, Hand-in open, in Debt, in a Study Session, Worker busy, fully bought, stock full, none held, wrong Stage, already fertilised, already protected, or Bollworms on the Plot.
-  - **Views (read-only):** the Hand-in (open or not, cotton in hand, the Quota); hidden savings; on watch (Shifts left); times caught; the audit tell (the Overseer watching the scale this Shift). The land: the Farm's columns and rows, and the cell each Plot sits in. The store gains a land item (next Plot's price and Quota rise, or fully bought) and the supplies (price today, price next Shift, held, most held). Each Plot's view gains fertilised, protected and Bollworms (with seconds left before they eat the crop). The Shift view gains the Disaster: none, warned (kind, seconds until it strikes) or striking (kind, seconds left). The Worker view gains the current lap length.
+  - **Views (read-only):** the Shift view's crop counter (crops picked this Shift); the Hand-in (open or not, cotton in hand, the Quota); hidden savings; on watch (Shifts left); times caught; the audit tell (the Overseer watching the scale this Shift). The land: the Farm's columns and rows, and the cell each Plot sits in. The store gains a land item (next Plot's price and Quota rise, or fully bought) and the supplies (price today, price next Shift, held, most held). Each Plot's view gains fertilised, protected and Bollworms (with seconds left before they eat the crop). The Shift view gains the Disaster: none, warned (kind, seconds until it strikes) or striking (kind, seconds left). The Worker view gains the current lap length.
   - **App messages (data, as now):** new keys for the Hand-in, audit announced, audit found nothing, caught (savings taken, Study Session, on watch), caught again, on watch ended, Plot bought, supply bought, Disaster warning, Disaster struck ("Nature cannot stop us!"), Disaster passed, Bollworms on a Plot, and crop eaten (as Negligence). Refusal reasons are rendered by The App, like the existing ones.
 - **Land (new, inside the rules, not a seam).** It knows the Farm's columns and rows and the cell of every Plot. Plots keep their number for good: a new Plot gets the next number, so the first twelve keep the numbers they have today. The field grows by whole columns and rows, in a fixed order: a column on the right, then a row at the back, and so on, until the largest Farm. Within a strip, Plots are bought from the front or the left. Buying a strip's first Plot widens the Farm to take in the whole strip; the rest of its cells are unworked ground until bought. The start and the largest Farm (4 × 3 and, to start, 6 × 5) are in the tuning table. Farm owns Land and delegates to it; it is tested only through Farm. Farm's starting land now comes from the tuning table, not from the field adapter.
 - **Lap length.** A lap of the first Farm takes `lap_seconds`. Each new column or row adds a set number of seconds (tuning), chosen so the shipped pace stays the same over the longer track (each new column or row adds two plot spacings to the track). A new length starts with the Worker's next lap. Exhaustion from running is charged per second, at the first Farm's rate (`exhaustion_per_lap` over `lap_seconds`), so a longer lap adds more. Laps before a breath don't change. Growth per second of running doesn't change either, so a bigger Farm gains nothing per lap; it only has more Plots to fill.
 - **Quota.** The Quota for a Shift adds the Quota rise of every Plot bought before that Shift began, alongside the Upgrades' (economy spec).
-- **Hand-in and Shift end.** When a Shift's time runs out, the Hand-in opens and the Farm stands still: online time moves nothing (crops, Toil, Study Session, Exhaustion, Disasters, Bollworms) until the Worker hands in, and every other command is refused. Offline time works as usual, so the night shift goes on behind an open Hand-in. Handing in then runs the rest of the Shift end in order: Labour Points for the cotton handed in, Quota check on what was handed in (and Study Session if missed), the audit if one was planned, Bills, the Exhaustion floor rise, then the next Shift starts, with its audit and Disaster rolled. Labour Points are no longer paid at each pick; the cotton in hand during the Shift replaces them on the Quota bar. A Hand-in left open is saved.
+- **Hand-in and Shift end.** When a Shift's time runs out, the Hand-in opens and the Farm stands still: online time moves nothing (crops, Toil, Study Session, Exhaustion, Disasters, Bollworms) until the Worker hands in, and every other command is refused. Offline time works as usual, so the night shift goes on behind an open Hand-in. Handing in then runs the rest of the Shift end in order: Labour Points for the cotton handed in, Quota check on what was handed in (and Study Session if missed), the audit if one was planned, Bills, the Exhaustion floor rise, then the next Shift starts, with its audit and Disaster rolled. Labour Points are no longer paid at each pick. Instead the crop counter, the number of crops picked this Shift and so the cotton in hand, goes up by one with every pick that doesn't drop its cotton. The Quota bar fills with it during the Shift, the Hand-in starts from it, and it goes back to zero when the next Shift starts. A Hand-in left open is saved.
 - **Hidden savings (in the Ledger).** A second balance beside Labour Points, never below zero. Kept cotton adds a set amount per pick (tuning), more than the Labour Points it would have earned. Bills draw on Labour Points first, then hidden savings, and only what both can't cover becomes Debt. Store purchases draw on whichever the Worker chose. Debt still blocks every store purchase, whatever pays. Negligence never touches hidden savings.
 - **Audits (new, inside the rules, not a seam).** It remembers, for each of the last few Shifts (tuning, 3 to start), how much was kept back, what the Worker's Plots should have yielded (Plots × a set yield per Plot per Shift), and how much hidden savings he spent in the store.
   - **Kept share:** cotton kept back over those Shifts divided by what they should have yielded. More Plots make the same cut a smaller share.
@@ -188,7 +193,7 @@ Disasters and Bollworms happen only while the game is open.
   - **Field:** builds Plots, unworked ground, fence and track from the land view, and rebuilds them when land is bought. The track's place is no longer a centred rectangle but follows the Farm's bounds, so the gate and Generator stay put. The track's power tiles (ticket 24) follow the longer track. Plots show fertilised, protected and Bollworm looks. The supplies bar sits in the App overlay.
   - **Field camera:** pan limits follow the track's new bounds, and the farthest zoom grows in step with the track's size.
   - **Disaster looks:** orange sky, haze and blowing dust for a Sandstorm; harsher light and heat shimmer for a Heatwave. With reduced motion the dust and shimmer are replaced by a still tint.
-  - **App overlay:** the Hand-in card with its slider and Quota line, the cotton in hand, the audit and caught cards, the on-watch notice, a "pay with" choice on store items when he has hidden savings, the store's land item and supplies, the supplies bar, the Disaster warning and countdown.
+  - **App overlay:** the Hand-in card with its slider and Quota line, the crop counter beside Labour Points with a "+1" rising from the Plot on each pick, the audit and caught cards, the on-watch notice, a "pay with" choice on store items when he has hidden savings, the store's land item and supplies, the supplies bar, the Disaster warning and countdown.
   - **Hidden savings tin:** a small hand-drawn tin outside The App's look, like the Children's letters, showing the hidden savings. It is the only place they appear.
   - **Field:** a weighing scale by the gate, where the Overseer stands to watch during an audit's tell.
 - **Save.** The save format version goes up. The new state is the number of Plots bought (the cells follow from the fixed order), cotton in hand, whether the Hand-in is open, hidden savings, the remembered Shifts (kept, should-have-yielded, savings spent in the store), a planned audit, on-watch Shifts left, times caught, supplies held, and per Plot: fertilised, protected, and Bollworm time left. A save from the previous version is migrated: twelve Plots in the first Farm's cells, the Shift's picks so far as cotton in hand, no hidden savings, a clean record, not on watch, no supplies, nothing fertilised or protected, no Bollworms. It is not treated as damaged.
@@ -207,6 +212,7 @@ Disasters and Bollworms happen only while the game is open.
 - A good test drives the Farm rules only through their public interface (commands, advance, resume, save and restore) and checks what a player would see: the Hand-in, Labour Points and hidden savings, audits planned and their result, on watch, times caught, the land view, store prices and availability, supplies held, a Plot's fertilised, protected and Bollworm state, the Shift's Disaster, lap length, Exhaustion, the Quota in the next Shift, and the App message keys. Tests never reach into Land, Audits, Disasters or Bollworms directly. They drive time only with advance and resume, and decide chance through the test tuning table (chances of 0 or 1) and the Farm's roll.
 - **Farm rules (the main body of tests).** They cover:
   - the Hand-in opening at the Shift's end, the Farm standing still until it's answered, offline time still working, and an open Hand-in surviving a save;
+  - the crop counter going up by one per pick, not for a dropped pick, and back to zero at the next Shift; no Labour Points until the Hand-in;
   - only cotton handed in counting towards the Quota and earning Labour Points, and kept cotton becoming hidden savings;
   - Bills drawing on Labour Points, then hidden savings, then Debt; Debt blocking store purchases paid either way; Negligence never touching hidden savings;
   - buying from hidden savings, and the refusals;
@@ -248,7 +254,7 @@ Disasters and Bollworms happen only while the game is open.
 ### Decisions this spec made beyond the owner's draft (owner to confirm)
 
 - Spending hidden savings in the state's store raises the audit chance a little (the owner's answer to the draft's question). Paying Bills from them doesn't.
-- Labour Points are paid at the Hand-in for the cotton handed in, not at each pick. This changes the first playable's rule and its tests, and means a Privilege bought mid-Shift is paid from earlier Shifts' wages.
+- Labour Points are paid at the Hand-in for the cotton handed in, not at each pick (confirmed by the owner). This changes the first playable's rule and its tests, and means a Privilege bought mid-Shift is paid from earlier Shifts' wages. A crop counter takes their place as the feedback for each pick (the owner's addition).
 - The Farm stands still while the Hand-in is open; offline time doesn't.
 - Hidden savings pay a Bill Labour Points can't cover, automatically, before it becomes Debt. They never pay off Debt that already exists.
 - An audit looks back three Shifts. A run of honest Shifts lowers the risk as kept Shifts drop out; a met Quota doesn't lower it by itself.
