@@ -83,6 +83,26 @@ func test_a_negligence_study_session_no_longer_than_the_missed_quota_cap_is_repo
 	assert_string_contains(problems[0], "longer than study_session_cap_seconds")
 
 
+func test_a_mistake_threshold_below_the_slow_threshold_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.mistake_exhaustion = tuning.slow_exhaustion - 1.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "mistake_exhaustion")
+
+
+func test_fewest_laps_above_the_laps_at_no_exhaustion_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.fewest_laps_before_breath = tuning.laps_before_breath + 1.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "fewest_laps_before_breath")
+
+
 func test_every_missing_field_is_reported_at_once() -> void:
 	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size())
 

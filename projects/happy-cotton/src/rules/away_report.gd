@@ -28,6 +28,10 @@ var withered: int:
 var study_seconds_served: float:
 	get:
 		return _study_seconds_served
+## Exhaustion recovered while away, never past its floor.
+var exhaustion_recovered: float:
+	get:
+		return _exhaustion_recovered
 
 var _seconds_away: float
 var _seconds_counted: float
@@ -35,6 +39,7 @@ var _clock_problem: StringName
 var _ripened: int
 var _withered: int
 var _study_seconds_served: float
+var _exhaustion_recovered: float
 
 
 func _init(
@@ -43,7 +48,8 @@ func _init(
 	problem: StringName,
 	ripened_plots: int,
 	withered_plots: int,
-	study_served: float
+	study_served: float,
+	recovered: float
 ) -> void:
 	_seconds_away = away
 	_seconds_counted = counted
@@ -51,3 +57,4 @@ func _init(
 	_ripened = ripened_plots
 	_withered = withered_plots
 	_study_seconds_served = study_served
+	_exhaustion_recovered = recovered

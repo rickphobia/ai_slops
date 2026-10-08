@@ -19,6 +19,9 @@ const QUOTA_BAR := "Quota {picked} / {quota}"
 const SHIFT_TIMER := "Shift {shift}  ·  {time} left"
 const LABOUR_POINTS := "{points} Labour Points"
 const STUDY_SESSION_TIMER := "Study Session  ·  {time} left"
+const EXHAUSTION := "Exhaustion {level}%"
+const REST_HOUR_BUTTON := "Rest hour  ·  {price} Labour Points"
+const RESTING := "Resting  ·  {time} left"
 
 
 ## Text for every message key the rules can emit (Farm.MESSAGE_KEYS).
@@ -76,10 +79,43 @@ static func lines() -> Dictionary[StringName, AppLine]:
 			(
 				"Welcome back! While you were away ({minutes} min), the night shift kept the"
 				+ " field growing: {ripened} cotton ripened, {withered} Withered. Study"
-				+ " Session served: {study_minutes} min."
+				+ " Session served: {study_minutes} min. Exhaustion recovered:"
+				+ " {exhaustion_recovered}%."
 			)
 		),
+		Farm.REST_STARTED:
+		AppLine.new(
+			(
+				"Rest hour approved! {price} Labour Points well spent. Rest quickly: the"
+				+ " Quota is still waiting!"
+			)
+		),
+		Farm.REST_ENDED:
+		AppLine.new("Rest hour over. Refreshed workers make a stronger Farm. Back to work!"),
+		Farm.COTTON_DROPPED:
+		AppLine.new("Cotton dropped! Careless hands waste the people's harvest. Focus!"),
 	}
+
+
+## Why a rest hour was refused, for each reason Farm.buy_rest_hour() gives (values: price,
+## points).
+static func rest_hour_refusals() -> Dictionary[StringName, AppLine]:
+	return {
+		Farm.IN_STUDY_SESSION: AppLine.new("Privileges are not available during Study Sessions."),
+		Farm.REST_HOUR_TAKEN_AWAY:
+		AppLine.new("Privileges are suspended this Shift. Meet your Quota to earn them back!"),
+		Farm.RESTING: AppLine.new("You are already resting. Enjoy your Privilege!"),
+		Farm.NOT_ENOUGH_LABOUR_POINTS:
+		AppLine.new("A rest hour costs {price} Labour Points. You have {points}. Keep picking!"),
+	}
+
+
+## The refusal as The App says it, or an empty string when the reason has no text.
+static func render_rest_hour_refusal(reason: StringName, values: Dictionary) -> String:
+	var refusals := rest_hour_refusals()
+	if not refusals.has(reason):
+		return ""
+	return refusals[reason].text.format(values)
 
 
 ## The message as The App says it, or an empty string when the key has no text.

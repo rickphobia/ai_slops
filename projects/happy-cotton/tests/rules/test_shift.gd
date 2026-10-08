@@ -226,5 +226,8 @@ func test_every_key_the_rules_emit_is_listed() -> void:
 		Farm.STUDY_SESSION_ENDED,
 		Farm.NEGLIGENCE_LOGGED,
 		Farm.AWAY_SUMMARY,
+		Farm.REST_STARTED,
+		Farm.REST_ENDED,
+		Farm.COTTON_DROPPED,
 	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)
