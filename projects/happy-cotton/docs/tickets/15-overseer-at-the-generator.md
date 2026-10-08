@@ -1,12 +1,12 @@
 # 15: The Overseer at the Generator
 
-**What to build:** When the Worker stops on the Generator to breathe, the crops halt and the Overseer comes: a whistle, then the whip. The Worker flinches, staggers and starts running again. The Generator whines while it turns and winds down when he stops; footsteps, the whistle and the whip crack are heard. This is the one shown act of physical punishment in the game, chosen by the owner, and it stays without blood, wounds or gore (spec: story 95; "Rules decisions": Generator and Toil; "Content rules").
+**What to build:** When the Worker stops on the Generator to breathe, the crops halt and the Overseer comes: a whistle, then the whip. The Worker flinches, staggers and starts running again. The Generator whines while it turns and winds down when he stops; footsteps, the whistle and the whip crack are heard. This is the one shown act of physical punishment in the game, chosen by the owner, and it stays without blood, wounds or gore (spec: stories 93, 95; "Rules decisions": Generator and Toil; "Content rules").
 
 **Blocked by:** 14 (Run the Generator)
 
 **Status:** ready
 
-**Touches:** rules, config/tuning, adapters/field, adapters/audio, assets
+**Touches:** rules, config/tuning, adapters/field, adapters/app_overlay, adapters/audio, assets
 
 **Effort:** medium
 
@@ -16,5 +16,6 @@
 - [ ] No blood, wounds, marks or gore; the camera does not zoom in on it
 - [ ] Sounds (CC0, credited): footsteps on the Generator, a Generator whine that rises with speed and winds down when it stops, the whistle, the whip crack
 - [ ] One audio bus for these sounds, so ticket 12's volume and mute can control them; the first sound plays only after the player's first tap (browsers block audio before that)
+- [ ] The Generator powers The App as well as the loudspeaker (story 93): while the Worker isn't running, The App overlay dims, and it brightens again when he runs
 - [ ] With reduced motion on (once ticket 12 adds it) the stagger is skipped; the sounds stay
 - [ ] Works in the web export on a phone-sized screen with sound (record what was checked in the PR)
