@@ -84,9 +84,27 @@ func test_a_mouse_drag_pans_and_never_taps() -> void:
 	_mouse_drag(end)
 	_mouse_button(MOUSE_BUTTON_LEFT, end, false)
 	assert_eq(_tapped, [] as Array[int])
-	assert_almost_eq(
-		_plot_on_screen(PLOT), end, Vector2.ONE * 0.5, "the plot stays under the pointer"
-	)
+	var moved := _plot_on_screen(PLOT) - start
+	assert_gt(moved.dot(end - start), 0.0, "the field moves the way the pointer did")
+	assert_lt(moved.length(), (end - start).length() * 0.8, "but less far, so panning is gentle")
+
+
+func test_a_drag_near_the_horizon_pans_as_far_as_one_in_the_middle() -> void:
+	var centre := Vector2(VIEW_SIZE) / 2.0
+	var near_top := Vector2(centre.x, VIEW_SIZE.y * 0.1)
+	var step := Vector2(0, 60)
+	var focus_before := _camera.position
+	_mouse_button(MOUSE_BUTTON_LEFT, centre, true)
+	_mouse_drag(centre + step)
+	_mouse_button(MOUSE_BUTTON_LEFT, centre + step, false)
+	var middle_pan := _camera.position - focus_before
+	focus_before = _camera.position
+	_mouse_button(MOUSE_BUTTON_LEFT, near_top, true)
+	_mouse_drag(near_top + step)
+	_mouse_button(MOUSE_BUTTON_LEFT, near_top + step, false)
+	var top_pan := _camera.position - focus_before
+	assert_gt(middle_pan.length(), 0.0)
+	assert_almost_eq(top_pan, middle_pan, Vector3.ONE * 0.01, "far ground doesn't pan faster")
 
 
 func test_a_finger_tap_taps_the_plot() -> void:

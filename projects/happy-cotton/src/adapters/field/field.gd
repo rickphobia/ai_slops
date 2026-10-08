@@ -24,6 +24,9 @@ const SOIL_TEXTURE := preload("res://assets/polyhaven/dry_ground_01_diff_1k.jpg"
 ## How far a finger or the mouse may move between press and release, in viewport units
 ## (the 1280x720 base size, whatever the screen), and still count as a tap.
 const TAP_SLOP := 12.0
+## How far the view pans for a drag, as a share of the drag: below 1 the ground slides
+## slower than the finger, so a short drag never flings the view across the field.
+const PAN_SPEED := 0.6
 ## The pointer id the mouse uses in a gesture; touch fingers are numbered from 0.
 const MOUSE_POINTER := -2
 ## How much colour is left in the world when the Worker is fully exhausted: nearly grey.
@@ -213,20 +216,32 @@ func _on_pointer_button(pointer: int, position: Vector2, pressed: bool, canceled
 			generator_tapped.emit()
 
 
-## One finger pans so the ground under it stays under it; two pan by their midpoint and zoom
-## by how much their spread changed, towards the point between them.
+## One finger or the mouse pans gently (see _pan); two fingers pan by their midpoint and
+## zoom by how much their spread changed, towards the point between them.
 func _move_pointer(pointer: int, position: Vector2) -> void:
 	var midpoint_before := _gesture.midpoint()
 	var spread_before := _gesture.spread()
 	_gesture.move(pointer, position)
-	_pan(midpoint_before, _gesture.midpoint())
 	var spread_after := _gesture.spread()
 	if spread_before > 0.0 and spread_after > 0.0:
+		_pan_holding(midpoint_before, _gesture.midpoint())
 		_zoom_at(_gesture.midpoint(), spread_before / spread_after)
+	else:
+		_pan(_gesture.midpoint() - midpoint_before)
 
 
-## Slides the camera so the ground under one screen point moves to another.
-func _pan(from_screen: Vector2, to_screen: Vector2) -> void:
+## Slides the camera by a drag across the screen. The drag is measured on the ground at the
+## middle of the screen, not under the finger: the camera is tilted, so ground near the top
+## is far away and a drag there would fling the view many metres.
+func _pan(screen_drag: Vector2) -> void:
+	var centre := get_viewport().get_visible_rect().size / 2.0
+	_pan_holding(centre, centre + screen_drag * PAN_SPEED)
+
+
+## Slides the camera so the ground under one screen point moves exactly to another. A pinch
+## pans this way: its fingers move one at a time, so its midpoint wobbles, and only an exact
+## pan undoes the wobble.
+func _pan_holding(from_screen: Vector2, to_screen: Vector2) -> void:
 	var from_ground := _ground_under(from_screen)
 	var to_ground := _ground_under(to_screen)
 	if not from_ground.is_finite() or not to_ground.is_finite():
