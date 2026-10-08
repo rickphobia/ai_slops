@@ -51,6 +51,7 @@ func _init() -> void:
 	var steps := AudioStreamRandomizer.new()
 	for footstep in FOOTSTEPS:
 		steps.add_stream(-1, footstep)
+	# Up to 10% higher or lower each step, so the same three steps don't sound looped.
 	steps.random_pitch = 1.1
 	_footsteps.stream = steps
 	_turnstile.stream = TURNSTILE
@@ -138,6 +139,7 @@ static func build_whine() -> AudioStreamWAV:
 		var value := 0.0
 		for hertz: int in WHINE_PARTIALS:
 			value += WHINE_PARTIALS[hertz] * sin(TAU * hertz * time)
+		# The partials sum to at most 1; 0.8 of full scale leaves headroom against clipping.
 		samples.encode_s16(index * 2, roundi(value * 0.8 * 32767.0))
 	var whine := AudioStreamWAV.new()
 	whine.format = AudioStreamWAV.FORMAT_16_BITS

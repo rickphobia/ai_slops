@@ -7,7 +7,10 @@ extends RefCounted
 ## again. Farm owns this and decides when time passes and when he is sent or brought back;
 ## tested through Farm, not on its own.
 
-## What pass_time() returns when the Overseer did nothing.
+## What pass_time() returns: the Overseer blew his whistle at the Worker stopped to breathe,
+## used the whip (and the Worker runs again), or did nothing.
+const WHISTLE := &"overseer_whistle"
+const WHIP := &"overseer_whip"
 const NO_EVENT := &""
 
 var _tuning: Tuning
@@ -92,7 +95,7 @@ func seconds_until_turn() -> float:
 
 
 ## Some seconds of his time outside a Study Session, never past the next turn. The crops'
-## growth for them is the caller's. Returns Farm.OVERSEER_WHISTLE or Farm.OVERSEER_WHIP if the
+## growth for them is the caller's. Returns WHISTLE or WHIP if the
 ## Overseer acted at the end of them, NO_EVENT otherwise. The whip changes no numbers.
 func pass_time(seconds: float) -> StringName:
 	if not _on_generator:
@@ -102,12 +105,12 @@ func pass_time(seconds: float) -> StringName:
 		if whistle_due > 0.0:
 			if seconds >= whistle_due:
 				_breath_left = _tuning.whip_after_seconds
-				return Farm.OVERSEER_WHISTLE
+				return WHISTLE
 			_breath_left -= seconds
 			return NO_EVENT
 		if seconds >= _breath_left:
 			_breath_left = 0.0
-			return Farm.OVERSEER_WHIP
+			return WHIP
 		_breath_left -= seconds
 		return NO_EVENT
 	_exhaustion.add(_tuning.exhaustion_per_lap * seconds / _tuning.lap_seconds)

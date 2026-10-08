@@ -85,6 +85,7 @@ func _build_whip() -> Node3D:
 	leather.roughness = 1.0
 	# Each piece is a cylinder laid along -x, its far end the next piece's start.
 	var joint := Node3D.new()
+	# A fifth of the handle sticks out behind his fist, as a real grip does.
 	joint.position = Vector3(HANDLE_LENGTH * 0.2, 0.0, 0.0)
 	whip.add_child(joint)
 	joint.add_child(_whip_piece(HANDLE_LENGTH, HANDLE_RADIUS, HANDLE_RADIUS, leather))
@@ -94,6 +95,7 @@ func _build_whip() -> Node3D:
 		next.rotation.z = deg_to_rad(LASH_CURL_DEGREES)
 		joint.add_child(next)
 		joint = next
+		# The lash starts at 0.6 of the handle's thickness and tapers to 40% of that.
 		var thickness := HANDLE_RADIUS * 0.6 * (1.0 - 0.6 * segment / LASH_SEGMENTS)
 		joint.add_child(_whip_piece(LASH_SEGMENT_LENGTH, thickness, thickness * 0.7, leather))
 	return whip

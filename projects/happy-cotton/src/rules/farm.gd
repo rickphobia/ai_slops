@@ -95,9 +95,9 @@ const MESSAGE_KEYS: Array[StringName] = [
 ]
 ## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
 ## Worker stopped to breathe.
-const OVERSEER_WHISTLE := &"overseer_whistle"
+const OVERSEER_WHISTLE := Toil.WHISTLE
 ## He used the whip, and the Worker runs again. It changes no numbers.
-const OVERSEER_WHIP := &"overseer_whip"
+const OVERSEER_WHIP := Toil.WHIP
 ## The Quota-missed key for the first, second and every later miss in a row.
 const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
 

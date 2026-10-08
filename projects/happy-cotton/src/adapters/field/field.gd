@@ -332,12 +332,7 @@ func _fence_half_size() -> Vector2:
 
 func _start_worker() -> void:
 	var body: Node3D = $Worker
-	var players := body.find_children("*", "AnimationPlayer", true, false)
-	var player: AnimationPlayer = null
-	if players.is_empty():
-		GameLog.warning("worker has no animation player")
-	else:
-		player = players[0] as AnimationPlayer
+	var player := _animation_player_of(body, "worker")
 	var gate := Vector3(-_fence_half_size().x + gate_inside, 0.0, gate_z)
 	_worker = WorkerMotion.new(body, player, _track, gate)
 	_worker.pushed_through_turnstile.connect(_generator.push_turnstile)
@@ -347,13 +342,18 @@ func _start_overseer() -> void:
 	var body: Node3D = $Overseer
 	body.position = _generator.position + OVERSEER_SPOT
 	body.rotation.y = atan2(-OVERSEER_SPOT.x, -OVERSEER_SPOT.z)
-	var players := body.find_children("*", "AnimationPlayer", true, false)
-	var player: AnimationPlayer = null
-	if players.is_empty():
-		GameLog.warning("overseer has no animation player")
-	else:
-		player = players[0] as AnimationPlayer
+	var player := _animation_player_of(body, "overseer")
 	_overseer = OverseerLook.new(body, player)
+
+
+## The model's animation player, or null (with a warning) if it has none: he then moves
+## without animating.
+func _animation_player_of(body: Node3D, who: String) -> AnimationPlayer:
+	var animation_players := body.find_children("*", "AnimationPlayer", true, false)
+	if animation_players.is_empty():
+		GameLog.warning("%s has no animation player" % who)
+		return null
+	return animation_players[0] as AnimationPlayer
 
 
 func _material(colour: Color) -> StandardMaterial3D:
