@@ -5,9 +5,9 @@ extends RefCounted
 ## play), is time the Worker was away. Offline time since the last save, on start, comes with
 ## saving (ticket 09).
 
-## Gaps shorter than this are slow frames, not an absence: Godot already caps a slow frame's
-## step, and calling a two-second stall "away" would only make The App chatter.
-const MIN_AWAY_SECONDS := 2.0
+## Gaps shorter than this are slow frames or a glance at another tab, not an absence: each
+## absence gets an away summary, and one after a few seconds would only make The App chatter.
+const MIN_AWAY_SECONDS := 10.0
 
 ## func() -> float: seconds since the Unix epoch, such as Time.get_unix_time_from_system.
 var _now: Callable

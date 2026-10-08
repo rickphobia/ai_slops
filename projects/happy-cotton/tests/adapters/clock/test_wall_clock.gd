@@ -39,7 +39,7 @@ func test_the_hidden_time_is_counted_once() -> void:
 
 func test_a_short_stall_is_a_slow_frame_not_an_absence() -> void:
 	_clock.offline_seconds(0.016)
-	_now += 1.5
+	_now += WallClock.MIN_AWAY_SECONDS - 0.5
 
 	assert_eq(_clock.offline_seconds(0.13), 0.0)
 

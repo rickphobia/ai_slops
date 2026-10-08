@@ -30,9 +30,7 @@ func _ready() -> void:
 	_clock = WallClock.new(Time.get_unix_time_from_system)
 	_field.plot_tapped.connect(_on_plot_tapped)
 	_field.generator_tapped.connect(_on_generator_tapped)
-	_field.show_plots(_farm.plots())
-	_show_worker()
-	_show_app()
+	_show_farm()
 	if DebugMode.is_on():
 		GameLog.info("debug mode on")
 		var skip_time := SkipTimePanel.new()
@@ -55,9 +53,7 @@ func _process(delta: float) -> void:
 	if away != 0.0:
 		_resume_offline(away)
 	_farm.advance(delta)
-	_field.show_plots(_farm.plots())
-	_show_worker()
-	_show_app()
+	_show_farm()
 
 
 ## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
@@ -88,9 +84,7 @@ func _on_generator_tapped() -> void:
 func _on_skip_requested(seconds: float) -> void:
 	GameLog.info("skip time", {"seconds": seconds})
 	_resume_offline(seconds)
-	_field.show_plots(_farm.plots())
-	_show_worker()
-	_show_app()
+	_show_farm()
 
 
 ## Logs each return from offline time, with a warning when the clock's time couldn't be used
@@ -110,6 +104,12 @@ func _resume_offline(seconds: float) -> void:
 		"study_seconds_served": report.study_seconds_served,
 	}
 	GameLog.info("offline resume", resumed)
+
+
+func _show_farm() -> void:
+	_field.show_plots(_farm.plots())
+	_show_worker()
+	_show_app()
 
 
 ## Shows the Worker and logs each change in what he is doing, such as stopping to breathe.

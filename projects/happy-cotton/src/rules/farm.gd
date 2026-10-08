@@ -136,12 +136,7 @@ func advance(seconds: float) -> void:
 	# turn.
 	while remaining > 0.0:
 		if in_study_session():
-			var served := minf(remaining, _study_left)
-			remaining -= served
-			if served >= _study_left:
-				_end_study_session()
-			else:
-				_study_left -= served
+			remaining -= _serve_study_session(remaining)
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
 			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
@@ -167,12 +162,7 @@ func resume_offline(seconds: float) -> AwayReport:
 		problem = OFFLINE_TIME_CAPPED
 	var ripe_before := _ripe_count()
 	_grow(counted * _tuning.offline_growth_rate)
-	var study_served := minf(counted, _study_left)
-	if study_served > 0.0:
-		if study_served >= _study_left:
-			_end_study_session()
-		else:
-			_study_left -= study_served
+	var study_served := _serve_study_session(counted)
 	var ripened := _ripe_count() - ripe_before
 	if counted > 0.0:
 		var values := {
@@ -272,6 +262,19 @@ func _start_study_session() -> void:
 		"in_a_row": _misses_in_a_row,
 	}
 	_messages.append(AppMessage.new(STUDY_SESSION_STARTED, values))
+
+
+## Counts the Study Session down by up to `seconds`, ending it if they cover what is left.
+## Returns the seconds served: 0 when there is no Study Session.
+func _serve_study_session(seconds: float) -> float:
+	var served := minf(seconds, _study_left)
+	if served <= 0.0:
+		return 0.0
+	if served >= _study_left:
+		_end_study_session()
+	else:
+		_study_left -= served
+	return served
 
 
 func _end_study_session() -> void:
