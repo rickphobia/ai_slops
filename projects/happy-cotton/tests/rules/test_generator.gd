@@ -195,7 +195,8 @@ func test_laps_and_breath_come_from_the_tuning_table() -> void:
 	var tuning := FastTuning.table()
 	tuning.lap_seconds = 2.0
 	tuning.laps_before_breath = 3.0
-	tuning.breath_seconds = 7.0
+	tuning.whistle_after_seconds = 4.0
+	tuning.whip_after_seconds = 3.0
 	var farm := Farm.new(tuning, PLOTS)
 	farm.run_generator()
 

@@ -8,8 +8,9 @@ extends RefCounted
 ## AppMessages through take_messages(). A missed Quota starts a Study Session: the Worker can't
 ## plant or pick until it ends, and the next Shift's clock waits for it.
 ## The Worker is either in the field or on the Generator (see Toil). Crops grow only while he
-## runs on it; after a set number of laps he stops to breathe and growth halts until he runs
-## again. Planting or picking brings him back to the field, and so does a Study Session.
+## runs on it; after a set number of laps he stops to breathe and growth halts until the
+## Overseer whistles, then whips, and he runs again (advance() returns these events).
+## Planting or picking brings him back to the field, and so does a Study Session.
 ## Offline time (the game closed or its tab hidden) grows crops at a slower rate with no
 ## Generator and serves the Study Session, but the Shift waits. Ripe cotton left unpicked too
 ## long, counted outside Study Sessions, Withers; each Withered plot is Negligence, which docks
@@ -92,6 +93,11 @@ const MESSAGE_KEYS: Array[StringName] = [
 	REST_ENDED,
 	COTTON_DROPPED,
 ]
+## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
+## Worker stopped to breathe.
+const OVERSEER_WHISTLE := &"overseer_whistle"
+## He used the whip, and the Worker runs again. It changes no numbers.
+const OVERSEER_WHIP := &"overseer_whip"
 ## The Quota-missed key for the first, second and every later miss in a row.
 const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
 
@@ -224,7 +230,10 @@ func buy_rest_hour() -> CommandResult:
 ## Moves the Farm on by some seconds of online play. Time never runs backwards, so a
 ## negative step does nothing. The clock that runs is the Study Session's while the Worker is
 ## in one, and the Shift's otherwise; crops grow only while he runs on the Generator.
-func advance(seconds: float) -> void:
+## Returns what the Overseer did in that time (OVERSEER_WHISTLE, OVERSEER_WHIP), oldest first,
+## for the scene to show as it happens; they are not saved.
+func advance(seconds: float) -> Array[StringName]:
+	var overseer_events: Array[StringName] = []
 	_busy_left = maxf(0.0, _busy_left - maxf(seconds, 0.0))
 	var remaining := seconds
 	# One long step can cover several Shifts, Study Sessions, runs, breaths, rests and
@@ -238,7 +247,9 @@ func advance(seconds: float) -> void:
 			var worked := minf(minf(remaining, shift_left), _toil.seconds_until_turn())
 			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
 			worked = minf(worked, _rest_left if _resting() else INF)
-			_toil.pass_time(worked)
+			var overseer_event := _toil.pass_time(worked)
+			if overseer_event != Toil.NO_EVENT:
+				overseer_events.append(overseer_event)
 			_rest(worked)
 			var withered := _crops.tend(worked, growth_rate)
 			remaining -= worked
@@ -249,6 +260,7 @@ func advance(seconds: float) -> void:
 				_shift_elapsed += worked
 			# After the Shift's end, so a missed Quota's shorter Study Session can't replace it.
 			_log_negligence(withered)
+	return overseer_events
 
 
 ## Moves the Farm on by some seconds offline: crops grow at the offline rate whatever the
