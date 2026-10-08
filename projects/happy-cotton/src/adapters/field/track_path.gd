@@ -21,6 +21,7 @@ var _turnstile_offset: float
 
 ## `turnstile_z` is where the turnstile crosses the left side, between its corners.
 func _init(track_half_size: Vector2, corner_radius: float, turnstile_z: float) -> void:
+	assert(absf(turnstile_z) <= track_half_size.y - corner_radius, "turnstile off the straight")
 	half_size = track_half_size
 	_radius = corner_radius
 	_straight_half = half_size - Vector2.ONE * corner_radius

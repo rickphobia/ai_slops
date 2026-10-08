@@ -25,6 +25,12 @@ const RUN_FROM_SPEED := 2.0
 const RUN_STRIDE_SPEED := 3.5
 ## His pace as he reaches the turnstile at the end of his last lap, as a share of his usual.
 const LAST_LAP_END_PACE := 0.5
+## The walk and run animations play between these shares of their normal speed, however
+## slowly or fast he moves.
+const SLOWEST_STRIDE := 0.5
+const FASTEST_STRIDE := 1.8
+## How far ahead along the way he looks to face where he is going, in metres.
+const LOOK_AHEAD := 0.05
 ## Closer than this to where he should be, in metres, and he is there.
 const ARRIVED_WITHIN := 0.02
 ## How far he leans forward, and how slowly his animations play, fully exhausted.
@@ -115,7 +121,7 @@ func _walk_way(distance: float) -> void:
 			_body.rotation.y = _home_facing
 			_play(STANDING)
 		return
-	_face(_gate_way.sample_baked(_way_distance + signf(distance) * 0.05) - _body.position)
+	_face(_gate_way.sample_baked(_way_distance + signf(distance) * LOOK_AHEAD) - _body.position)
 	_play(WALKING)
 	if _way_distance == way_length:
 		_on_track = true
@@ -128,6 +134,9 @@ func _jog_back(delta: float) -> void:
 	var forwards := _track_distance >= lap / 2.0
 	var left := lap - _track_distance if forwards else _track_distance
 	var step := minf(JOG_BACK_SPEED * _speed * delta, left)
+	if step <= 0.0:
+		_on_track = false
+		return
 	_track_distance += step if forwards else -step
 	_body.position = _track.point_at(_track_distance)
 	_face(_track.heading_at(_track_distance) * (1.0 if forwards else -1.0))
@@ -213,6 +222,6 @@ func _face(direction: Vector3) -> void:
 func _play(animation: StringName, pace := -1.0) -> void:
 	if _player == null:
 		return
-	_player.speed_scale = _speed if pace < 0.0 else clampf(pace, 0.5, 1.8)
+	_player.speed_scale = _speed if pace < 0.0 else clampf(pace, SLOWEST_STRIDE, FASTEST_STRIDE)
 	if _player.current_animation != animation:
 		_player.play(animation)

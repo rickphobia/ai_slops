@@ -64,7 +64,7 @@ const WHOLE_NUMBERS: Array[String] = [
 ## study_session_seconds.
 @export var study_session_cap_seconds: float = NAN
 ## How long one lap of the track round the fence takes, in seconds of online play. The field
-## shows him running at the pace this sets (the shipped 16 s is a jog round a 52 m lap).
+## shows him running at the pace this sets over the track's length (about 52 m as shipped).
 @export var lap_seconds: float = NAN
 ## How many laps the Worker runs on the Generator before he stops to breathe. Leaving the
 ## Generator doesn't rest him: the laps since his last breath carry over.

@@ -13,10 +13,10 @@ const PUMP_COLOUR := Color(0.4, 0.27, 0.18)
 const LAMP_LIT_COLOUR := Color(1.0, 0.62, 0.22)
 const LAMP_DARK_COLOUR := Color(0.22, 0.2, 0.18)
 const LAMP_LIGHT_ENERGY := 1.6
-## The turnstile's post stands at the track's outer edge; its arms reach across to the middle.
+## The turnstile's post stands at the track's outer edge; its arms reach right across it.
 const TURNSTILE_POST_X := -0.85
 const TURNSTILE_ARM_HEIGHT := 0.9
-const TURNSTILE_ARM_LENGTH := 0.85
+const TURNSTILE_ARM_LENGTH := 1.6
 ## How fast the turnstile turns its quarter turn when pushed, in radians a second.
 const TURNSTILE_TURN_SPEED := 5.0
 ## Where the pump stands, from the turnstile.
@@ -76,7 +76,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_turnstile_arms.rotation.y = move_toward(
-		_turnstile_arms.rotation.y, _turnstile_turns * PI / 2.0, TURNSTILE_TURN_SPEED * delta
+		_turnstile_arms.rotation.y, turnstile_turn(), TURNSTILE_TURN_SPEED * delta
 	)
 
 
