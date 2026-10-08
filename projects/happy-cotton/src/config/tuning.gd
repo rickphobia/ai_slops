@@ -47,6 +47,12 @@ const WHOLE_NUMBERS: Array[String] = [
 	"fewest_laps_before_breath",
 	"rest_hour_price",
 ]
+## What a Generator tier's growth multiplier is measured against: no Upgrade at all.
+const NO_UPGRADE_GROWTH := 1.0
+## The most a tier can cost, multiply growth by, or raise the Quota by.
+const MOST_TIER_PRICE := 1000000.0
+const MOST_GROWTH_MULTIPLIER := 100.0
+const MOST_TIER_QUOTA_RISE := 10000.0
 
 ## How long a planted plot takes to ripen, in seconds of real time.
 @export var grow_seconds: float = NAN
@@ -121,6 +127,9 @@ const WHOLE_NUMBERS: Array[String] = [
 @export var rest_hour_recovery: float = NAN
 ## How much Exhaustion an hour away from the game takes away, never below the floor.
 @export var offline_recovery_per_hour: float = NAN
+## The Generator Upgrade's tiers, bought in order: each one's price, growth per second of
+## running, and Quota rise. At least one tier.
+@export var generator_tiers: Array[GeneratorTier] = []
 
 
 static func load_file(path: String) -> Tuning:
@@ -165,4 +174,56 @@ func problems() -> Array[String]:
 			"fewest_laps_before_breath is %s, but it must be at most" + " laps_before_breath (%s)"
 		)
 		found.append(laps_problem % [fewest_laps_before_breath, laps_before_breath])
+	found.append_array(_generator_tier_problems())
 	return found
+
+
+## The tier list must not be empty; each tier has a whole, positive price, a whole Quota rise
+## of at least 1 (an Upgrade always raises the Quota), and a growth multiplier no lower than
+## the tier before it (or than no Upgrade, for the first). Tiers count from 1, as the store
+## shows them.
+func _generator_tier_problems() -> Array[String]:
+	if generator_tiers.is_empty():
+		return ["generator_tiers has no tiers"]
+	var found: Array[String] = []
+	var previous_multiplier := NO_UPGRADE_GROWTH
+	for index in generator_tiers.size():
+		var where := "generator_tiers[%d]" % (index + 1)
+		var tier := generator_tiers[index]
+		if tier == null:
+			found.append("%s is missing" % where)
+			continue
+		found.append_array(
+			_tier_value_problems(where + ".price", tier.price, 1.0, MOST_TIER_PRICE, true)
+		)
+		found.append_array(
+			_tier_value_problems(
+				where + ".quota_rise", tier.quota_rise, 1.0, MOST_TIER_QUOTA_RISE, true
+			)
+		)
+		var multiplier_problems := _tier_value_problems(
+			where + ".growth_multiplier",
+			tier.growth_multiplier,
+			previous_multiplier,
+			MOST_GROWTH_MULTIPLIER,
+			false
+		)
+		found.append_array(multiplier_problems)
+		if multiplier_problems.is_empty():
+			previous_multiplier = tier.growth_multiplier
+	return found
+
+
+## One tier value checked as the flat values are: missing, out of range, or not whole.
+func _tier_value_problems(
+	field: String, value: float, lowest: float, highest: float, whole: bool
+) -> Array[String]:
+	if is_nan(value):
+		return ["%s is missing from the tuning table" % field]
+	if value < lowest or value > highest:
+		return [
+			"%s is %s, but it must be at least %s and at most %s" % [field, value, lowest, highest]
+		]
+	if whole and value != roundf(value):
+		return ["%s is %s, but it must be a whole number" % [field, value]]
+	return []

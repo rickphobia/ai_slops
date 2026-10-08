@@ -132,7 +132,8 @@ func restore(reader: SaveReader) -> void:
 		_ripe_for[index] = minf(_ripe_for[index], _wither_seconds)
 
 
-func view(index: int) -> PlotView:
+## The time left it shows is in seconds of growth at `growth_rate`.
+func view(index: int, growth_rate := 1.0) -> PlotView:
 	var grown := _grown[index]
 	if grown == EMPTY:
 		return PlotView.new(PlotView.Stage.EMPTY, 0.0)
@@ -141,7 +142,7 @@ func view(index: int) -> PlotView:
 	if grown >= _grow_seconds:
 		return PlotView.new(PlotView.Stage.RIPE, 0.0)
 	var stage_index := floori(grown * GROWING.size() / _grow_seconds)
-	return PlotView.new(GROWING[stage_index], _grow_seconds - grown)
+	return PlotView.new(GROWING[stage_index], (_grow_seconds - grown) / growth_rate)
 
 
 ## Plots with a crop that hasn't Withered.

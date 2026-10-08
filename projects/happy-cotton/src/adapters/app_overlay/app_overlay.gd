@@ -2,16 +2,18 @@ class_name AppOverlay
 extends CanvasLayer
 ## The App: the bright, state-issued overlay over the grim field. A top bar with the Quota bar,
 ## the Shift's time left, the Worker's Exhaustion and Labour Points; the Mascot with a speech
-## bubble at the bottom; the rest hour button with its price at the bottom right; and confetti
-## for a met Quota. During a Study Session the plain room covers the field, under the bar and
-## the Mascot. It shows what it is given and never decides anything. Only the rest hour and
-## Settings buttons catch taps, so the field underneath still gets the rest (the rules refuse
-## them in a Study Session). With reduced motion there is no confetti.
-## The Generator powers The App: while the Worker isn't running it, the bar, the Mascot and
-## the rest hour button dim; the Study Session room is not The App and stays as it is.
+## bubble at the bottom; the Store button at the bottom right, which opens the store over the
+## field (see StorePanel) and shows the rest time left while he rests; and confetti for a met
+## Quota or a purchase. During a Study Session the plain room covers the field, under the bar
+## and the Mascot. It shows what it is given and never decides anything. Only the Store and
+## Settings buttons, and the store while open, catch taps, so the field underneath still gets
+## the rest. With reduced motion there is no confetti.
+## The Generator powers The App: while the Worker isn't running it, the bar, the Mascot, the
+## Store button and the store dim; the Study Session room is not The App and stays as it is.
 
-## The rest hour button was pressed; the rules decide whether he gets it.
-signal rest_hour_pressed
+## A store item's buy button was pressed; the rules decide whether he gets it.
+signal upgrade_pressed(id: StringName)
+signal privilege_pressed(id: StringName)
 ## The Settings button was pressed.
 signal settings_pressed
 
@@ -21,13 +23,6 @@ const QUOTA_EMPTY := Color(1.0, 0.8, 0.88)
 const QUOTA_FILL := Color(0.98, 0.84, 0.2)
 const TEXT_ON_BAR := Color(1.0, 1.0, 1.0)
 const TEXT_IN_BUBBLE := Color(0.3, 0.12, 0.22)
-const CONFETTI_COLOURS: Array[Color] = [
-	Color(1.0, 0.3, 0.4),
-	Color(1.0, 0.85, 0.2),
-	Color(0.3, 0.8, 0.5),
-	Color(0.3, 0.6, 1.0),
-	Color(1.0, 0.5, 0.9),
-]
 ## The tint over The App while the Generator stands still.
 const UNPOWERED := Color(0.45, 0.45, 0.45)
 const FONT_SIZE := 28
@@ -41,10 +36,12 @@ var _quota_label: Label
 var _shift_label: Label
 var _points_label: Label
 var _exhaustion_label: Label
-var _rest_hour_button: Button
+var _store_button: Button
+var _store: StorePanel
+var _text_scale := 1.0
 var _speech: Label
 var _bubble: PanelContainer
-var _confetti: CPUParticles2D
+var _confetti: Confetti
 var _study_room: StudyRoom
 ## The parts of The App that dim with the Generator.
 var _powered_parts: Array[CanvasItem] = []
@@ -65,10 +62,16 @@ func _ready() -> void:
 	_root.add_child(top_bar)
 	var mascot_corner := _build_mascot_corner()
 	_root.add_child(mascot_corner)
-	_rest_hour_button = _build_rest_hour_button()
-	_root.add_child(_rest_hour_button)
-	_powered_parts = [top_bar, mascot_corner, _rest_hour_button]
-	_confetti = _build_confetti()
+	_store_button = _build_store_button()
+	_root.add_child(_store_button)
+	_store = StorePanel.new()
+	_store.name = "StorePanel"
+	_store.visible = false
+	_store.upgrade_pressed.connect(upgrade_pressed.emit)
+	_store.privilege_pressed.connect(privilege_pressed.emit)
+	_root.add_child(_store)
+	_powered_parts = [top_bar, mascot_corner, _store_button, _store]
+	_confetti = Confetti.new()
 	add_child(_confetti)
 
 
@@ -99,19 +102,34 @@ func show_exhaustion(level: float) -> void:
 	_exhaustion_label.text = AppText.EXHAUSTION.format({"level": roundi(level)})
 
 
-## Shows the rest hour's price, how long the rest has left while he rests, or that a missed
-## Quota has taken it away.
-func show_rest_hour(price: int, rest_seconds_left: float, taken_away := false) -> void:
-	if taken_away:
-		_rest_hour_button.text = AppText.REST_HOUR_TAKEN_AWAY
-	elif rest_seconds_left > 0.0:
-		_rest_hour_button.text = AppText.RESTING.format({"time": clock_text(rest_seconds_left)})
+## The Store button reads "Store", or how long the rest has left while he rests.
+func show_resting(rest_seconds_left: float) -> void:
+	if rest_seconds_left > 0.0:
+		_store_button.text = AppText.RESTING.format({"time": clock_text(rest_seconds_left)})
 	else:
-		_rest_hour_button.text = AppText.REST_HOUR_BUTTON.format({"price": price})
+		_store_button.text = AppText.STORE_BUTTON
 
 
-func rest_hour_button() -> Button:
-	return _rest_hour_button
+## Shows what the store sells now, whether it is open or not, so it is ready when opened.
+func show_store(items: Array[StoreItemView], labour_points: int) -> void:
+	if _store.show_items(items, labour_points):
+		SettingsEffects.scale_text(_store, _text_scale)
+
+
+func open_store() -> void:
+	_store.visible = true
+
+
+func is_store_open() -> bool:
+	return _store.visible
+
+
+func store_panel() -> StorePanel:
+	return _store
+
+
+func store_button() -> Button:
+	return _store_button
 
 
 ## Shows the Study Session room with the time left while there is any; hides it at 0.
@@ -133,6 +151,7 @@ func set_reduced_motion(on: bool) -> void:
 
 ## Scales all of The App's text to `scale` times its normal size.
 func scale_text(scale: float) -> void:
+	_text_scale = scale
 	SettingsEffects.scale_text(_root, scale)
 
 
@@ -210,8 +229,10 @@ func _build_top_bar() -> Control:
 	return bar
 
 
-func _build_rest_hour_button() -> Button:
+func _build_store_button() -> Button:
 	var button := Button.new()
+	button.name = "StoreButton"
+	button.text = AppText.STORE_BUTTON
 	button.add_theme_font_size_override("font_size", FONT_SIZE)
 	for state: String in ["normal", "hover", "pressed", "focus"]:
 		button.add_theme_stylebox_override(state, _rounded(BAR_COLOUR, 20))
@@ -221,7 +242,7 @@ func _build_rest_hour_button() -> Button:
 	button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	button.offset_right = -MARGIN
 	button.offset_bottom = -MARGIN
-	button.pressed.connect(rest_hour_pressed.emit)
+	button.pressed.connect(open_store)
 	return button
 
 
@@ -245,35 +266,6 @@ func _build_mascot_corner() -> Control:
 	_bubble.visible = false
 	corner.add_child(_bubble)
 	return corner
-
-
-func _build_confetti() -> CPUParticles2D:
-	var confetti := CPUParticles2D.new()
-	confetti.emitting = false
-	confetti.one_shot = true
-	confetti.explosiveness = 0.8
-	confetti.amount = 160
-	confetti.lifetime = 3.0
-	confetti.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	confetti.direction = Vector2.DOWN
-	confetti.spread = 30.0
-	confetti.gravity = Vector2(0, 300)
-	confetti.initial_velocity_min = 100.0
-	confetti.initial_velocity_max = 300.0
-	confetti.angular_velocity_min = -360.0
-	confetti.angular_velocity_max = 360.0
-	confetti.scale_amount_min = 6.0
-	confetti.scale_amount_max = 10.0
-	# Each piece picks a random point on this ramp; constant steps keep the colours pure.
-	var colours := Gradient.new()
-	colours.interpolation_mode = Gradient.GRADIENT_INTERPOLATE_CONSTANT
-	var offsets := PackedFloat32Array()
-	for index in CONFETTI_COLOURS.size():
-		offsets.append(float(index) / CONFETTI_COLOURS.size())
-	colours.offsets = offsets
-	colours.colors = PackedColorArray(CONFETTI_COLOURS)
-	confetti.color_initial_ramp = colours
-	return confetti
 
 
 func _label(colour: Color) -> Label:

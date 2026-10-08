@@ -90,11 +90,12 @@ func test_a_rest_hour_he_cannot_afford_is_refused_and_the_mascot_says_why() -> v
 	await wait_process_frames(1)
 	var app: AppOverlay = main.get_node("AppOverlay")
 
-	app.rest_hour_pressed.emit()
+	app.privilege_pressed.emit(Farm.REST_HOUR)
 
-	assert_has(_lines, '[debug] rest hour refused reason=&"not_enough_labour_points"')
+	var refused := '[debug] purchase refused item=&"rest_hour" reason=&"not_enough_labour_points"'
+	assert_has(_lines, refused)
 	assert_string_contains(app.speech(), "You have 0")
-	assert_string_contains(app.rest_hour_button().text, "Rest hour")
+	assert_eq(app.store_button().text, "Store")
 
 
 func test_the_mascot_announces_the_first_shift_on_start() -> void:
@@ -177,7 +178,7 @@ func test_there_is_no_skip_time_control_without_debug_mode() -> void:
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 
-	assert_eq(main.find_children("*", "SkipTimePanel", true, false).size(), 0)
+	assert_eq(main.find_children("*", "DebugPanel", true, false).size(), 0)
 
 
 func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary() -> void:

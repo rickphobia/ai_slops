@@ -7,6 +7,8 @@ extends Node3D
 ## track on the lap line; the track runs along its z axis (he runs towards -z) and the machine
 ## stands outside it, towards -x. It is the game's own invention, not documented practice
 ## (see the spec's content rules).
+## Each Upgrade tier bought repaints the machine a brighter state red and adds a coil on top,
+## so the purchase shows in the field.
 
 const METAL_COLOUR := Color(0.3, 0.3, 0.29)
 const PUMP_COLOUR := Color(0.4, 0.27, 0.18)
@@ -15,6 +17,15 @@ const LAMP_LIT_COLOUR := Color(1.0, 0.62, 0.22)
 const LAMP_DARK_COLOUR := Color(0.22, 0.2, 0.18)
 const LAMP_LIGHT_ENERGY := 1.6
 const CABLE_COLOUR := Color(0.12, 0.12, 0.12)
+## The machine's paint at each Upgrade tier, from none; tiers past the list keep the last.
+const TIER_COLOURS: Array[Color] = [
+	PUMP_COLOUR,
+	Color(0.55, 0.22, 0.16),
+	Color(0.7, 0.16, 0.14),
+	Color(0.85, 0.1, 0.1),
+]
+const COIL_COLOUR := Color(0.72, 0.5, 0.2)
+const COIL_SIZE := Vector3(0.6, 0.12, 0.6)
 ## Each step brightens the lamp by up to this share, fading back over PULSE_SECONDS.
 const PULSE_STRENGTH := 0.3
 const PULSE_SECONDS := 0.3
@@ -43,6 +54,8 @@ const TAP_ALONG := 1.6
 var skip_pulse := false
 
 var _lamp_material := StandardMaterial3D.new()
+var _machine_material: StandardMaterial3D
+var _tier := 0
 var _lamp_light := OmniLight3D.new()
 var _lit := false
 ## From 1 (a step just landed) down to 0 (steady).
@@ -52,7 +65,8 @@ var _pulse := 0.0
 func _ready() -> void:
 	var metal := _material(METAL_COLOUR)
 	var pump := _material(PUMP_COLOUR)
-	_add_box("Pump", Vector3(0.8, 0.8, 0.8), PUMP_SPOT + Vector3(0.0, 0.4, 0.0), pump)
+	_machine_material = _material(PUMP_COLOUR)
+	_add_box("Pump", Vector3(0.8, 0.8, 0.8), PUMP_SPOT + Vector3(0.0, 0.4, 0.0), _machine_material)
 	_build_cables()
 	var pipe_start_x := PUMP_SPOT.x + 0.4
 	var pipe_length := PIPE_END_X - pipe_start_x
@@ -81,6 +95,30 @@ func set_lit(lit: bool) -> void:
 
 func is_lit() -> bool:
 	return _lit
+
+
+## Shows the Generator Upgrade tier owned, from 0 (none): the machine's paint, and one coil
+## stacked on top for each tier.
+func show_tier(tier: int) -> void:
+	if tier == _tier:
+		return
+	_tier = tier
+	_machine_material.albedo_color = TIER_COLOURS[mini(tier, TIER_COLOURS.size() - 1)]
+	for coil in find_children("Coil*", "MeshInstance3D", false, false):
+		remove_child(coil)
+		coil.queue_free()
+	var coil_material := _material(COIL_COLOUR)
+	for index in tier:
+		var height := 0.8 + COIL_SIZE.y * (index + 0.5)
+		_add_box("Coil%d" % index, COIL_SIZE, PUMP_SPOT + Vector3(0.0, height, 0.0), coil_material)
+
+
+func tier() -> int:
+	return _tier
+
+
+func machine_colour() -> Color:
+	return _machine_material.albedo_color
 
 
 ## A step on a power tile: the lit lamp brightens faintly, then settles.

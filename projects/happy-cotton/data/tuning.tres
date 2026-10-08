@@ -1,6 +1,25 @@
-[gd_resource type="Resource" script_class="Tuning" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Tuning" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/config/tuning.gd" id="1_tuning"]
+[ext_resource type="Script" path="res://src/config/generator_tier.gd" id="2_generator_tier"]
+
+[sub_resource type="Resource" id="GeneratorTier_1"]
+script = ExtResource("2_generator_tier")
+price = 40.0
+growth_multiplier = 1.25
+quota_rise = 3.0
+
+[sub_resource type="Resource" id="GeneratorTier_2"]
+script = ExtResource("2_generator_tier")
+price = 80.0
+growth_multiplier = 1.5
+quota_rise = 3.0
+
+[sub_resource type="Resource" id="GeneratorTier_3"]
+script = ExtResource("2_generator_tier")
+price = 160.0
+growth_multiplier = 2.0
+quota_rise = 5.0
 
 [resource]
 script = ExtResource("1_tuning")
@@ -33,3 +52,4 @@ rest_hour_price = 20.0
 rest_hour_seconds = 60.0
 rest_hour_recovery = 40.0
 offline_recovery_per_hour = 10.0
+generator_tiers = Array[ExtResource("2_generator_tier")]([SubResource("GeneratorTier_1"), SubResource("GeneratorTier_2"), SubResource("GeneratorTier_3")])

@@ -20,9 +20,27 @@ const SHIFT_TIMER := "Shift {shift}  ·  {time} left"
 const LABOUR_POINTS := "{points} Labour Points"
 const STUDY_SESSION_TIMER := "Study Session  ·  {time} left"
 const EXHAUSTION := "Exhaustion {level}%"
-const REST_HOUR_BUTTON := "Rest hour  ·  {price} Labour Points"
 const RESTING := "Resting  ·  {time} left"
-const REST_HOUR_TAKEN_AWAY := "Rest hour  ·  suspended this Shift"
+const STORE_BUTTON := "Store"
+const STORE_TITLE := "Happy Store"
+const STORE_UPGRADES := "Upgrades"
+const STORE_PRIVILEGES := "Privileges"
+const STORE_CLOSE := "Close"
+const STORE_PRICE := "{price} Labour Points"
+const STORE_TIER := "Tier {tier} of {top_tier}"
+const STORE_FULLY_UPGRADED := "Fully upgraded!"
+## The store is honest about the Quota rise: the player sees the trade and takes it anyway.
+const STORE_QUOTA_RISE := "Quota +{quota_rise} from next Shift. More to give, more to be proud of!"
+## What each item is called in the store, and The App's pitch for it (values: effect, current).
+const STORE_NAMES: Dictionary[StringName, String] = {
+	Farm.GENERATOR: "Generator",
+	Farm.REST_HOUR: "Rest hour",
+}
+const STORE_BLURBS: Dictionary[StringName, String] = {
+	Farm.GENERATOR:
+	"Turn every step into more harvest! Growth ×{effect} per second of running (now ×{current}).",
+	Farm.REST_HOUR: "A short rest, kindly granted. The Shift goes on while you recover.",
+}
 
 
 ## Text for every message key the rules can emit (Farm.MESSAGE_KEYS).
@@ -95,28 +113,38 @@ static func lines() -> Dictionary[StringName, AppLine]:
 		AppLine.new("Rest hour over. Refreshed workers make a stronger Farm. Back to work!"),
 		Farm.COTTON_DROPPED:
 		AppLine.new("Cotton dropped! Careless hands waste the people's harvest. Focus!"),
+		Farm.GENERATOR_UPGRADED:
+		AppLine.new(
+			(
+				"Congratulations! Generator tier {tier} is yours for {price} Labour Points!"
+				+ " Every second of running now grows ×{multiplier} the cotton. Your Quota rises"
+				+ " by {quota_rise} from next Shift, so everyone shares your success!"
+			)
+		),
 	}
 
 
-## Why a rest hour was refused, for each reason buying the rest hour gives (values: price,
-## points).
-static func rest_hour_refusals() -> Dictionary[StringName, AppLine]:
+## Why a store item can't be bought, for each reason the store gives (Farm.STORE_REFUSALS;
+## values: price, points).
+static func store_refusals() -> Dictionary[StringName, AppLine]:
 	return {
-		Farm.IN_STUDY_SESSION: AppLine.new("Privileges are not available during Study Sessions."),
+		Farm.IN_STUDY_SESSION:
+		AppLine.new("The store is closed during Study Sessions. Learning comes first!"),
 		Farm.REST_HOUR_TAKEN_AWAY:
 		AppLine.new("Privileges are suspended this Shift. Meet your Quota to earn them back!"),
 		Farm.RESTING: AppLine.new("You are already resting. Enjoy your Privilege!"),
 		Farm.NOT_ENOUGH_LABOUR_POINTS:
-		AppLine.new("A rest hour costs {price} Labour Points. You have {points}. Keep picking!"),
+		AppLine.new("This costs {price} Labour Points. You have {points}. Keep picking!"),
+		Farm.FULLY_UPGRADED: AppLine.new("Fully upgraded! The very best the Farm can give you."),
 	}
 
 
 ## The refusal as The App says it, or an empty string when the reason has no text.
-static func render_rest_hour_refusal(reason: StringName, values: Dictionary) -> String:
-	var refusals := rest_hour_refusals()
+static func render_store_refusal(reason: StringName, values: Dictionary) -> String:
+	var refusals := store_refusals()
 	if not refusals.has(reason):
 		return ""
-	return refusals[reason].text.format(values)
+	return fill(refusals[reason].text, values)
 
 
 ## The message as The App says it, or an empty string when the key has no text.
@@ -124,7 +152,22 @@ static func render(message: AppMessage) -> String:
 	var all_lines := lines()
 	if not all_lines.has(message.key):
 		return ""
-	return all_lines[message.key].text.format(message.values)
+	return fill(all_lines[message.key].text, message.values)
+
+
+## Fills a line's {named} slots. Fractions show at most two decimals and whole numbers none, so
+## a multiplier of 2.0 reads "2" and 1.25 reads "1.25".
+static func fill(text: String, values: Dictionary) -> String:
+	var shown := {}
+	for key: Variant in values:
+		var value: Variant = values[key]
+		if value is float:
+			var fraction: float = value
+			var whole := fraction == roundf(fraction)
+			shown[key] = str(roundi(fraction)) if whole else String.num(fraction, 2)
+		else:
+			shown[key] = value
+	return text.format(shown)
 
 
 ## Everything wrong with the App text: emitted keys with no text, source ids missing from the

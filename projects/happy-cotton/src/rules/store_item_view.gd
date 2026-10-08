@@ -1,0 +1,84 @@
+class_name StoreItemView
+extends RefCounted
+## A read-only snapshot of one item in the store, for The App to show. Changing the Farm never
+## changes a view already handed out; ask the Farm for a new one.
+
+enum Kind { UPGRADE, PRIVILEGE }
+
+## Which item: an Upgrade (Farm.GENERATOR) or a Privilege (Farm.REST_HOUR).
+var id: StringName:
+	get:
+		return _id
+var kind: Kind:
+	get:
+		return _kind
+## Upgrade tiers owned, from 0; always 0 for a Privilege.
+var tier: int:
+	get:
+		return _tier
+## How many tiers the Upgrade has; 0 for a Privilege.
+var top_tier: int:
+	get:
+		return _top_tier
+## Labour Points the next tier (or the Privilege) costs; 0 when fully upgraded.
+var price: int:
+	get:
+		return _price
+## What the next tier does (the Generator's growth multiplier); the owned tier's when fully
+## upgraded. 0 for a Privilege.
+var effect: float:
+	get:
+		return _effect
+## What the owned tier does now (1 for no Upgrade). 0 for a Privilege.
+var current_effect: float:
+	get:
+		return _current_effect
+## How many more picks the Quota demands from the next Shift if the next tier is bought; 0 when
+## fully upgraded and for a Privilege.
+var quota_rise: int:
+	get:
+		return _quota_rise
+## Why it can't be bought right now (one of Farm's reason keys), or &"" when it can.
+var refusal: StringName:
+	get:
+		return _refusal
+
+var _id: StringName
+var _kind: Kind
+var _tier := 0
+var _top_tier := 0
+var _price: int
+var _effect := 0.0
+var _current_effect := 0.0
+var _quota_rise := 0
+var _refusal: StringName
+
+
+func _init(item_id: StringName, item_kind: Kind, item_price: int, why_not: StringName) -> void:
+	_id = item_id
+	_kind = item_kind
+	_price = item_price
+	_refusal = why_not
+
+
+## A view of an Upgrade: its tiers owned and in all, the next tier's effect and Quota rise, and
+## the owned tier's effect.
+static func upgrade(
+	item_id: StringName,
+	tiers: Vector2i,
+	item_price: int,
+	effects: Vector2,
+	rise: int,
+	why_not: StringName
+) -> StoreItemView:
+	var view := StoreItemView.new(item_id, Kind.UPGRADE, item_price, why_not)
+	view._tier = tiers.x
+	view._top_tier = tiers.y
+	view._effect = effects.x
+	view._current_effect = effects.y
+	view._quota_rise = rise
+	return view
+
+
+func is_fully_upgraded() -> bool:
+	return _kind == Kind.UPGRADE and _tier >= _top_tier
