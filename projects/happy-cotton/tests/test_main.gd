@@ -108,3 +108,22 @@ func test_a_missed_quota_logs_the_study_session_and_shows_the_room() -> void:
 
 	assert_has(_lines, "[info] study session ended in_a_row=1")
 	assert_false(app.in_study_room())
+
+
+func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp() -> void:
+	GameLog.minimum_level = GameLog.Level.DEBUG
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var field: Field = main.get_node("Field")
+	var generator: Generator = field.get_node("Generator")
+
+	field.generator_tapped.emit()
+
+	assert_has(_lines, "[debug] run generator")
+	assert_has(_lines, '[debug] worker activity="running"')
+	assert_true(generator.is_lit())
+
+	field.plot_tapped.emit(0)
+
+	assert_has(_lines, '[debug] worker activity="in_field"')
+	assert_false(generator.is_lit())

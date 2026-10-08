@@ -1,5 +1,6 @@
 extends GutTest
-## The Farm rules through their public interface: plant, grow, look, pick.
+## The Farm rules through their public interface: plant, grow, look, pick. Crops grow only
+## while the Worker runs on the Generator, so the growth tests send him there after planting.
 
 const PLOTS := 4
 
@@ -40,6 +41,7 @@ func test_planting_a_planted_plot_is_refused_as_not_empty() -> void:
 
 func test_cotton_grows_through_each_stage_to_ripe() -> void:
 	_farm.plant(0)
+	_farm.run_generator()
 
 	_farm.advance(9.0)
 	assert_eq(_stage(0), PlotView.Stage.SEEDLING)
@@ -57,6 +59,7 @@ func test_cotton_grows_through_each_stage_to_ripe() -> void:
 
 func test_ripe_cotton_stays_ripe() -> void:
 	_farm.plant(0)
+	_farm.run_generator()
 
 	_farm.advance(3600.0)
 
@@ -67,7 +70,9 @@ func test_ripe_cotton_stays_ripe() -> void:
 func test_growth_in_small_steps_matches_one_big_step() -> void:
 	var stepped := Farm.new(FastTuning.table(), PLOTS)
 	stepped.plant(0)
+	stepped.run_generator()
 	_farm.plant(0)
+	_farm.run_generator()
 
 	for step in 20:
 		stepped.advance(0.5)
@@ -79,6 +84,7 @@ func test_growth_in_small_steps_matches_one_big_step() -> void:
 
 func test_negative_time_does_not_ungrow_a_plot() -> void:
 	_farm.plant(0)
+	_farm.run_generator()
 	_farm.advance(15.0)
 
 	_farm.advance(-10.0)
@@ -98,6 +104,7 @@ func test_the_grow_time_comes_from_the_tuning_table() -> void:
 	tuning.grow_seconds = 60.0
 	var slow := Farm.new(tuning, PLOTS)
 	slow.plant(0)
+	slow.run_generator()
 
 	slow.advance(30.0)
 
@@ -107,6 +114,7 @@ func test_the_grow_time_comes_from_the_tuning_table() -> void:
 
 func test_picking_a_ripe_plot_clears_it_for_planting_again() -> void:
 	_farm.plant(2)
+	_farm.run_generator()
 	_farm.advance(30.0)
 
 	var result := _farm.pick(2)
@@ -119,6 +127,7 @@ func test_picking_a_ripe_plot_clears_it_for_planting_again() -> void:
 
 func test_picking_an_unripe_plot_is_refused_and_leaves_it_growing() -> void:
 	_farm.plant(0)
+	_farm.run_generator()
 	_farm.advance(29.0)
 
 	var result := _farm.pick(0)

@@ -5,8 +5,11 @@ extends RefCounted
 ## It also runs the Shift: online play counts it down, and at its end the Quota is checked and
 ## the next Shift starts at once with a higher Quota. What The App should say comes out as
 ## AppMessages through take_messages(). A missed Quota starts a Study Session: the Worker can't
-## plant or pick until it ends, and the next Shift's clock waits for it. Later tickets add
-## Exhaustion here.
+## plant or pick until it ends, and the next Shift's clock waits for it.
+## The Worker is either in the field or on the Generator. Crops grow only while he runs on it;
+## after a set number of laps he stops to breathe and growth halts until he runs again.
+## Planting or picking brings him back to the field, and so does a Study Session. Later
+## tickets add Exhaustion here.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
@@ -64,6 +67,11 @@ var _study_left := 0.0
 ## Quotas missed since the last met one; it sets the next Study Session's length.
 var _misses_in_a_row := 0
 var _messages: Array[AppMessage] = []
+var _on_generator := false
+## Seconds run on the Generator since his last breath. Leaving it doesn't reset this.
+var _run_since_breath := 0.0
+## Seconds left of his breath; while above 0 on the Generator, he stands and crops halt.
+var _breath_left := 0.0
 
 
 func _init(tuning: Tuning, plot_count: int) -> void:
@@ -81,6 +89,7 @@ func plant(index: int) -> CommandResult:
 	if _grown[index] != EMPTY:
 		return CommandResult.refused(NOT_EMPTY)
 	_grown[index] = 0.0
+	_on_generator = false
 	return CommandResult.done()
 
 
@@ -96,19 +105,28 @@ func pick(index: int) -> CommandResult:
 	_grown[index] = EMPTY
 	_picked += 1
 	_labour_points += roundi(_tuning.labour_points_per_pick)
+	_on_generator = false
+	return CommandResult.done()
+
+
+## Sends the Worker to run on the Generator. Sending him while he is on it changes nothing.
+func run_generator() -> CommandResult:
+	if in_study_session():
+		return CommandResult.refused(IN_STUDY_SESSION)
+	_on_generator = true
 	return CommandResult.done()
 
 
 ## Moves the Farm on by some seconds of online play. Time never runs backwards, so a
-## negative step does nothing. Crops grow all the time; the clock that runs is the Study
-## Session's while the Worker is in one, and the Shift's otherwise.
+## negative step does nothing. The clock that runs is the Study Session's while the Worker is
+## in one, and the Shift's otherwise; crops grow only while he runs on the Generator.
 func advance(seconds: float) -> void:
 	var remaining := seconds
-	# One long step can cover several Shifts and Study Sessions; each ends in turn.
+	# One long step can cover several Shifts, Study Sessions, runs and breaths; each ends in
+	# turn.
 	while remaining > 0.0:
 		if in_study_session():
 			var served := minf(remaining, _study_left)
-			_grow(served)
 			remaining -= served
 			if served >= _study_left:
 				_end_study_session()
@@ -116,8 +134,8 @@ func advance(seconds: float) -> void:
 				_study_left -= served
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
-			var worked := minf(remaining, shift_left)
-			_grow(worked)
+			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
+			_toil(worked)
 			remaining -= worked
 			if worked >= shift_left:
 				_shift_elapsed = 0.0
@@ -162,6 +180,14 @@ func study_session_seconds_left() -> float:
 	return _study_left
 
 
+func worker() -> WorkerView:
+	if not _on_generator:
+		return WorkerView.new(WorkerView.Activity.IN_FIELD, _laps_left())
+	if _breath_left > 0.0:
+		return WorkerView.new(WorkerView.Activity.BREATHING, _laps_left())
+	return WorkerView.new(WorkerView.Activity.RUNNING, _laps_left())
+
+
 ## What The App should say since the last call, oldest first. Empties the queue.
 func take_messages() -> Array[AppMessage]:
 	var taken := _messages
@@ -189,6 +215,7 @@ func _end_shift() -> void:
 		var key := MISSED_KEYS[mini(_misses_in_a_row, MISSED_KEYS.size()) - 1]
 		_messages.append(AppMessage.new(key, values))
 		_start_study_session()
+		_on_generator = false
 	_shift_number += 1
 	_start_shift()
 
@@ -210,6 +237,38 @@ func _start_study_session() -> void:
 func _end_study_session() -> void:
 	_study_left = 0.0
 	_messages.append(AppMessage.new(STUDY_SESSION_ENDED, {"in_a_row": _misses_in_a_row}))
+
+
+func _run_seconds() -> float:
+	return _tuning.lap_seconds * roundi(_tuning.laps_before_breath)
+
+
+func _laps_left() -> int:
+	return roundi(_tuning.laps_before_breath) - floori(_run_since_breath / _tuning.lap_seconds)
+
+
+## Seconds until he stops to breathe or starts running again; INF while he is in the field.
+func _seconds_until_toil_turns() -> float:
+	if not _on_generator:
+		return INF
+	if _breath_left > 0.0:
+		return _breath_left
+	return _run_seconds() - _run_since_breath
+
+
+## Some seconds of the Worker's time outside a Study Session, never past the next turn.
+func _toil(seconds: float) -> void:
+	if not _on_generator:
+		return
+	if _breath_left > 0.0:
+		_breath_left = 0.0 if seconds >= _breath_left else _breath_left - seconds
+		return
+	_grow(seconds)
+	if seconds >= _run_seconds() - _run_since_breath:
+		_run_since_breath = 0.0
+		_breath_left = _tuning.breath_seconds
+	else:
+		_run_since_breath += seconds
 
 
 func _grow(seconds: float) -> void:

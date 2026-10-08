@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://src/adapters/field/field.gd" id="1_field"]
 [ext_resource type="Texture2D" path="res://assets/polyhaven/dry_ground_01_diff_1k.jpg" id="2_dust"]
 [ext_resource type="PackedScene" path="res://assets/quaternius-modular-men/farmer.glb" id="3_worker"]
+[ext_resource type="Script" path="res://src/adapters/field/generator.gd" id="4_generator"]
 
 [sub_resource type="StandardMaterial3D" id="Material_dust"]
 albedo_color = Color(0.56, 0.53, 0.49, 1)
@@ -53,6 +54,10 @@ environment = SubResource("Environment_haze")
 
 [node name="Worker" parent="." instance=ExtResource("3_worker")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, -5.2, 0, 2.2)
+
+[node name="Generator" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.9, 0, 2)
+script = ExtResource("4_generator")
 
 [node name="TimeLeft" type="Label3D" parent="."]
 billboard = 1

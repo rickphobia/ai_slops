@@ -1,9 +1,10 @@
 class_name Field
 extends Node3D
 ## The field the Worker works: a fenced grid of plots seen from a fixed, angled camera, with
-## the Worker standing beside it. Shows each plot's growth stage as a cotton plant (see
-## CropLooks), shows the time left on a growing plot, and reports which plot was tapped.
-## Knows nothing of the rules beyond the plot views it is shown.
+## the Worker beside it and the Generator outside its gate. Shows each plot's growth stage as
+## a cotton plant (see CropLooks), shows the time left on a growing plot, shows the Worker
+## walking to the Generator and running on it (see WorkerMotion), and reports which plot, or
+## the Generator, was tapped. Knows nothing of the rules beyond the views it is shown.
 ##
 ## Dragging pans the camera and pinching or the mouse wheel zooms it (within FieldCamera's
 ## limits); a tap counts on release, only if the pointer barely moved (PointerGesture).
@@ -12,21 +13,13 @@ extends Node3D
 ## with touch) are ignored here. Input reaches this only after The App's controls pass on it.
 
 signal plot_tapped(index: int)
+signal generator_tapped
 
 ## Plots are raised beds this tall, in metres, centred on the ground.
 const SOIL_HEIGHT := 0.1
 ## Tilled soil: the dust texture, darker.
 const SOIL_COLOUR := Color(0.42, 0.34, 0.27)
 const SOIL_TEXTURE := preload("res://assets/polyhaven/dry_ground_01_diff_1k.jpg")
-## Weathered, unpainted planks instead of the model's warm wood.
-const FENCE_COLOUR := Color(0.33, 0.3, 0.26)
-const FENCE_MODEL := preload("res://assets/kenney-nature-kit/fence_planks.glb")
-## The fence model is one metre long; scaled up so it reaches a person's waist.
-const FENCE_SCALE := 2.0
-## How far back from its origin the fence model's planks sit, in model units.
-const FENCE_BACK_EDGE := 0.465
-## The Worker stands still, breathing, while the player taps.
-const WORKER_ANIMATION := &"Idle_Neutral"
 ## How far a finger or the mouse may move between press and release, in viewport units
 ## (the 1280x720 base size, whatever the screen), and still count as a tap.
 const TAP_SLOP := 12.0
@@ -49,12 +42,14 @@ var _shown_stages: Array[PlotView.Stage] = []
 var _labelled_plot := -1
 var _label_seconds_remaining := 0.0
 var _gesture := PointerGesture.new(TAP_SLOP)
+var _worker: WorkerMotion
 var _view: FieldCamera
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
 var _camera_back: Vector3
 
 @onready var _camera: Camera3D = $Camera
 @onready var _time_left: Label3D = $TimeLeft
+@onready var _generator: Generator = $Generator
 
 
 func _ready() -> void:
@@ -77,9 +72,9 @@ func _ready() -> void:
 		_crops.append(crop)
 		_shown_stages.append(PlotView.Stage.EMPTY)
 		add_child(plot)
-	_build_fence()
+	add_child(FenceLook.build(_fence_half_size(), _generator.position.z))
 	_start_camera()
-	_start_worker_idle()
+	_start_worker()
 	_time_left.visible = false
 
 
@@ -106,6 +101,12 @@ func show_plots(views: Array[PlotView]) -> void:
 			_time_left.text = time_left_text(labelled.seconds_left)
 
 
+## Shows the Worker where the rules put him, and lights the loudspeaker while he runs.
+func show_worker(view: WorkerView) -> void:
+	_worker.show(view)
+	_generator.set_lit(view.activity == WorkerView.Activity.RUNNING)
+
+
 ## Shows how long a growing plot has left, above the plot, for a few seconds.
 func show_time_left(index: int, seconds_left: float) -> void:
 	_labelled_plot = index
@@ -122,6 +123,7 @@ static func time_left_text(seconds_left: float) -> String:
 
 
 func _process(delta: float) -> void:
+	_worker.update(delta)
 	if _labelled_plot < 0:
 		return
 	_label_seconds_remaining -= delta
@@ -163,9 +165,14 @@ func _on_pointer_button(pointer: int, position: Vector2, pressed: bool, canceled
 	elif canceled:
 		_gesture.cancel(pointer)
 	elif _gesture.release(pointer):
-		var index := _plot_under(position)
+		var ground_point := _ground_under(position)
+		if not ground_point.is_finite():
+			return
+		var index := _grid.index_at(ground_point)
 		if index >= 0:
 			plot_tapped.emit(index)
+		elif _generator.covers(ground_point):
+			generator_tapped.emit()
 
 
 ## One finger pans so the ground under it stays under it; two pan by their midpoint and zoom
@@ -204,14 +211,6 @@ func _zoom_at(screen_position: Vector2, factor: float) -> void:
 	_place_camera()
 
 
-## The plot under a screen position: follow the camera ray down to the ground (y = 0).
-func _plot_under(screen_position: Vector2) -> int:
-	var ground_point := _ground_under(screen_position)
-	if not ground_point.is_finite():
-		return -1
-	return _grid.index_at(ground_point)
-
-
 ## Where the camera ray through a screen position meets the ground (y = 0); not finite when
 ## the ray never comes down to it.
 func _ground_under(screen_position: Vector2) -> Vector3:
@@ -243,34 +242,6 @@ func _hide_time_left() -> void:
 	_time_left.visible = false
 
 
-## A plank fence around the plots, one model per metre-run, leaving no gaps at the corners.
-func _build_fence() -> void:
-	var half_x := _fence_half_size().x
-	var half_z := _fence_half_size().y
-	var fence := Node3D.new()
-	fence.name = "Fence"
-	var planks := _material(FENCE_COLOUR)
-	for side in [Vector2(0, -1), Vector2(0, 1), Vector2(-1, 0), Vector2(1, 0)] as Array[Vector2]:
-		var along_x := side.y != 0.0
-		var half_length := half_x if along_x else half_z
-		var pieces := ceili(half_length * 2.0 / FENCE_SCALE)
-		for piece in pieces:
-			var offset := -half_length + (piece + 0.5) * half_length * 2.0 / pieces
-			var section := FENCE_MODEL.instantiate() as Node3D
-			for mesh in section.find_children("*", "MeshInstance3D", true, false):
-				(mesh as MeshInstance3D).material_override = planks
-			section.scale = Vector3(half_length * 2.0 / pieces, FENCE_SCALE, FENCE_SCALE)
-			if along_x:
-				section.position = Vector3(offset, 0.0, side.y * half_z)
-			else:
-				section.position = Vector3(side.x * half_x, 0.0, offset)
-				section.rotation.y = PI / 2.0
-			# The model's planks run along its back edge; move them onto the fence line.
-			section.translate_object_local(Vector3(0.0, 0.0, FENCE_BACK_EDGE))
-			fence.add_child(section)
-	add_child(fence)
-
-
 ## How far the fence reaches from the field's centre: across (x) and front to back (y).
 func _fence_half_size() -> Vector2:
 	return Vector2(
@@ -279,14 +250,15 @@ func _fence_half_size() -> Vector2:
 	)
 
 
-func _start_worker_idle() -> void:
-	var players := $Worker.find_children("*", "AnimationPlayer", true, false)
+func _start_worker() -> void:
+	var body: Node3D = $Worker
+	var players := body.find_children("*", "AnimationPlayer", true, false)
+	var player: AnimationPlayer = null
 	if players.is_empty():
 		GameLog.warning("worker has no animation player")
-		return
-	var player := players[0] as AnimationPlayer
-	player.get_animation(WORKER_ANIMATION).loop_mode = Animation.LOOP_LINEAR
-	player.play(WORKER_ANIMATION)
+	else:
+		player = players[0] as AnimationPlayer
+	_worker = WorkerMotion.new(body, player, _generator.run_spot(), _generator.run_facing())
 
 
 func _material(colour: Color) -> StandardMaterial3D:

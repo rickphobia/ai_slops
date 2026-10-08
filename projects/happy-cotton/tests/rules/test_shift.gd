@@ -11,11 +11,12 @@ func before_each() -> void:
 	_farm = Farm.new(FastTuning.table(), PLOTS)
 
 
-## Plants `count` plots (at most PLOTS), lets them ripen and picks them all: `count` picks in
-## one grow time of play.
+## Plants `count` plots (at most PLOTS), runs the Generator until they ripen and picks them
+## all: `count` picks in one grow time of play.
 func _pick_cotton(count: int) -> void:
 	for index in count:
 		_farm.plant(index)
+	_farm.run_generator()
 	_farm.advance(FastTuning.GROW_SECONDS)
 	for index in count:
 		_farm.pick(index)
