@@ -7,13 +7,18 @@ extends RefCounted
 ## the next Shift starts at once with a higher Quota. What The App should say comes out as
 ## AppMessages through take_messages(). A missed Quota starts a Study Session: the Worker can't
 ## plant or pick until it ends, and the next Shift's clock waits for it.
-## The Worker is either in the field or on the Generator. Crops grow only while he runs on it;
-## after a set number of laps he stops to breathe and growth halts until he runs again.
-## Planting or picking brings him back to the field, and so does a Study Session. Offline
-## time (the game closed or its tab hidden) grows crops at a slower rate with no Generator and
-## serves the Study Session, but the Shift waits. Ripe cotton left unpicked too long, counted
-## outside Study Sessions, Withers; each Withered plot is Negligence, which docks Labour Points
-## and starts a Study Session longer than a missed Quota's. Later tickets add Exhaustion here.
+## The Worker is either in the field or on the Generator (see Toil). Crops grow only while he
+## runs on it; after a set number of laps he stops to breathe and growth halts until he runs
+## again. Planting or picking brings him back to the field, and so does a Study Session.
+## Offline time (the game closed or its tab hidden) grows crops at a slower rate with no
+## Generator and serves the Study Session, but the Shift waits. Ripe cotton left unpicked too
+## long, counted outside Study Sessions, Withers; each Withered plot is Negligence, which docks
+## Labour Points and starts a Study Session longer than a missed Quota's.
+## Work wears the Worker down (see Exhaustion): above one threshold his field work is slow,
+## above a higher one a pick can drop its cotton, and he runs fewer laps before he stops to
+## breathe. Labour Points buy a rest hour, which takes him off the Generator and lowers
+## Exhaustion towards a floor that rises every Shift. A missed Quota takes the rest hour away
+## for the next Shift. Offline time recovers Exhaustion slowly, never below the floor.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
@@ -22,6 +27,18 @@ const NOTHING_PLANTED := &"nothing_planted"
 const IN_STUDY_SESSION := &"in_study_session"
 const WITHERED := &"withered"
 const NOT_WITHERED := &"not_withered"
+## He is still at a slow plant, pick or clear (Exhaustion above the slow threshold).
+const WORKER_BUSY := &"worker_busy"
+const RESTING := &"resting"
+const REST_HOUR_TAKEN_AWAY := &"rest_hour_taken_away"
+const NOT_ENOUGH_LABOUR_POINTS := &"not_enough_labour_points"
+## Every reason buy_rest_hour() can refuse with; the App text table explains each.
+const REST_HOUR_REFUSALS: Array[StringName] = [
+	IN_STUDY_SESSION,
+	REST_HOUR_TAKEN_AWAY,
+	RESTING,
+	NOT_ENOUGH_LABOUR_POINTS,
+]
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -46,8 +63,15 @@ const STUDY_SESSION_ENDED := &"study_session_ended"
 const NEGLIGENCE_LOGGED := &"negligence_logged"
 ## The Worker came back from offline time: values minutes (away, rounded up), ripened (plots
 ## that ripened while away, even if they then Withered), withered (plots that Withered while
-## away), study_minutes (Study Session served while away, rounded up).
+## away), study_minutes (Study Session served while away, rounded up), exhaustion_recovered
+## (rounded).
 const AWAY_SUMMARY := &"away_summary"
+## A rest hour was bought: values price, minutes (rounded up).
+const REST_STARTED := &"rest_started"
+## A rest hour ran its course. A Study Session cuts one short without this.
+const REST_ENDED := &"rest_ended"
+## An exhausted pick dropped its cotton: nothing counted, nothing earned.
+const COTTON_DROPPED := &"cotton_dropped"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -59,12 +83,17 @@ const MESSAGE_KEYS: Array[StringName] = [
 	STUDY_SESSION_ENDED,
 	NEGLIGENCE_LOGGED,
 	AWAY_SUMMARY,
+	REST_STARTED,
+	REST_ENDED,
+	COTTON_DROPPED,
 ]
 ## The Quota-missed key for the first, second and every later miss in a row.
 const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
 
 var _tuning: Tuning
 var _crops: Crops
+var _exhaustion: Exhaustion
+var _toil: Toil
 var _shift_number := 1
 ## Seconds of online play into the current Shift.
 var _shift_elapsed := 0.0
@@ -76,16 +105,32 @@ var _study_left := 0.0
 ## Quotas missed since the last met one; it sets the next Study Session's length.
 var _misses_in_a_row := 0
 var _messages: Array[AppMessage] = []
-var _on_generator := false
-## Seconds run on the Generator since his last breath. Leaving it doesn't reset this.
-var _run_since_breath := 0.0
-## Seconds left of his breath; while above 0 on the Generator, he stands and crops halt.
-var _breath_left := 0.0
+## Seconds left of a slow field action; he can do no other field work until it is 0.
+var _busy_left := 0.0
+## Seconds left of a rest hour; 0 when he isn't resting.
+var _rest_left := 0.0
+## Set by a missed Quota for the whole of the next Shift.
+var _rest_taken_away := false
+## Returns a number from 0 to 1 each call; a pick drops its cotton when it comes up under the
+## tuning's chance.
+var _roll: Callable
+## Kept here for the default roll, as a Callable doesn't keep its object alive.
+var _random: RandomNumberGenerator
 
 
-func _init(tuning: Tuning, plot_count: int) -> void:
+## `roll` is the source of chance, returning a number from 0 to 1; tests pass their own.
+## Without one the Farm uses a randomly seeded generator.
+func _init(tuning: Tuning, plot_count: int, roll: Callable = Callable()) -> void:
 	_tuning = tuning
 	_crops = Crops.new(tuning.grow_seconds, tuning.wither_seconds, plot_count)
+	_exhaustion = Exhaustion.new(tuning)
+	_toil = Toil.new(tuning, _exhaustion)
+	if roll.is_valid():
+		_roll = roll
+	else:
+		_random = RandomNumberGenerator.new()
+		_random.randomize()
+		_roll = _random.randf
 	_start_shift()
 
 
@@ -98,26 +143,30 @@ func plant(index: int) -> CommandResult:
 		return CommandResult.refused(WITHERED)
 	if not _crops.is_empty(index):
 		return CommandResult.refused(NOT_EMPTY)
+	var unable := _unable_to_work()
+	if unable != &"":
+		return CommandResult.refused(unable)
+	_start_field_work(_tuning.exhaustion_per_plant)
 	_crops.plant(index)
-	_on_generator = false
 	return CommandResult.done()
 
 
+## Picks ripe cotton. Exhausted past the mistake threshold, he can drop it: the plot is
+## emptied, but nothing counts towards the Quota and nothing is earned.
 func pick(index: int) -> CommandResult:
-	if in_study_session():
-		return CommandResult.refused(IN_STUDY_SESSION)
-	if not _crops.exists(index):
-		return CommandResult.refused(NO_SUCH_PLOT)
-	if _crops.is_empty(index):
-		return CommandResult.refused(NOTHING_PLANTED)
-	if _crops.is_withered(index):
-		return CommandResult.refused(WITHERED)
-	if not _crops.is_ripe(index):
-		return CommandResult.refused(NOT_RIPE)
+	var refusal := _pick_refusal(index)
+	if refusal != &"":
+		return CommandResult.refused(refusal)
+	# How tired he was as he reached for it decides whether he drops it.
+	var roll: float = _roll.call()
+	var drops := _exhaustion.can_drop_cotton() and roll < _tuning.dropped_cotton_chance
+	_start_field_work(_tuning.exhaustion_per_pick)
 	_crops.empty(index)
-	_picked += 1
-	_labour_points += roundi(_tuning.labour_points_per_pick)
-	_on_generator = false
+	if drops:
+		_messages.append(AppMessage.new(COTTON_DROPPED, {}))
+	else:
+		_picked += 1
+		_labour_points += roundi(_tuning.labour_points_per_pick)
 	return CommandResult.done()
 
 
@@ -129,8 +178,11 @@ func clear(index: int) -> CommandResult:
 		return CommandResult.refused(NO_SUCH_PLOT)
 	if not _crops.is_withered(index):
 		return CommandResult.refused(NOT_WITHERED)
+	var unable := _unable_to_work()
+	if unable != &"":
+		return CommandResult.refused(unable)
+	_start_field_work(0.0)
 	_crops.empty(index)
-	_on_generator = false
 	return CommandResult.done()
 
 
@@ -138,7 +190,29 @@ func clear(index: int) -> CommandResult:
 func run_generator() -> CommandResult:
 	if in_study_session():
 		return CommandResult.refused(IN_STUDY_SESSION)
-	_on_generator = true
+	if _resting():
+		return CommandResult.refused(RESTING)
+	_toil.send()
+	return CommandResult.done()
+
+
+## The rest hour, the first Privilege: it costs Labour Points and takes the Worker off the
+## Generator, lowering his Exhaustion towards its floor while the Shift counts on.
+func buy_rest_hour() -> CommandResult:
+	if in_study_session():
+		return CommandResult.refused(IN_STUDY_SESSION)
+	if _rest_taken_away:
+		return CommandResult.refused(REST_HOUR_TAKEN_AWAY)
+	if _resting():
+		return CommandResult.refused(RESTING)
+	var price := rest_hour_price()
+	if _labour_points < price:
+		return CommandResult.refused(NOT_ENOUGH_LABOUR_POINTS)
+	_labour_points -= price
+	_rest_left = _tuning.rest_hour_seconds
+	_toil.bring_back()
+	var values := {"price": price, "minutes": ceili(_rest_left / 60.0)}
+	_messages.append(AppMessage.new(REST_STARTED, values))
 	return CommandResult.done()
 
 
@@ -146,18 +220,21 @@ func run_generator() -> CommandResult:
 ## negative step does nothing. The clock that runs is the Study Session's while the Worker is
 ## in one, and the Shift's otherwise; crops grow only while he runs on the Generator.
 func advance(seconds: float) -> void:
+	_busy_left = maxf(0.0, _busy_left - maxf(seconds, 0.0))
 	var remaining := seconds
-	# One long step can cover several Shifts, Study Sessions, runs, breaths and Witherings;
-	# each ends in turn.
+	# One long step can cover several Shifts, Study Sessions, runs, breaths, rests and
+	# Witherings; each ends in turn.
 	while remaining > 0.0:
 		if in_study_session():
 			remaining -= _serve_study_session(remaining)
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
-			var growth_rate := 1.0 if worker().activity == WorkerView.Activity.RUNNING else 0.0
-			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
+			var growth_rate := 1.0 if _toil.is_running() else 0.0
+			var worked := minf(minf(remaining, shift_left), _toil.seconds_until_turn())
 			worked = minf(worked, _crops.seconds_until_wither(growth_rate))
-			_toil(worked)
+			worked = minf(worked, _rest_left if _resting() else INF)
+			_toil.pass_time(worked)
+			_rest(worked)
 			var withered := _crops.tend(worked, growth_rate)
 			remaining -= worked
 			if worked >= shift_left:
@@ -171,8 +248,9 @@ func advance(seconds: float) -> void:
 
 ## Moves the Farm on by some seconds offline: crops grow at the offline rate whatever the
 ## Worker was doing, and a Study Session counts down, but the Shift waits and the Worker stays
-## where he was. A wrong clock can't break the Farm: negative time counts as zero and a long
-## absence is cut to the tuning's cap; the report says which.
+## where he was: a rest hour waits for his return, like the Shift. Exhaustion recovers at the
+## offline rate, never below its floor. A wrong clock can't break the Farm: negative time
+## counts as zero and a long absence is cut to the tuning's cap; the report says which.
 func resume_offline(seconds: float) -> AwayReport:
 	var counted := clampf(seconds, 0.0, _tuning.offline_cap_seconds)
 	var problem := &""
@@ -180,6 +258,8 @@ func resume_offline(seconds: float) -> AwayReport:
 		problem = NEGATIVE_OFFLINE_TIME
 	elif seconds > _tuning.offline_cap_seconds:
 		problem = OFFLINE_TIME_CAPPED
+	_busy_left = maxf(0.0, _busy_left - counted)
+	var recovered := _exhaustion.recover(_tuning.offline_recovery_per_hour * counted / 3600.0)
 	var rate := _tuning.offline_growth_rate
 	var ripe_before := _crops.ripe_count()
 	var study_served := 0.0
@@ -206,9 +286,10 @@ func resume_offline(seconds: float) -> AwayReport:
 			"ripened": ripened,
 			"withered": withered,
 			"study_minutes": ceili(study_served / 60.0),
+			"exhaustion_recovered": roundi(recovered),
 		}
 		_messages.append(AppMessage.new(AWAY_SUMMARY, values))
-	return AwayReport.new(seconds, counted, problem, ripened, withered, study_served)
+	return AwayReport.new(seconds, counted, problem, ripened, withered, study_served, recovered)
 
 
 ## The plot at index; it must exist.
@@ -241,11 +322,43 @@ func study_session_seconds_left() -> float:
 
 
 func worker() -> WorkerView:
-	if not _on_generator:
-		return WorkerView.new(WorkerView.Activity.IN_FIELD, _laps_left())
-	if _breath_left > 0.0:
-		return WorkerView.new(WorkerView.Activity.BREATHING, _laps_left())
-	return WorkerView.new(WorkerView.Activity.RUNNING, _laps_left())
+	var activity := WorkerView.Activity.IN_FIELD
+	if _resting():
+		activity = WorkerView.Activity.RESTING
+	elif _toil.is_breathing():
+		activity = WorkerView.Activity.BREATHING
+	elif _toil.is_running():
+		activity = WorkerView.Activity.RUNNING
+	return WorkerView.new(activity, _toil.laps_left(), _exhaustion.level())
+
+
+## From 0 (rested) to Exhaustion.MOST (spent).
+func exhaustion() -> float:
+	return _exhaustion.level()
+
+
+## The least Exhaustion can be; it rises every Shift and never falls.
+func exhaustion_floor() -> float:
+	return _exhaustion.floor_level()
+
+
+func _resting() -> bool:
+	return _rest_left > 0.0
+
+
+## Seconds left of the rest hour; 0 when he isn't resting.
+func rest_seconds_left() -> float:
+	return _rest_left
+
+
+## Labour Points a rest hour costs.
+func rest_hour_price() -> int:
+	return roundi(_tuning.rest_hour_price)
+
+
+## Whether a missed Quota has taken the rest hour away for this Shift.
+func rest_hour_taken_away() -> bool:
+	return _rest_taken_away
 
 
 ## What The App should say since the last call, oldest first. Empties the queue.
@@ -265,17 +378,21 @@ func _start_shift() -> void:
 	_messages.append(AppMessage.new(SHIFT_STARTED, {"shift": _shift_number, "quota": _quota()}))
 
 
+## Checks the Quota, raises the Exhaustion floor and starts the next Shift. A missed Quota
+## also takes the rest hour away until the next Shift ends.
 func _end_shift() -> void:
 	var values := {"shift": _shift_number, "picked": _picked, "quota": _quota()}
 	if _picked >= _quota():
 		_misses_in_a_row = 0
+		_rest_taken_away = false
 		_messages.append(AppMessage.new(QUOTA_MET, values))
 	else:
 		_misses_in_a_row += 1
+		_rest_taken_away = true
 		var key := MISSED_KEYS[mini(_misses_in_a_row, MISSED_KEYS.size()) - 1]
 		_messages.append(AppMessage.new(key, values))
 		_start_study_session()
-		_on_generator = false
+	_exhaustion.raise_floor(_tuning.exhaustion_floor_rise)
 	_shift_number += 1
 	_start_shift()
 
@@ -300,11 +417,13 @@ func _log_negligence(withered_plots: Array[int]) -> void:
 	var values := {"plots": withered_plots.size(), "points": docked}
 	_messages.append(AppMessage.new(NEGLIGENCE_LOGGED, values))
 	_begin_study_session(maxf(_study_left, _tuning.negligence_study_session_seconds))
-	_on_generator = false
 
 
+## Takes the Worker off the Generator and cuts any rest hour short.
 func _begin_study_session(seconds: float) -> void:
 	_study_left = seconds
+	_rest_left = 0.0
+	_toil.bring_back()
 	var values := {
 		"seconds": _study_left,
 		"minutes": ceili(_study_left / 60.0),
@@ -331,33 +450,47 @@ func _end_study_session() -> void:
 	_messages.append(AppMessage.new(STUDY_SESSION_ENDED, {"in_a_row": _misses_in_a_row}))
 
 
-func _run_seconds() -> float:
-	return _tuning.lap_seconds * roundi(_tuning.laps_before_breath)
+## Why plot `index` can't be picked right now, or &"" when it can.
+func _pick_refusal(index: int) -> StringName:
+	if in_study_session():
+		return IN_STUDY_SESSION
+	if not _crops.exists(index):
+		return NO_SUCH_PLOT
+	if _crops.is_empty(index):
+		return NOTHING_PLANTED
+	if _crops.is_withered(index):
+		return WITHERED
+	if not _crops.is_ripe(index):
+		return NOT_RIPE
+	return _unable_to_work()
 
 
-func _laps_left() -> int:
-	return roundi(_tuning.laps_before_breath) - floori(_run_since_breath / _tuning.lap_seconds)
+## Why the Worker can't do field work right now, or &"" when he can.
+func _unable_to_work() -> StringName:
+	if _resting():
+		return RESTING
+	if _busy_left > 0.0:
+		return WORKER_BUSY
+	return &""
 
 
-## Seconds until he stops to breathe or starts running again; INF while he is in the field.
-func _seconds_until_toil_turns() -> float:
-	if not _on_generator:
-		return INF
-	if _breath_left > 0.0:
-		return _breath_left
-	return _run_seconds() - _run_since_breath
+## Field work brings him back from the Generator. Exhausted, it is slow, judged by how tired he
+## was when he started; then it adds its own Exhaustion.
+func _start_field_work(exhaustion_added: float) -> void:
+	_toil.bring_back()
+	if _exhaustion.slows_work():
+		_busy_left = _tuning.slow_action_seconds
+	_exhaustion.add(exhaustion_added)
 
 
-## Some seconds of the Worker's time outside a Study Session, never past the next turn. The
-## crops' growth for them is the caller's.
-func _toil(seconds: float) -> void:
-	if not _on_generator:
+## Some seconds of a rest hour, never past its end: Exhaustion falls a little at a time.
+func _rest(seconds: float) -> void:
+	if not _resting():
 		return
-	if _breath_left > 0.0:
-		_breath_left = 0.0 if seconds >= _breath_left else _breath_left - seconds
-		return
-	if seconds >= _run_seconds() - _run_since_breath:
-		_run_since_breath = 0.0
-		_breath_left = _tuning.breath_seconds
+	_exhaustion.recover(_tuning.rest_hour_recovery * seconds / _tuning.rest_hour_seconds)
+	if seconds >= _rest_left:
+		_rest_left = 0.0
+		_toil.rested()
+		_messages.append(AppMessage.new(REST_ENDED, {}))
 	else:
-		_run_since_breath += seconds
+		_rest_left -= seconds

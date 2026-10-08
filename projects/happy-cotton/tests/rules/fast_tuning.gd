@@ -11,6 +11,12 @@ extends RefCounted
 ## 80-second Study Session, longer than the 50-second cap for missed Quotas.
 ## In table() ripe cotton takes far longer to Wither than any test plays, so tests about other
 ## rules never meet it; withering_table() makes it Wither after 50 seconds.
+## In table() work adds no Exhaustion and its floor never rises, so tests about other rules
+## never meet it; exhausting_table() makes each plant and pick add 10 and each lap 1, and
+## raises the floor by 5 each Shift. Above 50 a field action takes 2 seconds; above 80 a pick
+## drops its cotton half the time. Laps before a breath fall from 10 at no Exhaustion to 2 at
+## 100 (6 at 50). A rest hour costs 10 Labour Points and lasts 20 seconds, taking away 40
+## Exhaustion (2 a second); an hour offline takes away 36 (0.01 a second).
 
 const GROW_SECONDS := 30.0
 const SHIFT_SECONDS := 100.0
@@ -28,6 +34,19 @@ const WITHER_SECONDS := 50.0
 const SLOW_WITHER_SECONDS := 1000000.0
 const NEGLIGENCE_LABOUR_POINTS := 8
 const NEGLIGENCE_STUDY_SESSION_SECONDS := 80.0
+const EXHAUSTION_PER_PLANT := 10.0
+const EXHAUSTION_PER_PICK := 10.0
+const EXHAUSTION_PER_LAP := 1.0
+const SLOW_EXHAUSTION := 50.0
+const SLOW_ACTION_SECONDS := 2.0
+const MISTAKE_EXHAUSTION := 80.0
+const DROPPED_COTTON_CHANCE := 0.5
+const EXHAUSTION_FLOOR_RISE := 5.0
+const FEWEST_LAPS_BEFORE_BREATH := 2
+const REST_HOUR_PRICE := 10
+const REST_HOUR_SECONDS := 20.0
+const REST_HOUR_RECOVERY := 40.0
+const OFFLINE_RECOVERY_PER_HOUR := 36.0
 
 
 static func table() -> Tuning:
@@ -47,6 +66,19 @@ static func table() -> Tuning:
 	tuning.wither_seconds = SLOW_WITHER_SECONDS
 	tuning.negligence_labour_points = NEGLIGENCE_LABOUR_POINTS
 	tuning.negligence_study_session_seconds = NEGLIGENCE_STUDY_SESSION_SECONDS
+	tuning.exhaustion_per_plant = 0.0
+	tuning.exhaustion_per_pick = 0.0
+	tuning.exhaustion_per_lap = 0.0
+	tuning.slow_exhaustion = SLOW_EXHAUSTION
+	tuning.slow_action_seconds = SLOW_ACTION_SECONDS
+	tuning.mistake_exhaustion = MISTAKE_EXHAUSTION
+	tuning.dropped_cotton_chance = DROPPED_COTTON_CHANCE
+	tuning.exhaustion_floor_rise = 0.0
+	tuning.fewest_laps_before_breath = FEWEST_LAPS_BEFORE_BREATH
+	tuning.rest_hour_price = REST_HOUR_PRICE
+	tuning.rest_hour_seconds = REST_HOUR_SECONDS
+	tuning.rest_hour_recovery = REST_HOUR_RECOVERY
+	tuning.offline_recovery_per_hour = OFFLINE_RECOVERY_PER_HOUR
 	return tuning
 
 
@@ -54,4 +86,14 @@ static func table() -> Tuning:
 static func withering_table() -> Tuning:
 	var tuning := table()
 	tuning.wither_seconds = WITHER_SECONDS
+	return tuning
+
+
+## The test table with work adding Exhaustion and its floor rising every Shift.
+static func exhausting_table() -> Tuning:
+	var tuning := table()
+	tuning.exhaustion_per_plant = EXHAUSTION_PER_PLANT
+	tuning.exhaustion_per_pick = EXHAUSTION_PER_PICK
+	tuning.exhaustion_per_lap = EXHAUSTION_PER_LAP
+	tuning.exhaustion_floor_rise = EXHAUSTION_FLOOR_RISE
 	return tuning

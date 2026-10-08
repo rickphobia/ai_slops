@@ -25,6 +25,8 @@ const SOIL_TEXTURE := preload("res://assets/polyhaven/dry_ground_01_diff_1k.jpg"
 const TAP_SLOP := 12.0
 ## The pointer id the mouse uses in a gesture; touch fingers are numbered from 0.
 const MOUSE_POINTER := -2
+## How much colour is left in the world when the Worker is fully exhausted: nearly grey.
+const DRAINED_SATURATION := 0.1
 
 @export var columns := 4
 @export var rows := 3
@@ -46,8 +48,11 @@ var _worker: WorkerMotion
 var _view: FieldCamera
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
 var _camera_back: Vector3
+## The scene's own colour saturation, shown while he is rested.
+var _full_saturation: float
 
 @onready var _camera: Camera3D = $Camera
+@onready var _haze: WorldEnvironment = $Haze
 @onready var _time_left: Label3D = $TimeLeft
 @onready var _generator: Generator = $Generator
 
@@ -73,6 +78,9 @@ func _ready() -> void:
 		_shown_stages.append(PlotView.Stage.EMPTY)
 		add_child(plot)
 	add_child(FenceLook.build(_fence_half_size(), _generator.position.z))
+	# Its own copy: the scene's environment is shared by every instance of the scene.
+	_haze.environment = _haze.environment.duplicate()
+	_full_saturation = _haze.environment.adjustment_saturation
 	_start_camera()
 	_start_worker()
 	_time_left.visible = false
@@ -101,10 +109,18 @@ func show_plots(views: Array[PlotView]) -> void:
 			_time_left.text = time_left_text(labelled.seconds_left)
 
 
-## Shows the Worker where the rules put him, and lights the loudspeaker while he runs.
+## Shows the Worker where the rules put him, lights the loudspeaker while he runs, and drains
+## the world's colour as his Exhaustion rises.
 func show_worker(view: WorkerView) -> void:
 	_worker.show(view)
 	_generator.set_lit(view.activity == WorkerView.Activity.RUNNING)
+	_haze.environment.adjustment_saturation = saturation_for(view.exhaustion, _full_saturation)
+
+
+## The field's colour saturation at some Exhaustion: the scene's own when rested, falling
+## evenly to DRAINED_SATURATION when spent.
+static func saturation_for(exhaustion: float, full_saturation: float) -> float:
+	return lerpf(full_saturation, DRAINED_SATURATION, exhaustion / Exhaustion.MOST)
 
 
 ## Shows how long a growing plot has left, above the plot, for a few seconds.

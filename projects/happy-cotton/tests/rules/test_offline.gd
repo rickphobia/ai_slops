@@ -99,7 +99,13 @@ func test_coming_back_gives_an_away_summary_of_what_ripened() -> void:
 	var away_minutes := ceili(_offline_for(FastTuning.GROW_SECONDS) / 60.0)
 	assert_eq(
 		summary.values,
-		{"minutes": away_minutes, "ripened": 1, "withered": 0, "study_minutes": 0},
+		{
+			"minutes": away_minutes,
+			"ripened": 1,
+			"withered": 0,
+			"study_minutes": 0,
+			"exhaustion_recovered": 0,
+		},
 		"plots 0 and 1 were already ripe; only plot 2 ripened while away"
 	)
 
@@ -178,3 +184,59 @@ func test_the_offline_cap_limits_growth_too() -> void:
 	farm.resume_offline(100000.0)
 
 	assert_almost_eq(farm.plot(0).seconds_left, FastTuning.GROW_SECONDS - 10.0, 0.001)
+
+
+## A Farm where work adds Exhaustion, with `plants` plots planted (10 Exhaustion each).
+func _tired_farm(plants: int) -> Farm:
+	var farm := Farm.new(FastTuning.exhausting_table(), PLOTS)
+	for index in plants:
+		farm.plant(index)
+	farm.take_messages()
+	return farm
+
+
+func test_exhaustion_recovers_offline_at_the_tuning_rate() -> void:
+	var farm := _tired_farm(4)
+
+	var report := farm.resume_offline(1000.0)
+
+	# 36 an hour is 10 in 1000 seconds.
+	assert_almost_eq(farm.exhaustion(), 30.0, 0.001)
+	assert_almost_eq(report.exhaustion_recovered, 10.0, 0.001)
+
+
+func test_offline_recovery_never_goes_below_the_floor() -> void:
+	var farm := _tired_farm(1)
+	# The Shift's end raises the floor to 5; its missed Quota's Study Session is served away.
+	farm.advance(FastTuning.SHIFT_SECONDS)
+
+	var report := farm.resume_offline(1000.0)
+
+	assert_eq(farm.exhaustion(), FastTuning.EXHAUSTION_FLOOR_RISE)
+	assert_almost_eq(report.exhaustion_recovered, 5.0, 0.001)
+
+
+func test_the_away_summary_says_how_much_exhaustion_recovered() -> void:
+	var farm := _tired_farm(4)
+
+	farm.resume_offline(1000.0)
+
+	var summary := _message(Farm.AWAY_SUMMARY, farm.take_messages())
+	var recovered: int = summary.values["exhaustion_recovered"]
+	assert_eq(recovered, 10)
+
+
+func test_a_rest_waits_offline_like_the_shift() -> void:
+	var farm := _tired_farm(0)
+	farm.plant(0)
+	farm.plant(1)
+	farm.run_generator()
+	farm.advance(FastTuning.GROW_SECONDS)
+	farm.pick(0)
+	farm.pick(1)
+	farm.buy_rest_hour()
+
+	farm.resume_offline(100.0)
+
+	assert_eq(farm.rest_seconds_left(), FastTuning.REST_HOUR_SECONDS)
+	assert_eq(farm.worker().activity, WorkerView.Activity.RESTING)

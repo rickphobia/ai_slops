@@ -30,6 +30,7 @@ func _ready() -> void:
 	_clock = WallClock.new(Time.get_unix_time_from_system)
 	_field.plot_tapped.connect(_on_plot_tapped)
 	_field.generator_tapped.connect(_on_generator_tapped)
+	_app.rest_hour_pressed.connect(_on_rest_hour_pressed)
 	_show_farm()
 	if DebugMode.is_on():
 		GameLog.info("debug mode on")
@@ -83,6 +84,18 @@ func _on_generator_tapped() -> void:
 	_show_worker()
 
 
+## The rules decide whether he gets his rest hour; a refusal is explained by the Mascot.
+func _on_rest_hour_pressed() -> void:
+	var result := _farm.buy_rest_hour()
+	if result.happened:
+		GameLog.info("rest hour bought", {"labour_points_left": _farm.labour_points()})
+	else:
+		GameLog.debug("rest hour refused", {"reason": result.reason})
+		var values := {"price": _farm.rest_hour_price(), "points": _farm.labour_points()}
+		_app.say(AppText.render_rest_hour_refusal(result.reason, values))
+	_show_farm()
+
+
 ## Skip time runs exactly the offline resume of a real absence that long.
 func _on_skip_requested(seconds: float) -> void:
 	GameLog.info("skip time", {"seconds": seconds})
@@ -106,6 +119,7 @@ func _resume_offline(seconds: float) -> void:
 		"ripened": report.ripened,
 		"withered": report.withered,
 		"study_seconds_served": report.study_seconds_served,
+		"exhaustion_recovered": report.exhaustion_recovered,
 	}
 	GameLog.info("offline resume", resumed)
 
@@ -145,6 +159,10 @@ func _show_app() -> void:
 		_app.say("\n".join(lines))
 	_app.show_shift(_farm.shift(), _farm.labour_points())
 	_app.show_study_session(_farm.study_session_seconds_left())
+	_app.show_exhaustion(_farm.exhaustion())
+	_app.show_rest_hour(
+		_farm.rest_hour_price(), _farm.rest_seconds_left(), _farm.rest_hour_taken_away()
+	)
 
 
 func _log_message(message: AppMessage) -> void:
@@ -159,6 +177,10 @@ func _log_message(message: AppMessage) -> void:
 		GameLog.info("study session ended", message.values)
 	elif message.key == Farm.NEGLIGENCE_LOGGED:
 		GameLog.info("negligence logged", message.values)
+	elif message.key == Farm.REST_ENDED:
+		GameLog.info("rest hour ended", {"exhaustion": _farm.exhaustion()})
+	elif message.key == Farm.COTTON_DROPPED:
+		GameLog.info("cotton dropped", {"exhaustion": _farm.exhaustion()})
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:

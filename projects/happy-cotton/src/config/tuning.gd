@@ -22,6 +22,19 @@ const LIMITS: Dictionary = {
 	"wither_seconds": [1.0, 2592000.0],
 	"negligence_labour_points": [0.0, 10000.0],
 	"negligence_study_session_seconds": [1.0, 604800.0],
+	"exhaustion_per_plant": [0.0, 100.0],
+	"exhaustion_per_pick": [0.0, 100.0],
+	"exhaustion_per_lap": [0.0, 100.0],
+	"slow_exhaustion": [0.0, 100.0],
+	"slow_action_seconds": [0.1, 60.0],
+	"mistake_exhaustion": [0.0, 100.0],
+	"dropped_cotton_chance": [0.0, 1.0],
+	"exhaustion_floor_rise": [0.0, 100.0],
+	"fewest_laps_before_breath": [1.0, 1000.0],
+	"rest_hour_price": [0.0, 10000.0],
+	"rest_hour_seconds": [1.0, 86400.0],
+	"rest_hour_recovery": [0.0, 100.0],
+	"offline_recovery_per_hour": [0.0, 100.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = [
@@ -30,6 +43,8 @@ const WHOLE_NUMBERS: Array[String] = [
 	"labour_points_per_pick",
 	"laps_before_breath",
 	"negligence_labour_points",
+	"fewest_laps_before_breath",
+	"rest_hour_price",
 ]
 
 ## How long a planted plot takes to ripen, in seconds of real time.
@@ -70,6 +85,38 @@ const WHOLE_NUMBERS: Array[String] = [
 ## How long the Study Session for Negligence lasts. It must be longer than the cap for a missed
 ## Quota, so Negligence is always punished more severely.
 @export var negligence_study_session_seconds: float = NAN
+## Exhaustion runs from 0 (rested) to 100 (spent). This is how much each plant adds.
+@export var exhaustion_per_plant: float = NAN
+## Exhaustion added by each pick, even one that drops its cotton.
+@export var exhaustion_per_pick: float = NAN
+## Exhaustion added by each lap run on the Generator, a little at a time as he runs.
+@export var exhaustion_per_lap: float = NAN
+## Above this Exhaustion a plant, pick or clear takes slow_action_seconds, and the Worker can do
+## nothing else in the field until it is done. At or below it they are instant.
+@export var slow_exhaustion: float = NAN
+## How long a plant, pick or clear takes above slow_exhaustion, in seconds of online play.
+@export var slow_action_seconds: float = NAN
+## Above this Exhaustion a pick can drop its cotton. At least slow_exhaustion.
+@export var mistake_exhaustion: float = NAN
+## The chance, from 0 to 1, that a pick above mistake_exhaustion drops its cotton: the plot is
+## emptied but nothing counts towards the Quota and no Labour Points are earned.
+@export var dropped_cotton_chance: float = NAN
+## How much the Exhaustion floor rises at the end of every Shift. Rest never goes below the
+## floor, and it never falls.
+@export var exhaustion_floor_rise: float = NAN
+## How many laps he runs before he stops to breathe when fully exhausted. Between this and
+## laps_before_breath (at no Exhaustion) it falls in step with Exhaustion, set at the start of
+## each run. At most laps_before_breath.
+@export var fewest_laps_before_breath: float = NAN
+## Labour Points a rest hour costs.
+@export var rest_hour_price: float = NAN
+## How long a rest hour lasts, in seconds of online play. It is the state's name for it, not a
+## real hour. The Shift keeps counting and crops halt, as he is off the Generator.
+@export var rest_hour_seconds: float = NAN
+## How much Exhaustion a whole rest hour takes away, a little at a time, never below the floor.
+@export var rest_hour_recovery: float = NAN
+## How much Exhaustion an hour away from the game takes away, never below the floor.
+@export var offline_recovery_per_hour: float = NAN
 
 
 static func load_file(path: String) -> Tuning:
@@ -106,4 +153,12 @@ func problems() -> Array[String]:
 		found.append(
 			negligence_problem % [negligence_study_session_seconds, study_session_cap_seconds]
 		)
+	if mistake_exhaustion < slow_exhaustion:
+		var mistake_problem := "mistake_exhaustion is %s, but it must be at least slow_exhaustion (%s)"
+		found.append(mistake_problem % [mistake_exhaustion, slow_exhaustion])
+	if fewest_laps_before_breath > laps_before_breath:
+		var laps_problem := (
+			"fewest_laps_before_breath is %s, but it must be at most" + " laps_before_breath (%s)"
+		)
+		found.append(laps_problem % [fewest_laps_before_breath, laps_before_breath])
 	return found
