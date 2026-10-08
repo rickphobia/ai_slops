@@ -9,6 +9,9 @@ const SAMPLE_VALUES := {
 	"minutes": 5,
 	"in_a_row": 2,
 	"ripened": 3,
+	"withered": 2,
+	"plots": 2,
+	"points": 10,
 	"study_minutes": 4,
 }
 

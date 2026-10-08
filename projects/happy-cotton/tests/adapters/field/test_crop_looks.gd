@@ -35,3 +35,15 @@ func test_ripe_plant_carries_open_cotton() -> void:
 		if (mesh as MeshInstance3D).mesh.surface_get_material(0) == _looks.cotton:
 			open_bolls += 1
 	assert_eq(open_bolls, CropLooks.BUD_SPOTS.size())
+
+
+func test_a_withered_plant_is_dead_tan_with_no_open_cotton() -> void:
+	var look := _looks.build(PlotView.Stage.WITHERED)
+	autofree(look)
+	var brown := 0
+	for mesh in _meshes_in(look):
+		var instance := mesh as MeshInstance3D
+		assert_ne(instance.mesh.surface_get_material(0), _looks.cotton)
+		if instance.material_override == _looks.withered:
+			brown += 1
+	assert_gt(brown, 0, "the bush is drawn in the withered colour")

@@ -72,6 +72,17 @@ func test_a_study_session_cap_below_the_first_length_is_reported() -> void:
 	assert_string_contains(problems[0], "study_session_cap_seconds")
 
 
+func test_a_negligence_study_session_no_longer_than_the_missed_quota_cap_is_reported() -> void:
+	var tuning := _good_table()
+	tuning.negligence_study_session_seconds = tuning.study_session_cap_seconds
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "negligence_study_session_seconds")
+	assert_string_contains(problems[0], "longer than study_session_cap_seconds")
+
+
 func test_every_missing_field_is_reported_at_once() -> void:
 	assert_eq(Tuning.new().problems().size(), Tuning.LIMITS.size())
 

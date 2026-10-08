@@ -145,8 +145,47 @@ func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary()
 	main.call("_on_skip_requested", 3600.0)
 
 	assert_has(_lines, "[info] skip time seconds=3600.0")
-	assert_has(_lines, "[info] offline resume seconds=3600.0 ripened=0 study_seconds_served=0.0")
+	assert_has(
+		_lines,
+		"[info] offline resume seconds=3600.0 ripened=0 withered=0" + " study_seconds_served=0.0"
+	)
 	assert_string_contains(app.speech(), "Welcome back!")
+
+
+func test_ripe_cotton_skipped_past_the_wither_time_is_logged_as_negligence_and_cleared() -> void:
+	GameLog.minimum_level = GameLog.Level.DEBUG
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+	var field: Field = main.get_node("Field")
+	var app: AppOverlay = main.get_node("AppOverlay")
+	field.plot_tapped.emit(0)
+	main.call("_on_skip_requested", 3600.0)
+	assert_has(
+		_lines, "[info] offline resume seconds=3600.0 ripened=1 withered=0 study_seconds_served=0.0"
+	)
+
+	main.call("_on_skip_requested", tuning.wither_seconds)
+
+	assert_has(_lines, "[info] negligence logged plots=1 points=0")
+	var seconds := tuning.negligence_study_session_seconds
+	var started := (
+		"[info] study session started seconds=%s minutes=%d in_a_row=0"
+		% [var_to_str(seconds), ceili(seconds / 60.0)]
+	)
+	assert_has(_lines, started)
+	assert_string_contains(app.speech(), "Negligence logged")
+	assert_true(app.in_study_room())
+
+	# The first skip left the cotton ripe for this long, so the second Withered it this long
+	# before its end and served that much of the Study Session.
+	var ripe_before := 3600.0 - tuning.grow_seconds / tuning.offline_growth_rate
+	main.call("_process", seconds - ripe_before)
+	assert_false(app.in_study_room())
+	_lines.clear()
+	field.plot_tapped.emit(0)
+
+	assert_has(_lines, "[debug] clear plot=0")
 
 
 func test_offline_time_past_the_cap_is_logged_as_a_warning() -> void:

@@ -4,12 +4,19 @@ extends RefCounted
 ## assets/ (credits in assets/CREDITS.md). Each look is a fresh node standing on y = 0.
 ##
 ## The models share one green material; it is replaced with a dusty, muted one so the crop
-## matches the field. Flowers and bolls are small low-poly spheres added on top.
+## matches the field. Flowers and bolls are small low-poly spheres added on top. A Withered
+## plant is the bush gone dry, dead tan and slumped, its few bolls shrivelled grey: plain to see
+## from across the field, and nothing like ripe cotton.
 
 const LEAF_COLOUR := Color(0.36, 0.4, 0.27)
 const FLOWER_COLOUR := Color(0.85, 0.8, 0.62)
 const GREEN_BOLL_COLOUR := Color(0.42, 0.44, 0.28)
 const COTTON_COLOUR := Color(0.9, 0.88, 0.82)
+const WITHERED_COLOUR := Color(0.62, 0.52, 0.36)
+const SHRIVELLED_BOLL_COLOUR := Color(0.5, 0.46, 0.4)
+## How a Withered bush slumps: squashed to this share of its height and leaning over.
+const WITHERED_SLUMP := 0.65
+const WITHERED_LEAN_DEGREES := 18.0
 
 const SEEDLING_MODEL := preload("res://assets/kenney-nature-kit/crops_leafsStageA.glb")
 const YOUNG_PLANT_MODEL := preload("res://assets/kenney-nature-kit/crops_leafsStageB.glb")
@@ -26,12 +33,14 @@ const BUD_SPOTS: Array[Vector3] = [
 	Vector3(-0.6, 0.45, -0.1),
 ]
 
-## Public so tests can find the open bolls on a ripe plant.
+## Public so tests can find the open bolls on a ripe plant and tell a Withered one apart.
 var cotton := _material(COTTON_COLOUR)
+var withered := _material(WITHERED_COLOUR)
 
 var _leaf := _material(LEAF_COLOUR)
 var _flower := _material(FLOWER_COLOUR)
 var _green_boll := _material(GREEN_BOLL_COLOUR)
+var _shrivelled_boll := _material(SHRIVELLED_BOLL_COLOUR)
 
 
 ## A new node showing the plant at a stage. EMPTY has no plant, so it is an empty node.
@@ -45,15 +54,25 @@ func build(stage: PlotView.Stage) -> Node3D:
 			return _with_buds(_plant(BUSH_MODEL, 2.6), 0.9, 7, 0.08, _green_boll)
 		PlotView.Stage.RIPE:
 			return _with_buds(_plant(BUSH_MODEL, 2.8), 0.97, 7, 0.13, cotton)
+		PlotView.Stage.WITHERED:
+			return _withered_plant()
 	return Node3D.new()
 
 
-func _plant(model: PackedScene, scale: float) -> Node3D:
+func _plant(model: PackedScene, scale: float, material: Material = _leaf) -> Node3D:
 	var plant := model.instantiate() as Node3D
 	plant.scale = Vector3.ONE * scale
 	for mesh in plant.find_children("*", "MeshInstance3D", true, false):
-		(mesh as MeshInstance3D).material_override = _leaf
+		(mesh as MeshInstance3D).material_override = material
 	return plant
+
+
+func _withered_plant() -> Node3D:
+	var bush := _plant(BUSH_MODEL, 2.6, withered)
+	bush.scale.y *= WITHERED_SLUMP
+	var look := _with_buds(bush, 0.8, 3, 0.07, _shrivelled_boll)
+	look.rotation_degrees.z = WITHERED_LEAN_DEGREES
+	return look
 
 
 ## Adds round buds over the plant's outer surface. Sizes are in metres, after scaling.

@@ -62,13 +62,21 @@ static func lines() -> Dictionary[StringName, AppLine]:
 		),
 		Farm.STUDY_SESSION_ENDED:
 		AppLine.new("Study Session complete. Return to the field and show what you have learned!"),
+		# Negligence: the state books the crop's death as the Worker's offence.
+		Farm.NEGLIGENCE_LOGGED:
+		AppLine.new(
+			(
+				"Negligence logged: {plots} cotton Withered on your watch. {points} Labour"
+				+ " Points have been deducted. The harvest belongs to everyone!"
+			)
+		),
 		# The night shift: the field never stops working, even when the Worker is away.
 		Farm.AWAY_SUMMARY:
 		AppLine.new(
 			(
 				"Welcome back! While you were away ({minutes} min), the night shift kept the"
-				+ " field growing: {ripened} cotton ripened. Study Session served:"
-				+ " {study_minutes} min."
+				+ " field growing: {ripened} cotton ripened, {withered} Withered. Study"
+				+ " Session served: {study_minutes} min."
 			)
 		),
 	}
