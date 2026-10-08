@@ -26,6 +26,10 @@ extends RefCounted
 ## The store (see Store) sells Upgrades tier by tier: a Generator tier makes each second of
 ## running grow more cotton at once, and a tools tier makes a slow pick shorter and an
 ## exhausted one less likely to drop its cotton; each raises the Quota from the next Shift on.
+## Every Shift ends with the Bills (see Ledger), met Quota or missed: electricity for each lap
+## run that Shift, then rent, shown as a pay slip. A Bill the Labour Points can't cover becomes
+## Debt, which earnings pay down first; while it lasts no Privilege or Upgrade can be bought.
+## A missed Quota takes away every Privilege for the next Shift.
 ## to_save() gives the whole Farm as plain data and restore() takes it back, so a restored Farm
 ## plays on exactly as the saved one would have.
 
@@ -39,7 +43,10 @@ const NOT_WITHERED := &"not_withered"
 ## He is still at a slow plant, pick or clear (Exhaustion above the slow threshold).
 const WORKER_BUSY := &"worker_busy"
 const RESTING := &"resting"
-const REST_HOUR_TAKEN_AWAY := &"rest_hour_taken_away"
+## A missed Quota took every Privilege away for this Shift.
+const PRIVILEGES_TAKEN_AWAY := &"privileges_taken_away"
+## The Worker owes the Farm, so he can buy neither Privileges nor Upgrades.
+const IN_DEBT := &"in_debt"
 const NOT_ENOUGH_LABOUR_POINTS := &"not_enough_labour_points"
 ## The Upgrade has no tier left to buy.
 const FULLY_UPGRADED := &"fully_upgraded"
@@ -55,17 +62,21 @@ const NO_SUCH_UPGRADE := &"no_such_upgrade"
 ## Every reason a store item can be refused with; the App text table explains each.
 const STORE_REFUSALS: Array[StringName] = [
 	IN_STUDY_SESSION,
-	REST_HOUR_TAKEN_AWAY,
+	PRIVILEGES_TAKEN_AWAY,
 	RESTING,
+	IN_DEBT,
 	NOT_ENOUGH_LABOUR_POINTS,
 	FULLY_UPGRADED,
 ]
 
 ## The save format to_save() writes and restore() reads. Raise it when the format changes.
 ## Version 2 added the store; a version 1 save restores with no Upgrades. Version 3 added the
-## tools; a version 2 save restores with none.
-const SAVE_VERSION := 3
-const SAVE_VERSIONS_READ: Array[int] = [1, 2, SAVE_VERSION]
+## tools; a version 2 save restores with none. Version 4 added the Bills; a version 3 save
+## restores with nothing earned and no laps run yet this Shift.
+const SAVE_VERSION := 4
+const SAVE_VERSIONS_READ: Array[int] = [1, 2, 3, SAVE_VERSION]
+## The lowest balance a save can hold: Debt can grow, but not without end.
+const LEAST_SAVED_BALANCE := -1000000000
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -105,6 +116,14 @@ const GENERATOR_UPGRADED := &"generator_upgraded"
 ## A tools tier was bought: values tier (from 1), price, share (of a slow pick's time and of the
 ## drop chance, against no Upgrade), quota_rise (from the next Shift).
 const TOOLS_UPGRADED := &"tools_upgraded"
+## The Bills were charged at the end of a Shift: values shift, earned (by work this Shift),
+## laps, electricity, electricity_covered, rent, rent_covered (whether the balance covered each
+## Bill) and balance (Labour Points left, negative for Debt).
+const PAY_SLIP := &"pay_slip"
+## A Bill left the Worker in Debt when he wasn't: values debt.
+const FELL_INTO_DEBT := &"fell_into_debt"
+## Earnings paid the last of the Debt: values points (Labour Points left over).
+const DEBT_CLEARED := &"debt_cleared"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -121,6 +140,9 @@ const MESSAGE_KEYS: Array[StringName] = [
 	COTTON_DROPPED,
 	GENERATOR_UPGRADED,
 	TOOLS_UPGRADED,
+	PAY_SLIP,
+	FELL_INTO_DEBT,
+	DEBT_CLEARED,
 ]
 ## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
 ## Worker stopped to breathe.
@@ -153,7 +175,7 @@ var _busy_left := 0.0
 ## Seconds left of a rest hour; 0 when he isn't resting.
 var _rest_left := 0.0
 ## Set by a missed Quota for the whole of the next Shift.
-var _rest_taken_away := false
+var _privileges_taken_away := false
 ## Returns a number from 0 to 1 each call; a pick drops its cotton when it comes up under the
 ## tuning's chance.
 var _roll: Callable
@@ -213,7 +235,7 @@ func pick(index: int) -> CommandResult:
 		_messages.append(AppMessage.new(COTTON_DROPPED, {}))
 	else:
 		_picked += 1
-		_ledger.earn(roundi(_tuning.labour_points_per_pick))
+		_note_debt_cleared(_ledger.earn(roundi(_tuning.labour_points_per_pick)))
 	return CommandResult.done()
 
 
@@ -271,7 +293,7 @@ func buy_upgrade(upgrade: StringName) -> CommandResult:
 ## Only the debug wiring calls this, so players can never use it: it adds Labour Points
 ## without work, to reach the store's dearer items quickly.
 func debug_add_labour_points(points: int) -> void:
-	_ledger.earn(points)
+	_note_debt_cleared(_ledger.credit(points))
 
 
 ## Buys a Privilege with Labour Points. The only one so far is REST_HOUR.
@@ -387,11 +409,13 @@ func to_save() -> Dictionary:
 		"shift_elapsed": _shift_elapsed,
 		"picked": _picked,
 		"labour_points": _ledger.balance(),
+		"shift_earned": _ledger.earned(),
 		"study_left": _study_left,
 		"misses_in_a_row": _misses_in_a_row,
 		"busy_left": _busy_left,
 		"rest_left": _rest_left,
-		"rest_taken_away": _rest_taken_away,
+		# Named before every Privilege was taken away, not only the rest hour; kept for old saves.
+		"rest_taken_away": _privileges_taken_away,
 		"crops": _crops.to_save(),
 		"exhaustion": _exhaustion.to_save(),
 		"toil": _toil.to_save(),
@@ -405,7 +429,7 @@ func to_save() -> Dictionary:
 ## pending App messages are dropped: they described the Farm before the restore.
 ## Timers are held to what the tuning table allows now, in case it shortened them since the
 ## save was written; the save's other numbers are taken as they are. A version 1 save, from
-## before the store, restores with no Upgrades.
+## before the store, restores with no Upgrades; a negative balance restores as Debt.
 func restore(save: Dictionary) -> Array[String]:
 	var reader := SaveReader.new(save)
 	var version := reader.whole("version")
@@ -416,16 +440,17 @@ func restore(save: Dictionary) -> Array[String]:
 	var exhaustion := Exhaustion.new(_tuning)
 	exhaustion.restore(reader.section("exhaustion"))
 	var toil := Toil.new(_tuning, exhaustion)
-	toil.restore(reader.section("toil"))
+	toil.restore(reader.section("toil"), version >= 4)
 	var shift_number := reader.whole("shift_number", 1)
 	var shift_elapsed := minf(reader.number("shift_elapsed"), _tuning.shift_seconds)
 	var picked := reader.whole("picked")
-	var labour_points := reader.whole("labour_points")
+	var balance := reader.whole("labour_points", LEAST_SAVED_BALANCE)
+	var shift_earned := reader.whole("shift_earned") if version >= 4 else 0
 	var study_left := reader.number("study_left")
 	var misses_in_a_row := reader.whole("misses_in_a_row")
 	var busy_left := minf(reader.number("busy_left"), _tuning.slow_action_seconds)
 	var rest_left := minf(reader.number("rest_left"), _tuning.rest_hour_seconds)
-	var rest_taken_away := reader.flag("rest_taken_away")
+	var privileges_taken_away := reader.flag("rest_taken_away")
 	var store := Store.new(_tuning.generator_tiers, _tuning.tools_tiers)
 	var shift_upgrade_rise := 0
 	if version >= 2:
@@ -439,12 +464,12 @@ func restore(save: Dictionary) -> Array[String]:
 	_shift_number = shift_number
 	_shift_elapsed = shift_elapsed
 	_picked = picked
-	_ledger = Ledger.new(labour_points)
+	_ledger = Ledger.new(balance, shift_earned)
 	_study_left = study_left
 	_misses_in_a_row = misses_in_a_row
 	_busy_left = busy_left
 	_rest_left = rest_left
-	_rest_taken_away = rest_taken_away
+	_privileges_taken_away = privileges_taken_away
 	_store = store
 	_shift_upgrade_rise = shift_upgrade_rise
 	_messages = []
@@ -467,8 +492,14 @@ func shift() -> ShiftView:
 	return ShiftView.new(_shift_number, _quota(), _picked, _tuning.shift_seconds - _shift_elapsed)
 
 
+## Labour Points to spend; 0 while in Debt.
 func labour_points() -> int:
-	return _ledger.balance()
+	return _ledger.labour_points()
+
+
+## Labour Points owed to the Farm; 0 while out of Debt. Never above 0 with labour_points().
+func debt() -> int:
+	return _ledger.debt()
 
 
 func in_study_session() -> bool:
@@ -507,7 +538,7 @@ func _resting() -> bool:
 
 ## Its price, the seconds left of one under way, and whether a missed Quota took it away.
 func rest_hour() -> RestHourView:
-	return RestHourView.new(_rest_hour_price(), _rest_left, _rest_taken_away)
+	return RestHourView.new(_rest_hour_price(), _rest_left, _privileges_taken_away)
 
 
 func _rest_hour_price() -> int:
@@ -518,10 +549,12 @@ func _rest_hour_price() -> int:
 func _rest_hour_refusal() -> StringName:
 	if in_study_session():
 		return IN_STUDY_SESSION
-	if _rest_taken_away:
-		return REST_HOUR_TAKEN_AWAY
+	if _privileges_taken_away:
+		return PRIVILEGES_TAKEN_AWAY
 	if _resting():
 		return RESTING
+	if _ledger.in_debt():
+		return IN_DEBT
 	if not _ledger.can_afford(_rest_hour_price()):
 		return NOT_ENOUGH_LABOUR_POINTS
 	return &""
@@ -541,6 +574,8 @@ func _upgrade_refusal(upgrade: StringName) -> StringName:
 		return FULLY_UPGRADED
 	if in_study_session():
 		return IN_STUDY_SESSION
+	if _ledger.in_debt():
+		return IN_DEBT
 	var tier_price: float = tier.get("price")
 	if not _ledger.can_afford(roundi(tier_price)):
 		return NOT_ENOUGH_LABOUR_POINTS
@@ -611,23 +646,39 @@ func _start_shift() -> void:
 	_messages.append(AppMessage.new(SHIFT_STARTED, {"shift": _shift_number, "quota": _quota()}))
 
 
-## Checks the Quota, raises the Exhaustion floor and starts the next Shift. A missed Quota
-## also takes the rest hour away until the next Shift ends.
+## Checks the Quota, charges the Bills, raises the Exhaustion floor and starts the next Shift.
+## A missed Quota also takes every Privilege away until the next Shift ends.
 func _end_shift() -> void:
 	var values := {"shift": _shift_number, "picked": _picked, "quota": _quota()}
 	if _picked >= _quota():
 		_misses_in_a_row = 0
-		_rest_taken_away = false
+		_privileges_taken_away = false
 		_messages.append(AppMessage.new(QUOTA_MET, values))
 	else:
 		_misses_in_a_row += 1
-		_rest_taken_away = true
+		_privileges_taken_away = true
 		var key := MISSED_KEYS[mini(_misses_in_a_row, MISSED_KEYS.size()) - 1]
 		_messages.append(AppMessage.new(key, values))
 		_start_study_session()
+	_charge_bills()
 	_exhaustion.raise_floor(_tuning.exhaustion_floor_rise)
 	_shift_number += 1
 	_start_shift()
+
+
+## The pay slip, and word of the Worker falling into Debt if the Bills put him there.
+func _charge_bills() -> void:
+	var was_in_debt := _ledger.in_debt()
+	var slip := _ledger.settle_shift(_shift_number, _toil.take_laps_run(), _tuning)
+	_messages.append(AppMessage.new(PAY_SLIP, slip))
+	if _ledger.in_debt() and not was_in_debt:
+		_messages.append(AppMessage.new(FELL_INTO_DEBT, {"debt": _ledger.debt()}))
+
+
+## Says so when Labour Points just paid off the last of the Debt.
+func _note_debt_cleared(cleared: bool) -> void:
+	if cleared:
+		_messages.append(AppMessage.new(DEBT_CLEARED, {"points": _ledger.labour_points()}))
 
 
 ## Doubles for each miss in a row, up to the cap.

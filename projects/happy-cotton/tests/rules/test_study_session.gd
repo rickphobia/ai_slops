@@ -55,7 +55,7 @@ func test_a_missed_quota_starts_a_study_session_of_the_first_length() -> void:
 
 	assert_eq(_farm.study_session_seconds_left(), FastTuning.STUDY_SESSION_SECONDS)
 	var expected: Array[StringName] = [
-		Farm.QUOTA_MISSED, Farm.STUDY_SESSION_STARTED, Farm.SHIFT_STARTED
+		Farm.QUOTA_MISSED, Farm.STUDY_SESSION_STARTED, Farm.PAY_SLIP, Farm.SHIFT_STARTED
 	]
 	var messages := _farm.take_messages()
 	assert_eq(_keys(messages), expected)
@@ -206,6 +206,7 @@ func test_one_long_step_serves_the_study_session_and_carries_on_with_the_shift()
 	var expected: Array[StringName] = [
 		Farm.QUOTA_MISSED,
 		Farm.STUDY_SESSION_STARTED,
+		Farm.PAY_SLIP,
 		Farm.SHIFT_STARTED,
 		Farm.STUDY_SESSION_ENDED,
 	]

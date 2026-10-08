@@ -36,6 +36,8 @@ const LIMITS: Dictionary = {
 	"rest_hour_seconds": [1.0, 86400.0],
 	"rest_hour_recovery": [0.0, 100.0],
 	"offline_recovery_per_hour": [0.0, 100.0],
+	"electricity_per_lap": [0.0, 10000.0],
+	"rent_per_shift": [0.0, 10000.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = [
@@ -46,6 +48,7 @@ const WHOLE_NUMBERS: Array[String] = [
 	"negligence_labour_points",
 	"fewest_laps_before_breath",
 	"rest_hour_price",
+	"rent_per_shift",
 ]
 ## What a Generator tier's growth multiplier is measured against: no Upgrade at all.
 const NO_UPGRADE_GROWTH := 1.0
@@ -132,6 +135,12 @@ const MOST_TIER_QUOTA_RISE := 10000.0
 @export var rest_hour_recovery: float = NAN
 ## How much Exhaustion an hour away from the game takes away, never below the floor.
 @export var offline_recovery_per_hour: float = NAN
+## Labour Points the electricity Bill charges for each lap he ran on the Generator that Shift:
+## he pays for the power his own body made. It can be a fraction; the Bill is rounded to whole
+## Labour Points.
+@export var electricity_per_lap: float = NAN
+## Labour Points the dormitory rent Bill charges at the end of every Shift, after electricity.
+@export var rent_per_shift: float = NAN
 ## The Generator Upgrade's tiers, bought in order: each one's price, growth per second of
 ## running, and Quota rise. At least one tier.
 @export var generator_tiers: Array[GeneratorTier] = []

@@ -68,7 +68,9 @@ func test_an_item_that_cannot_be_bought_says_why_and_its_button_is_off() -> void
 
 
 func test_each_refusal_reads_as_the_app_says_it() -> void:
-	for reason: StringName in [Farm.IN_STUDY_SESSION, Farm.REST_HOUR_TAKEN_AWAY, Farm.RESTING]:
+	for reason: StringName in [
+		Farm.IN_STUDY_SESSION, Farm.PRIVILEGES_TAKEN_AWAY, Farm.RESTING, Farm.IN_DEBT
+	]:
 		_show([_rest_hour(reason)])
 
 		assert_eq(

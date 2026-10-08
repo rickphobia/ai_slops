@@ -1,13 +1,14 @@
 class_name AppOverlay
 extends CanvasLayer
 ## The App: the bright, state-issued overlay over the grim field. A top bar with the Quota bar,
-## the Shift's time left, the Worker's Exhaustion and Labour Points; the Mascot with a speech
-## bubble at the bottom; the Store button at the bottom right, which opens the store over the
-## field (see StorePanel) and shows the rest time left while he rests; and confetti for a met
-## Quota or a purchase. During a Study Session the plain room covers the field, under the bar
-## and the Mascot. It shows what it is given and never decides anything. Only the Store and
-## Settings buttons, and the store while open, catch taps, so the field underneath still gets
-## the rest. With reduced motion there is no confetti.
+## the Shift's time left, the Worker's Exhaustion and Labour Points (or his Debt, in red); the
+## Mascot with a speech bubble at the bottom; the Store button at the bottom right, which opens
+## the store over the field (see StorePanel) and shows the rest time left while he rests; the
+## pay slip card at the end of each Shift until it is put away; and confetti for a met Quota or
+## a purchase. During a Study Session the plain room covers the field, under the bar and the
+## Mascot. It shows what it is given and never decides anything. Only the Store and Settings
+## buttons, the pay slip card, and the store while open, catch taps, so the field underneath
+## still gets the rest. With reduced motion there is no confetti.
 ## The Generator powers The App: while the Worker isn't running it, the bar, the Mascot, the
 ## Store button and the store dim; the Study Session room is not The App and stays as it is.
 
@@ -34,10 +35,11 @@ var _root: Control
 var _quota_bar: ProgressBar
 var _quota_label: Label
 var _shift_label: Label
-var _points_label: Label
+var _balance: BalanceBadge
 var _exhaustion_label: Label
 var _store_button: Button
 var _store: StorePanel
+var _pay_slip: PaySlipCard
 var _text_scale := 1.0
 var _speech: Label
 var _bubble: PanelContainer
@@ -64,13 +66,17 @@ func _ready() -> void:
 	_root.add_child(mascot_corner)
 	_store_button = _build_store_button()
 	_root.add_child(_store_button)
+	_pay_slip = PaySlipCard.new()
+	_pay_slip.name = "PaySlipCard"
+	_pay_slip.visible = false
+	_root.add_child(_pay_slip)
 	_store = StorePanel.new()
 	_store.name = "StorePanel"
 	_store.visible = false
 	_store.upgrade_pressed.connect(upgrade_pressed.emit)
 	_store.privilege_pressed.connect(privilege_pressed.emit)
 	_root.add_child(_store)
-	_powered_parts = [top_bar, mascot_corner, _store_button, _store]
+	_powered_parts = [top_bar, mascot_corner, _store_button, _pay_slip, _store]
 	_confetti = Confetti.new()
 	add_child(_confetti)
 
@@ -86,15 +92,21 @@ func is_powered() -> bool:
 	return _powered
 
 
-## Shows the Shift's Quota progress and time left, and the Worker's Labour Points.
-func show_shift(shift: ShiftView, labour_points: int) -> void:
+## Shows the Shift's Quota progress and time left, and the Worker's Labour Points, or his Debt
+## in red in their place while he owes any.
+func show_shift(shift: ShiftView, labour_points: int, debt := 0) -> void:
 	_quota_bar.max_value = shift.quota
 	_quota_bar.value = mini(shift.picked, shift.quota)
 	_quota_label.text = AppText.QUOTA_BAR.format({"picked": shift.picked, "quota": shift.quota})
 	_shift_label.text = AppText.SHIFT_TIMER.format(
 		{"shift": shift.number, "time": clock_text(shift.seconds_left)}
 	)
-	_points_label.text = AppText.LABOUR_POINTS.format({"points": labour_points})
+	_balance.show_balance(labour_points, debt)
+
+
+## Brings up the pay slip card from a Farm.PAY_SLIP message's values.
+func show_pay_slip(values: Dictionary) -> void:
+	_pay_slip.show_slip(values)
 
 
 ## Shows the Worker's Exhaustion, from 0 to Exhaustion.MOST, as a whole percentage.
@@ -218,8 +230,9 @@ func _build_top_bar() -> Control:
 	row.add_child(_shift_label)
 	_exhaustion_label = _label(TEXT_ON_BAR)
 	row.add_child(_exhaustion_label)
-	_points_label = _label(TEXT_ON_BAR)
-	row.add_child(_points_label)
+	_balance = BalanceBadge.new()
+	_balance.name = "BalanceBadge"
+	row.add_child(_balance)
 	var settings := Button.new()
 	settings.name = "SettingsButton"
 	settings.text = SETTINGS_BUTTON_TEXT

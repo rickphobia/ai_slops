@@ -117,6 +117,23 @@ func test_the_end_of_a_shift_logs_the_quota_check_at_info_level() -> void:
 	assert_has(_lines, "[info] quota checked shift=1 picked=0 quota=%d met=false" % quota)
 
 
+func test_the_end_of_a_shift_logs_each_bill_shows_the_pay_slip_and_the_debt() -> void:
+	var main: Node = add_child_autofree(_main())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+	var app: AppOverlay = main.get_node("AppOverlay")
+	var rent := roundi(tuning.rent_per_shift)
+
+	main.call("_process", tuning.shift_seconds)
+
+	var electricity := '[info] bill charged shift=1 bill="electricity" amount=0 laps=0 covered=true'
+	assert_has(_lines, electricity)
+	assert_has(_lines, '[info] bill charged shift=1 bill="rent" amount=%d covered=false' % rent)
+	assert_has(_lines, "[info] debt incurred debt=%d" % rent)
+	assert_true((app.find_child("PaySlipCard", true, false) as PaySlipCard).visible)
+	assert_true((app.find_child("BalanceBadge", true, false) as BalanceBadge).shows_debt())
+
+
 func test_the_mascot_says_the_quota_result_and_the_next_shift_together() -> void:
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
