@@ -34,6 +34,10 @@ func test_it_shows_the_quota_the_time_left_and_the_labour_points() -> void:
 	assert_has(texts, "30 Labour Points")
 
 
+func _card() -> PaySlipCard:
+	return _overlay.find_child("PaySlipCard", true, false) as PaySlipCard
+
+
 func _badge() -> BalanceBadge:
 	return _overlay.find_child("BalanceBadge", true, false) as BalanceBadge
 
@@ -54,9 +58,9 @@ func test_debt_shows_in_red_where_the_labour_points_are() -> void:
 func test_the_pay_slip_card_lists_each_bill_and_what_is_left() -> void:
 	var slip := {"shift": 3, "earned": 20, "laps": 12, "electricity": 6, "rent": 6, "balance": 8}
 
-	_overlay.pay_slip_card().show_slip(slip)
+	_overlay.show_pay_slip(slip)
 
-	var card := _overlay.pay_slip_card()
+	var card := _card()
 	assert_true(card.visible)
 	assert_has(_label_texts(), "Pay slip  ·  Shift 3")
 	var expected: Array[String] = [
@@ -78,12 +82,12 @@ func test_a_negative_balance_on_the_pay_slip_reads_as_debt() -> void:
 
 
 func test_the_pay_slip_card_is_put_away_by_its_button() -> void:
-	_overlay.pay_slip_card().show_slip({"shift": 1, "balance": 0})
-	var close: Button = _overlay.pay_slip_card().find_child("PaySlipClose", true, false)
+	_overlay.show_pay_slip({"shift": 1, "balance": 0})
+	var close: Button = _card().find_child("PaySlipClose", true, false)
 
 	close.pressed.emit()
 
-	assert_false(_overlay.pay_slip_card().visible)
+	assert_false(_card().visible)
 
 
 func test_the_mascot_says_what_it_is_given() -> void:

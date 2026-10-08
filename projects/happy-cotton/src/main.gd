@@ -315,7 +315,7 @@ func _show_app() -> void:
 		):
 			_app.celebrate()
 		if message.key == Farm.PAY_SLIP:
-			_app.pay_slip_card().show_slip(message.values)
+			_app.show_pay_slip(message.values)
 		var text := AppText.render(message)
 		if text.is_empty():
 			GameLog.warning("app message has no text", {"key": message.key})

@@ -104,9 +104,9 @@ func show_shift(shift: ShiftView, labour_points: int, debt := 0) -> void:
 	_balance.show_balance(labour_points, debt)
 
 
-## The pay slip card; show_slip() brings it up.
-func pay_slip_card() -> PaySlipCard:
-	return _pay_slip
+## Brings up the pay slip card from a Farm.PAY_SLIP message's values.
+func show_pay_slip(values: Dictionary) -> void:
+	_pay_slip.show_slip(values)
 
 
 ## Shows the Worker's Exhaustion, from 0 to Exhaustion.MOST, as a whole percentage.

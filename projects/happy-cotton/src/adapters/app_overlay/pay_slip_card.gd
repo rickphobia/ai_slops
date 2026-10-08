@@ -7,7 +7,7 @@ extends PanelContainer
 const CARD_COLOUR := Color(1.0, 0.98, 0.9)
 const TITLE_COLOUR := Color(1.0, 0.42, 0.62)
 const ROW_COLOUR := Color(0.3, 0.12, 0.22)
-const DEBT_COLOUR := Color(0.78, 0.05, 0.1)
+const DEBT_COLOUR := BalanceBadge.DEBT_COLOUR
 const BUTTON_COLOUR := Color(1.0, 0.42, 0.62)
 const TITLE_FONT_SIZE := 32
 const FONT_SIZE := 26

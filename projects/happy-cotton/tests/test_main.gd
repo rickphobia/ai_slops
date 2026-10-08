@@ -130,7 +130,7 @@ func test_the_end_of_a_shift_logs_each_bill_shows_the_pay_slip_and_the_debt() ->
 	assert_has(_lines, electricity)
 	assert_has(_lines, '[info] bill charged shift=1 bill="rent" amount=%d covered=false' % rent)
 	assert_has(_lines, "[info] debt incurred debt=%d" % rent)
-	assert_true(app.pay_slip_card().visible)
+	assert_true((app.find_child("PaySlipCard", true, false) as PaySlipCard).visible)
 	assert_true((app.find_child("BalanceBadge", true, false) as BalanceBadge).shows_debt())
 
 
