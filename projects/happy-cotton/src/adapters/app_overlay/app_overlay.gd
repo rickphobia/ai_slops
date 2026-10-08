@@ -7,6 +7,8 @@ extends CanvasLayer
 ## the Mascot. It shows what it is given and never decides anything. Only the rest hour button
 ## catches taps, so the field underneath still gets the rest (the rules refuse them in a Study
 ## Session).
+## The Generator powers The App: while the Worker isn't running it, the bar, the Mascot and
+## the rest hour button dim; the Study Session room is not The App and stays as it is.
 
 ## The rest hour button was pressed; the rules decide whether he gets it.
 signal rest_hour_pressed
@@ -24,6 +26,8 @@ const CONFETTI_COLOURS: Array[Color] = [
 	Color(0.3, 0.6, 1.0),
 	Color(1.0, 0.5, 0.9),
 ]
+## The tint over The App while the Generator stands still.
+const UNPOWERED := Color(0.45, 0.45, 0.45)
 const FONT_SIZE := 28
 const MARGIN := 16
 
@@ -37,6 +41,9 @@ var _speech: Label
 var _bubble: PanelContainer
 var _confetti: CPUParticles2D
 var _study_room: StudyRoom
+## The parts of The App that dim with the Generator.
+var _powered_parts: Array[CanvasItem] = []
+var _powered := true
 
 
 func _ready() -> void:
@@ -48,12 +55,26 @@ func _ready() -> void:
 	_study_room = StudyRoom.new()
 	_study_room.visible = false
 	root.add_child(_study_room)
-	root.add_child(_build_top_bar())
-	root.add_child(_build_mascot_corner())
+	var top_bar := _build_top_bar()
+	root.add_child(top_bar)
+	var mascot_corner := _build_mascot_corner()
+	root.add_child(mascot_corner)
 	_rest_hour_button = _build_rest_hour_button()
 	root.add_child(_rest_hour_button)
+	_powered_parts = [top_bar, mascot_corner, _rest_hour_button]
 	_confetti = _build_confetti()
 	add_child(_confetti)
+
+
+## Lit while the Worker runs the Generator, dimmed while it stands still.
+func show_powered(powered: bool) -> void:
+	_powered = powered
+	for part in _powered_parts:
+		part.modulate = Color.WHITE if powered else UNPOWERED
+
+
+func is_powered() -> bool:
+	return _powered
 
 
 ## Shows the Shift's Quota progress and time left, and the Worker's Labour Points.

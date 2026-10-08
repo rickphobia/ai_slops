@@ -5,11 +5,14 @@ extends RefCounted
 ## step with the rules' lap clock so he passes the turnstile as each lap ends. He slows on his
 ## last lap, staggers and stands bent over at the turnstile to breathe, and goes back along the
 ## track and through the gate to his place beside the plots when he is sent to the field or to
-## rest. As Exhaustion rises he slumps forward and his walk slows. Only the Worker's own walk,
-## run, stagger and idle animations are used; never a fighting one.
+## rest. As Exhaustion rises he slumps forward and his walk slows. When the Overseer whips him
+## he flinches and staggers where he stands, then runs on. Only the Worker's own walk, run,
+## stagger and idle animations are used; never a fighting one.
 
 ## Emitted each time he runs through the turnstile, so the field can turn it.
 signal pushed_through_turnstile
+## Emitted each time a foot strikes the track as he runs it, for the footstep sound.
+signal stepped
 
 const WALK_SPEED := 1.4
 ## On the way back he jogs along the track to the gate, at this speed, in metres a second.
@@ -41,8 +44,16 @@ const WALKING := &"Walk"
 const RUNNING := &"Run"
 const STAGGERING := &"HitRecieve"
 const BREATHING := &"Idle"
+## How far he runs between one foot striking the track and the next, in metres.
+const STRIDE_LENGTH := 1.3
+## How long he stands flinching and staggering after the whip before he runs on, in seconds:
+## the stagger animation's length.
+const FLINCH_SECONDS := 0.6
 ## Played on a loop; the stagger plays once, then he breathes.
 const LOOPING: Array[StringName] = [STANDING, WALKING, RUNNING, BREATHING]
+
+## Reduced motion (ticket 12): no stagger into his breath or after the whip.
+var skip_stagger := false
 
 var _body: Node3D
 var _player: AnimationPlayer
@@ -63,6 +74,12 @@ var _track_distance := 0.0
 var _breath_shown := false
 ## 1 rested, down to SLOWEST_ANIMATION_SPEED spent: his walk and animations together.
 var _speed := 1.0
+## Seconds left of a flinch after the whip; he stands where he is until it is 0.
+var _flinch_left := 0.0
+## His speed along the track in the last update, in metres a second; 0 unless he ran it.
+var _track_speed := 0.0
+## Metres run since his last foot struck the track.
+var _since_step := 0.0
 
 
 ## `body` starts at his place beside the plots. `player` may be null if the model has none;
@@ -90,9 +107,28 @@ func show(view: WorkerView) -> void:
 	_lap_progress = view.lap_progress
 
 
+## The whip: he flinches and staggers where he stands, then runs on. Skipped with the stagger.
+func flinch() -> void:
+	if skip_stagger:
+		return
+	_flinch_left = FLINCH_SECONDS
+	if _player != null:
+		_player.speed_scale = 1.0
+		_player.play(STAGGERING)
+
+
+## How fast he is running along the track, in metres a second; 0 when he isn't.
+func track_speed() -> float:
+	return _track_speed
+
+
 ## Moves him some seconds closer to where he should be.
 func update(delta: float) -> void:
 	if delta <= 0.0:
+		return
+	_track_speed = 0.0
+	if _flinch_left > 0.0:
+		_flinch_left -= delta
 		return
 	if _is_home():
 		if _on_track:
@@ -164,6 +200,11 @@ func _keep_up(delta: float) -> void:
 		return
 	var step := minf(gap * (1.0 - exp(-KEEP_UP_RATE * delta)), FASTEST_RUN_SPEED * delta)
 	_track_distance += step
+	_track_speed = step / delta
+	_since_step += step
+	if _since_step >= STRIDE_LENGTH:
+		_since_step -= STRIDE_LENGTH
+		stepped.emit()
 	if _track_distance > lap:
 		_track_distance -= lap
 		pushed_through_turnstile.emit()
@@ -189,7 +230,9 @@ func _breathe() -> void:
 	if _breath_shown:
 		return
 	_breath_shown = true
-	if _player != null:
+	if skip_stagger:
+		_play(BREATHING)
+	elif _player != null:
 		_player.speed_scale = _speed
 		_player.play(STAGGERING)
 		_player.queue(BREATHING)

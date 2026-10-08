@@ -124,7 +124,9 @@ func _process(delta: float) -> void:
 	if away != 0.0:
 		_resume_offline(away)
 	var shift_number := _farm.shift().number
-	_farm.advance(delta)
+	for overseer_event in _farm.advance(delta):
+		GameLog.debug("overseer", {"event": overseer_event})
+		_field.show_overseer(overseer_event)
 	_since_autosave += delta
 	if _farm.shift().number != shift_number:
 		_save("shift_end")
@@ -232,6 +234,7 @@ func _show_worker() -> void:
 		var activity_name: String = WorkerView.Activity.keys()[view.activity]
 		GameLog.debug("worker", {"activity": activity_name.to_lower()})
 	_field.show_worker(view)
+	_app.show_powered(view.activity == WorkerView.Activity.RUNNING)
 
 
 ## Passes the rules' App messages to the Mascot, celebrates a met Quota, logs Quota checks,
