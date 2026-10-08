@@ -531,21 +531,17 @@ func _generator_refusal() -> StringName:
 func store() -> Array[StoreItemView]:
 	var next := _store.next_generator_tier()
 	var current := _store.growth_multiplier()
+	var price := 0
+	var effect := current
+	var rise := 0
+	if next != null:
+		price = roundi(next.price)
+		effect = next.growth_multiplier
+		rise = roundi(next.quota_rise)
 	var tiers := Vector2i(_store.generator_tier(), _store.generator_top_tier())
-	var generator: StoreItemView
-	if next == null:
-		generator = StoreItemView.upgrade(
-			GENERATOR, tiers, 0, Vector2(current, current), 0, _generator_refusal()
-		)
-	else:
-		generator = StoreItemView.upgrade(
-			GENERATOR,
-			tiers,
-			roundi(next.price),
-			Vector2(next.growth_multiplier, current),
-			roundi(next.quota_rise),
-			_generator_refusal()
-		)
+	var generator := StoreItemView.upgrade(
+		GENERATOR, tiers, price, Vector2(effect, current), rise, _generator_refusal()
+	)
 	var rest_hour := StoreItemView.new(
 		REST_HOUR, StoreItemView.Kind.PRIVILEGE, _rest_hour_price(), _rest_hour_refusal()
 	)

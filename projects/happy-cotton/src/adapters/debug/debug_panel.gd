@@ -14,7 +14,7 @@ const CHOICES: Dictionary[String, float] = {
 	"Skip +8 hours": 28800.0,
 }
 const LABOUR_POINTS_ADDED := 100
-const LABOUR_POINTS_LABEL := "+100 Labour Points"
+const LABOUR_POINTS_LABEL := "+%d Labour Points"
 const MARGIN := 16
 const TOP_OFFSET := 96
 const FONT_SIZE := 24
@@ -31,7 +31,7 @@ func _ready() -> void:
 	for label: String in CHOICES:
 		column.add_child(_button(label, skip_requested.emit.bind(CHOICES[label])))
 	var add_points := labour_points_requested.emit.bind(LABOUR_POINTS_ADDED)
-	column.add_child(_button(LABOUR_POINTS_LABEL, add_points))
+	column.add_child(_button(LABOUR_POINTS_LABEL % LABOUR_POINTS_ADDED, add_points))
 	add_child(column)
 
 
