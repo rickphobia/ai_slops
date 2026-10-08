@@ -77,12 +77,38 @@ A ripe crop that died because nobody picked it in time (8 hours, online or offli
 _Avoid_: dead, rotten, spoiled
 
 **Negligence**:
-The App's record of a Withered crop. It is punished more severely than a missed Quota.
+The App's record of a crop lost to Withering or eaten by Bollworms. It is punished more severely than a missed Quota.
 _Avoid_: penalty, fine, mistake
 
 **Farm Level**:
 How far the Farm has grown. It belongs to the state, not the Worker, and each new level raises the Quota.
 _Avoid_: player level, XP, rank
+
+### Nature
+
+**Disaster**:
+A Sandstorm or a Heatwave that strikes during a Shift, after a warning from The App. The App never lowers the Quota for one.
+_Avoid_: weather, event, hazard
+
+**Sandstorm**:
+A Disaster that turns the sky orange and slows the crops' growth while it lasts.
+_Avoid_: dust storm, storm
+
+**Heatwave**:
+A Disaster that makes every lap on the Generator tire the Worker faster while it lasts.
+_Avoid_: heat, hot spell
+
+**Bollworm**:
+The real cotton pest that appears on growing Plots. Left too long, Bollworms eat the crop, and The App logs it as Negligence.
+_Avoid_: worm (alone), bug, pest
+
+**Fertiliser**:
+A supply bought in The App's store and spread on a Seedling so the crop grows faster. It is used up, and its price rises every Shift.
+_Avoid_: boost, plant food, booster
+
+**Pesticide**:
+A supply bought in The App's store and sprayed on a Plot to keep Bollworms off its crop.
+_Avoid_: spray (as a noun), poison, bug killer
 
 ### The Worker's body
 
@@ -107,7 +133,7 @@ _Avoid_: resistance, rebellion, good deed
 ### What the Worker gets
 
 **Labour Points**:
-The only currency the Worker earns, a small fraction of the value of what they pick.
+The only currency the state pays the Worker, a small fraction of the value of the cotton he hands in.
 _Avoid_: coins, money, wages, gold
 
 **Privilege**:
@@ -119,11 +145,31 @@ The App's parody premium currency. It is never bought with real money.
 _Avoid_: gems, diamonds, premium currency
 
 **Bill**:
-A charge the state takes from the Worker's Labour Points: electricity, rent or his Children's school fees.
+A charge the state takes from the Worker's Labour Points, and from his hidden savings when they fall short: electricity, rent or his Children's school fees.
 _Avoid_: tax, cost, expense, fee (alone)
 
+**Hand-in**:
+The end of a Shift, when The App asks the Worker to hand in his cotton. Only what he hands in counts towards the Quota and earns Labour Points.
+_Avoid_: delivery, submission, weigh-in
+
+**Keeping back**:
+Holding some of the Worker's cotton back at the Hand-in, to sell on the side for his Family. The App calls it theft, and only when it catches him.
+_Avoid_: stealing, skimming, theft (except in The App's voice)
+
+**Hidden savings**:
+What kept-back cotton sells for, hidden under the Worker's mattress. The App never shows them. They buy what Labour Points buy, but spending them in the state's store is noticed.
+_Avoid_: stash, wallet, secret money, savings (alone)
+
+**Harmony Audit**:
+The App's check, now and then at a Hand-in, of whether the Worker has been keeping back. It is likelier the more he kept back lately, and a cut too big to hide catches him.
+_Avoid_: inspection, search, investigation
+
+**On watch**:
+The Shifts after the Worker is caught keeping back, when Harmony Audits come more often and any cut is found. The App calls it "Harmony Support".
+_Avoid_: probation, suspicion, flagged
+
 **Debt**:
-What the Worker owes when his Labour Points can't cover a Bill. It is never forgiven and blocks Privileges while it lasts.
+What the Worker owes when his Labour Points and hidden savings can't cover a Bill. It is never forgiven and blocks Privileges while it lasts.
 _Avoid_: negative balance, loan, overdraft
 
 **Upgrade**:
@@ -143,6 +189,10 @@ _Avoid_: good ending, win, level up
 **Revolt**:
 The ending where the Worker and his Co-workers stop the Generator together for one day, and the state replaces them all.
 _Avoid_: rebellion, uprising, victory
+
+**Caught**:
+The ending where a Harmony Audit catches the Worker keeping back a second time and he is taken away; The App calls it "reassignment".
+_Avoid_: fired, game over, arrested
 
 **Endless**:
 What happens when no other ending does: the work goes on, and play never stops.
