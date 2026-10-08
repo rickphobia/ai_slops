@@ -1,11 +1,13 @@
 extends Node
 ## Entry scene: logs which build is running, loads and checks the tuning table, creates the
-## Farm rules and wires them to the field and The App. Kept thin: no game rules here.
+## Farm rules and wires them to the field, The App and the wall clock, and adds the Skip time
+## control in debug mode. Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
 
 var _tuning: Tuning
 var _farm: Farm
+var _clock: WallClock
 var _worker_activity := WorkerView.Activity.IN_FIELD
 
 @onready var _field: Field = $Field
@@ -25,11 +27,15 @@ func _ready() -> void:
 	_tuning = tuning
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
 	_farm = Farm.new(_tuning, _field.plot_count())
+	_clock = WallClock.new(Time.get_unix_time_from_system)
 	_field.plot_tapped.connect(_on_plot_tapped)
 	_field.generator_tapped.connect(_on_generator_tapped)
-	_field.show_plots(_farm.plots())
-	_show_worker()
-	_show_app()
+	_show_farm()
+	if DebugMode.is_on():
+		GameLog.info("debug mode on")
+		var skip_time := SkipTimePanel.new()
+		skip_time.skip_requested.connect(_on_skip_requested)
+		add_child(skip_time)
 
 
 ## The tuning table that passed the startup check, or null if the game stopped.
@@ -38,14 +44,16 @@ func tuning() -> Tuning:
 
 
 ## Crops grow in real time while the game runs. A hidden browser tab stops frames, and Godot
-## caps one frame's delta (about 0.13 s), so the hidden time doesn't count as online play.
+## caps one frame's delta (about 0.13 s), so the hidden time doesn't count as online play: the
+## wall clock reports it as offline time instead.
 func _process(delta: float) -> void:
 	if _farm == null:
 		return
+	var away := _clock.offline_seconds(delta)
+	if away != 0.0:
+		_resume_offline(away)
 	_farm.advance(delta)
-	_field.show_plots(_farm.plots())
-	_show_worker()
-	_show_app()
+	_show_farm()
 
 
 ## A tap on an empty plot plants it; on any other plot it tries to pick. The rules decide
@@ -70,6 +78,38 @@ func _on_generator_tapped() -> void:
 	else:
 		GameLog.debug("run generator refused", {"reason": result.reason})
 	_show_worker()
+
+
+## Skip time runs exactly the offline resume of a real absence that long.
+func _on_skip_requested(seconds: float) -> void:
+	GameLog.info("skip time", {"seconds": seconds})
+	_resume_offline(seconds)
+	_show_farm()
+
+
+## Logs each return from offline time, with a warning when the clock's time couldn't be used
+## as given. The away summary reaches The App with the other messages.
+func _resume_offline(seconds: float) -> void:
+	var report := _farm.resume_offline(seconds)
+	if report.clock_problem != &"":
+		var adjusted := {
+			"problem": report.clock_problem,
+			"seconds_away": report.seconds_away,
+			"seconds_counted": report.seconds_counted,
+		}
+		GameLog.warning("offline time adjusted", adjusted)
+	var resumed := {
+		"seconds": report.seconds_counted,
+		"ripened": report.ripened,
+		"study_seconds_served": report.study_seconds_served,
+	}
+	GameLog.info("offline resume", resumed)
+
+
+func _show_farm() -> void:
+	_field.show_plots(_farm.plots())
+	_show_worker()
+	_show_app()
 
 
 ## Shows the Worker and logs each change in what he is doing, such as stopping to breathe.

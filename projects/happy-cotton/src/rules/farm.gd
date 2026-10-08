@@ -1,21 +1,27 @@
 class_name Farm
 extends RefCounted
 ## The Farm rules: the plots and the cotton growing in them. No scene tree, clock or file
-## access: time only moves when advance() is called, so tests play hours in milliseconds.
+## access: time only moves when advance() or resume_offline() is called, so tests play hours
+## in milliseconds.
 ## It also runs the Shift: online play counts it down, and at its end the Quota is checked and
 ## the next Shift starts at once with a higher Quota. What The App should say comes out as
 ## AppMessages through take_messages(). A missed Quota starts a Study Session: the Worker can't
 ## plant or pick until it ends, and the next Shift's clock waits for it.
 ## The Worker is either in the field or on the Generator. Crops grow only while he runs on it;
 ## after a set number of laps he stops to breathe and growth halts until he runs again.
-## Planting or picking brings him back to the field, and so does a Study Session. Later
-## tickets add Exhaustion here.
+## Planting or picking brings him back to the field, and so does a Study Session. Offline
+## time (the game closed or its tab hidden) grows crops at a slower rate with no Generator and
+## serves the Study Session, but the Shift waits. Later tickets add Exhaustion here.
 
 const NO_SUCH_PLOT := &"no_such_plot"
 const NOT_EMPTY := &"not_empty"
 const NOT_RIPE := &"not_ripe"
 const NOTHING_PLANTED := &"nothing_planted"
 const IN_STUDY_SESSION := &"in_study_session"
+
+## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
+const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
+const OFFLINE_TIME_CAPPED := &"offline_time_capped"
 
 ## App message keys. A Shift began: values shift, quota.
 const SHIFT_STARTED := &"shift_started"
@@ -31,6 +37,9 @@ const QUOTA_MISSED_REPEATEDLY := &"quota_missed_repeatedly"
 const STUDY_SESSION_STARTED := &"study_session_started"
 ## A Study Session ended: values in_a_row.
 const STUDY_SESSION_ENDED := &"study_session_ended"
+## The Worker came back from offline time: values minutes (away, rounded up), ripened (plots
+## that ripened while away), study_minutes (Study Session served while away, rounded up).
+const AWAY_SUMMARY := &"away_summary"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -40,6 +49,7 @@ const MESSAGE_KEYS: Array[StringName] = [
 	QUOTA_MISSED_REPEATEDLY,
 	STUDY_SESSION_STARTED,
 	STUDY_SESSION_ENDED,
+	AWAY_SUMMARY,
 ]
 ## The Quota-missed key for the first, second and every later miss in a row.
 const MISSED_KEYS: Array[StringName] = [QUOTA_MISSED, QUOTA_MISSED_AGAIN, QUOTA_MISSED_REPEATEDLY]
@@ -126,12 +136,7 @@ func advance(seconds: float) -> void:
 	# turn.
 	while remaining > 0.0:
 		if in_study_session():
-			var served := minf(remaining, _study_left)
-			remaining -= served
-			if served >= _study_left:
-				_end_study_session()
-			else:
-				_study_left -= served
+			remaining -= _serve_study_session(remaining)
 		else:
 			var shift_left := _tuning.shift_seconds - _shift_elapsed
 			var worked := minf(minf(remaining, shift_left), _seconds_until_toil_turns())
@@ -142,6 +147,31 @@ func advance(seconds: float) -> void:
 				_end_shift()
 			else:
 				_shift_elapsed += worked
+
+
+## Moves the Farm on by some seconds offline: crops grow at the offline rate whatever the
+## Worker was doing, and a Study Session counts down, but the Shift waits and the Worker stays
+## where he was. A wrong clock can't break the Farm: negative time counts as zero and a long
+## absence is cut to the tuning's cap; the report says which.
+func resume_offline(seconds: float) -> AwayReport:
+	var counted := clampf(seconds, 0.0, _tuning.offline_cap_seconds)
+	var problem := &""
+	if seconds < 0.0:
+		problem = NEGATIVE_OFFLINE_TIME
+	elif seconds > _tuning.offline_cap_seconds:
+		problem = OFFLINE_TIME_CAPPED
+	var ripe_before := _ripe_count()
+	_grow(counted * _tuning.offline_growth_rate)
+	var study_served := _serve_study_session(counted)
+	var ripened := _ripe_count() - ripe_before
+	if counted > 0.0:
+		var values := {
+			"minutes": ceili(counted / 60.0),
+			"ripened": ripened,
+			"study_minutes": ceili(study_served / 60.0),
+		}
+		_messages.append(AppMessage.new(AWAY_SUMMARY, values))
+	return AwayReport.new(seconds, counted, problem, ripened, study_served)
 
 
 ## The plot at index; it must exist.
@@ -234,6 +264,19 @@ func _start_study_session() -> void:
 	_messages.append(AppMessage.new(STUDY_SESSION_STARTED, values))
 
 
+## Counts the Study Session down by up to `seconds`, ending it if they cover what is left.
+## Returns the seconds served: 0 when there is no Study Session.
+func _serve_study_session(seconds: float) -> float:
+	var served := minf(seconds, _study_left)
+	if served <= 0.0:
+		return 0.0
+	if served >= _study_left:
+		_end_study_session()
+	else:
+		_study_left -= served
+	return served
+
+
 func _end_study_session() -> void:
 	_study_left = 0.0
 	_messages.append(AppMessage.new(STUDY_SESSION_ENDED, {"in_a_row": _misses_in_a_row}))
@@ -275,6 +318,10 @@ func _grow(seconds: float) -> void:
 	for index in _grown.size():
 		if _grown[index] != EMPTY:
 			_grown[index] = minf(_grown[index] + seconds, _tuning.grow_seconds)
+
+
+func _ripe_count() -> int:
+	return _grown.count(_tuning.grow_seconds)
 
 
 func _exists(index: int) -> bool:

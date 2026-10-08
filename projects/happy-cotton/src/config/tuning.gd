@@ -17,6 +17,8 @@ const LIMITS: Dictionary = {
 	"lap_seconds": [0.5, 600.0],
 	"laps_before_breath": [1.0, 1000.0],
 	"breath_seconds": [0.5, 600.0],
+	"offline_growth_rate": [0.01, 1.0],
+	"offline_cap_seconds": [60.0, 2592000.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = [
@@ -47,6 +49,12 @@ const WHOLE_NUMBERS: Array[String] = [
 ## How long he stands bent over on the Generator, breathing, before he runs again. Crops halt
 ## meanwhile.
 @export var breath_seconds: float = NAN
+## How fast crops grow while the game is closed or its tab hidden (the night shift), as a share
+## of how fast they grow while the Worker runs on the Generator. No Generator is needed.
+@export var offline_growth_rate: float = NAN
+## The most offline time one return counts, in seconds. More is cut to this, so one bad
+## timestamp can't move the Farm on by years.
+@export var offline_cap_seconds: float = NAN
 
 
 static func load_file(path: String) -> Tuning:

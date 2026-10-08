@@ -52,6 +52,14 @@ _Avoid_: order, target, goal
 A stretch of the Worker's working time that runs only while the game is open, with one Quota due at its end.
 _Avoid_: day, round, turn, period
 
+**Night shift**:
+The slow growth of the crops while the game is closed or its tab hidden. The field never stops working.
+_Avoid_: idle growth, offline progress
+
+**Away summary**:
+The App's short report on returning to the game: how long the Worker was away, what ripened and the Study Session time served.
+_Avoid_: welcome-back screen, offline report
+
 **The App**:
 The bright, state-issued "Happy Cotton" app laid over the world: the state's cheerful voice, never the Worker's.
 _Avoid_: HUD, UI (when talking about the game's world rather than its code)

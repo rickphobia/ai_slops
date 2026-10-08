@@ -1,6 +1,7 @@
 extends GutTest
 ## Smoke test of the entry scene: it loads, logs the build version and accepts the shipped
-## tuning table, and that a tap on the field reaches the Farm rules.
+## tuning table, that a tap on the field reaches the Farm rules, and that offline time and
+## Skip time are logged.
 
 const MAIN_SCENE := preload("res://src/main.tscn")
 
@@ -127,3 +128,52 @@ func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp() -> void:
 
 	assert_has(_lines, '[debug] worker activity="in_field"')
 	assert_false(generator.is_lit())
+
+
+func test_there_is_no_skip_time_control_without_debug_mode() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+
+	assert_eq(main.find_children("*", "SkipTimePanel", true, false).size(), 0)
+
+
+func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var app: AppOverlay = main.get_node("AppOverlay")
+
+	main.call("_on_skip_requested", 3600.0)
+
+	assert_has(_lines, "[info] skip time seconds=3600.0")
+	assert_has(_lines, "[info] offline resume seconds=3600.0 ripened=0 study_seconds_served=0.0")
+	assert_string_contains(app.speech(), "Welcome back!")
+
+
+func test_offline_time_past_the_cap_is_logged_as_a_warning() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+	var tuning: Tuning = main.call("tuning")
+	var too_long := tuning.offline_cap_seconds * 2.0
+
+	main.call("_resume_offline", too_long)
+
+	var warning := (
+		'[warning] offline time adjusted problem=&"offline_time_capped" seconds_away=%s'
+		+ " seconds_counted=%s"
+	)
+	assert_has(_lines, warning % [var_to_str(too_long), var_to_str(tuning.offline_cap_seconds)])
+
+
+func test_negative_offline_time_is_logged_as_a_warning() -> void:
+	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	await wait_process_frames(1)
+
+	main.call("_resume_offline", -60.0)
+
+	assert_has(
+		_lines,
+		(
+			'[warning] offline time adjusted problem=&"negative_offline_time"'
+			+ " seconds_away=-60.0 seconds_counted=0.0"
+		)
+	)
