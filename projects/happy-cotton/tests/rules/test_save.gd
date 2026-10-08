@@ -342,3 +342,42 @@ func _end_shift_slip(farm: Farm) -> Dictionary:
 		if message.key == Farm.PAY_SLIP:
 			return message.values
 	return {}
+
+
+func test_the_school_fees_survive_a_save() -> void:
+	var saved := Farm.new(FastTuning.billing_table(), PLOTS)
+	_miss_shifts(saved, 3)
+	var restored := Farm.new(FastTuning.billing_table(), PLOTS)
+
+	var problems := restored.restore(_through_json(saved.to_save()))
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(restored.shift().school_fees_shift, saved.shift().school_fees_shift)
+	assert_true(restored.school_fees_unpaid())
+	assert_eq(restored.school_fees_unpaid_in_a_row(), 1)
+
+
+func test_a_save_from_before_the_school_fees_has_them_due_three_shifts_on() -> void:
+	var saved := Farm.new(FastTuning.billing_table(), PLOTS)
+	_miss_shifts(saved, 4)
+	var save := _through_json(saved.to_save())
+	save["version"] = 4
+	save.erase("school_fees_shift")
+	save.erase("school_fees_unpaid")
+	save.erase("school_fees_unpaid_in_a_row")
+	var restored := Farm.new(FastTuning.billing_table(), PLOTS)
+
+	var problems := restored.restore(save)
+
+	assert_eq(problems, [] as Array[String])
+	var shift := restored.shift()
+	assert_eq(shift.school_fees_shift, shift.number + FastTuning.SCHOOL_FEES_EVERY_SHIFTS)
+	assert_false(restored.school_fees_unpaid())
+	assert_eq(restored.school_fees_unpaid_in_a_row(), 0)
+
+
+## Ends `shifts` Shifts with nothing picked, serving each Study Session that follows.
+func _miss_shifts(farm: Farm, shifts: int) -> void:
+	for shift in shifts:
+		farm.advance(farm.shift().seconds_left)
+		farm.advance(farm.study_session_seconds_left())

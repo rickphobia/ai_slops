@@ -38,6 +38,8 @@ const LIMITS: Dictionary = {
 	"offline_recovery_per_hour": [0.0, 100.0],
 	"electricity_per_lap": [0.0, 10000.0],
 	"rent_per_shift": [0.0, 10000.0],
+	"school_fees": [0.0, 100000.0],
+	"school_fees_every_shifts": [1.0, 1000.0],
 }
 ## Fields that count things (picks, points), so they must be whole numbers.
 const WHOLE_NUMBERS: Array[String] = [
@@ -49,6 +51,8 @@ const WHOLE_NUMBERS: Array[String] = [
 	"fewest_laps_before_breath",
 	"rest_hour_price",
 	"rent_per_shift",
+	"school_fees",
+	"school_fees_every_shifts",
 ]
 ## What a Generator tier's growth multiplier is measured against: no Upgrade at all.
 const NO_UPGRADE_GROWTH := 1.0
@@ -141,6 +145,11 @@ const MOST_TIER_QUOTA_RISE := 10000.0
 @export var electricity_per_lap: float = NAN
 ## Labour Points the dormitory rent Bill charges at the end of every Shift, after electricity.
 @export var rent_per_shift: float = NAN
+## Labour Points the Children's school-fees Bill charges, after rent, at the end of every
+## school_fees_every_shifts-th Shift. The fees are the game's invention, not a documented fact.
+@export var school_fees: float = NAN
+## How many Shifts apart the school fees come; the first are due at the end of this Shift.
+@export var school_fees_every_shifts: float = NAN
 ## The Generator Upgrade's tiers, bought in order: each one's price, growth per second of
 ## running, and Quota rise. At least one tier.
 @export var generator_tiers: Array[GeneratorTier] = []

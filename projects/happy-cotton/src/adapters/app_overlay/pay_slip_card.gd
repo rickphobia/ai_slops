@@ -76,12 +76,16 @@ static func rows(values: Dictionary) -> Array[String]:
 	var last := AppText.PAY_SLIP_LEFT.format({"points": balance})
 	if balance < 0:
 		last = AppText.PAY_SLIP_DEBT.format({"debt": -balance})
-	return [
+	var texts: Array[String] = [
 		AppText.PAY_SLIP_EARNED.format(values),
 		AppText.PAY_SLIP_ELECTRICITY.format(values),
 		AppText.PAY_SLIP_RENT.format(values),
-		last,
 	]
+	var school_fees: int = values.get("school_fees", 0)
+	if school_fees > 0:
+		texts.append(AppText.PAY_SLIP_SCHOOL_FEES.format(values))
+	texts.append(last)
+	return texts
 
 
 static func in_debt(values: Dictionary) -> bool:

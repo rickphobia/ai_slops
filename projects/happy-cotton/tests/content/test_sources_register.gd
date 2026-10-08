@@ -38,3 +38,12 @@ func test_a_repeated_id_is_reported() -> void:
 
 	var expected: Array[String] = ["source id x is used more than once"]
 	assert_eq(SourcesRegister.problems(sources), expected)
+
+
+## The school fees are the game's invention, so no source may be cited for them.
+func test_no_source_is_cited_for_the_school_fees() -> void:
+	for source in SourcesRegister.entries():
+		assert_false(
+			(source.title + source.used_for).to_lower().contains("fee"),
+			"%s cites the fees" % source.id
+		)

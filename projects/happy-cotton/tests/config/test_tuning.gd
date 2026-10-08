@@ -71,6 +71,28 @@ func test_a_bill_below_zero_is_reported() -> void:
 	assert_string_contains(problems[0], "rent_per_shift")
 
 
+func test_school_fees_and_their_interval_must_be_whole() -> void:
+	var tuning := _good_table()
+	tuning.school_fees = 12.5
+	tuning.school_fees_every_shifts = 2.5
+
+	var expected: Array[String] = [
+		"school_fees is 12.5, but it must be a whole number",
+		"school_fees_every_shifts is 2.5, but it must be a whole number",
+	]
+	assert_eq(tuning.problems(), expected)
+
+
+func test_school_fees_must_come_at_least_every_shift() -> void:
+	var tuning := _good_table()
+	tuning.school_fees_every_shifts = 0.0
+
+	var problems := tuning.problems()
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "school_fees_every_shifts")
+
+
 func test_a_quota_that_does_not_rise_is_reported() -> void:
 	var tuning := _good_table()
 	tuning.quota_rise = 0.0

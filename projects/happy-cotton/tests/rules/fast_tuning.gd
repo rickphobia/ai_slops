@@ -65,6 +65,8 @@ const TOOLS_WORK_SHARES: Array[float] = [0.5, 0.25]
 const TOOLS_QUOTA_RISES: Array[int] = [1, 2]
 const ELECTRICITY_PER_LAP := 1
 const RENT_PER_SHIFT := 4
+const SCHOOL_FEES := 20
+const SCHOOL_FEES_EVERY_SHIFTS := 3
 
 
 static func table() -> Tuning:
@@ -100,6 +102,8 @@ static func table() -> Tuning:
 	tuning.offline_recovery_per_hour = OFFLINE_RECOVERY_PER_HOUR
 	tuning.electricity_per_lap = 0.0
 	tuning.rent_per_shift = 0.0
+	tuning.school_fees = 0.0
+	tuning.school_fees_every_shifts = SCHOOL_FEES_EVERY_SHIFTS
 	var tiers: Array[GeneratorTier] = []
 	for index in GENERATOR_PRICES.size():
 		tiers.append(
@@ -134,9 +138,11 @@ static func exhausting_table() -> Tuning:
 	return tuning
 
 
-## The test table with the Bills charged at the end of every Shift.
+## The test table with the Bills charged at the end of every Shift, and school fees at the end
+## of every third.
 static func billing_table() -> Tuning:
 	var tuning := table()
 	tuning.electricity_per_lap = ELECTRICITY_PER_LAP
 	tuning.rent_per_shift = RENT_PER_SHIFT
+	tuning.school_fees = SCHOOL_FEES
 	return tuning

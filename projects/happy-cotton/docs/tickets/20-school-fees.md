@@ -4,16 +4,16 @@
 
 **Blocked by:** 19 (Bills, the pay slip and Debt)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules, config/tuning, content/app-text, adapters/app-overlay, adapters/save
 
 **Effort:** low
 
-- [ ] School fees are charged every N Shifts (tuning, 3 to start), after electricity and rent, and appear on the pay slip; other Shifts' pay slips show none
-- [ ] The overlay shows the Shift when the next fees are due
-- [ ] A school-fees Bill that leaves a shortfall sets "school fees unpaid", which clears when Debt reaches zero
-- [ ] The rules count school-fees Bills in a row that left a shortfall, and a covered one resets the count
-- [ ] An App line introduces the Children at a state boarding school, citing zenz-2019; the fees are never presented as fact and the Sources page doesn't cite them
-- [ ] The next-fees Shift, the unpaid flag and the count are saved; a save without them restores with fees due on the third Shift after the restored one
-- [ ] GUT tests through Farm and tuning validation tests
+- [x] School fees are charged every N Shifts (tuning, 3 to start), after electricity and rent, and appear on the pay slip; other Shifts' pay slips show none
+- [x] The overlay shows the Shift when the next fees are due
+- [x] A school-fees Bill that leaves a shortfall sets "school fees unpaid", which clears when Debt reaches zero
+- [x] The rules count school-fees Bills in a row that left a shortfall, and a covered one resets the count
+- [x] An App line introduces the Children at a state boarding school, citing zenz-2019; the fees are never presented as fact and the Sources page doesn't cite them
+- [x] The next-fees Shift, the unpaid flag and the count are saved; a save without them restores with fees due on the third Shift after the restored one
+- [x] GUT tests through Farm and tuning validation tests
