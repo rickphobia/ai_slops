@@ -4,18 +4,18 @@
 
 **Blocked by:** 08 (Exhaustion and the rest hour)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** rules, adapters/save, adapters/title, entrypoint
 
 **Effort:** medium
 
-- [ ] Rules produce a plain dictionary of the full Farm state with a save format version, and restore from one
-- [ ] GUT round-trip tests: a game saved and restored behaves identically through the next Shift, Study Session and rest hour
-- [ ] Save store adapter keeps one slot in Godot's user folder (browser storage in the web export)
-- [ ] Autosave after every command, at the end of each Shift and when the tab is hidden
-- [ ] The title screen offers Continue when a save exists
-- [ ] A save that can't be read is kept aside, not overwritten; the player sees a clear message and can start over
-- [ ] "Start over" asks for confirmation
-- [ ] Saves, loads and failures are logged without dumping the save itself
-- [ ] On start, the time since the save was written is fed through the same offline resume as a hidden tab (crops grow, Withering, Study Sessions, Exhaustion recovery), with the away summary; the clock-safety rules apply
+- [x] Rules produce a plain dictionary of the full Farm state with a save format version, and restore from one
+- [x] GUT round-trip tests: a game saved and restored behaves identically through the next Shift, Study Session and rest hour
+- [x] Save store adapter keeps one slot in Godot's user folder (browser storage in the web export)
+- [x] Autosave after every command, at the end of each Shift and when the tab is hidden
+- [x] The title screen offers Continue when a save exists
+- [x] A save that can't be read is kept aside, not overwritten; the player sees a clear message and can start over
+- [x] "Start over" asks for confirmation
+- [x] Saves, loads and failures are logged without dumping the save itself
+- [x] On start, the time since the save was written is fed through the same offline resume as a hidden tab (crops grow, Withering, Study Sessions, Exhaustion recovery), with the away summary; the clock-safety rules apply

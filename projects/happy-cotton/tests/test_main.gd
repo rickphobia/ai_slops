@@ -1,32 +1,53 @@
 extends GutTest
 ## Smoke test of the entry scene: it loads, logs the build version and accepts the shipped
 ## tuning table, that a tap on the field reaches the Farm rules, and that offline time and
-## Skip time are logged.
+## Skip time are logged. Its save slot is in a test folder of its own (saving itself is
+## tested in test_main_save.gd).
 
 const MAIN_SCENE := preload("res://src/main.tscn")
+const SAVE_FOLDER := "user://test_main"
+const SAVE_SLOT := SAVE_FOLDER + "/save.json"
 
 var _lines: Array[String] = []
+var _store := SaveStore.new(SAVE_SLOT)
 
 
 func before_each() -> void:
 	_lines = []
 	GameLog.reset()
 	GameLog.sink = func(_level: GameLog.Level, line: String) -> void: _lines.append(line)
+	_empty_save_folder()
 
 
 func after_each() -> void:
 	GameLog.reset()
 
 
+func after_all() -> void:
+	_empty_save_folder()
+
+
+func _empty_save_folder() -> void:
+	DirAccess.make_dir_recursive_absolute(SAVE_FOLDER)
+	for file in DirAccess.get_files_at(SAVE_FOLDER):
+		DirAccess.remove_absolute(SAVE_FOLDER.path_join(file))
+
+
+func _main() -> Node:
+	var main := MAIN_SCENE.instantiate()
+	main.set("save_store", _store)
+	return main
+
+
 func test_the_entry_scene_logs_the_build_version_on_start() -> void:
-	add_child_autofree(MAIN_SCENE.instantiate())
+	add_child_autofree(_main())
 	await wait_process_frames(1)
 
 	assert_has(_lines, '[info] game started version="%s"' % BuildVersion.read())
 
 
 func test_the_entry_scene_starts_with_the_shipped_tuning_table() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 
 	var tuning: Tuning = main.call("tuning")
@@ -36,7 +57,7 @@ func test_the_entry_scene_starts_with_the_shipped_tuning_table() -> void:
 
 func test_tapping_an_empty_plot_plants_it_and_logs_at_debug_level() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var field: Field = main.get_node("Field")
 
@@ -47,7 +68,7 @@ func test_tapping_an_empty_plot_plants_it_and_logs_at_debug_level() -> void:
 
 func test_tapping_a_growing_plot_is_refused_by_the_rules_as_not_ripe() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var field: Field = main.get_node("Field")
 	field.plot_tapped.emit(0)
@@ -55,12 +76,15 @@ func test_tapping_a_growing_plot_is_refused_by_the_rules_as_not_ripe() -> void:
 
 	field.plot_tapped.emit(0)
 
-	assert_eq(_lines, ['[debug] pick refused plot=0 reason=&"not_ripe"'] as Array[String])
+	var expected: Array[String] = [
+		'[debug] pick refused plot=0 reason=&"not_ripe"', '[debug] game saved reason="command"'
+	]
+	assert_eq(_lines, expected)
 
 
 func test_a_rest_hour_he_cannot_afford_is_refused_and_the_mascot_says_why() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var app: AppOverlay = main.get_node("AppOverlay")
 
@@ -72,7 +96,7 @@ func test_a_rest_hour_he_cannot_afford_is_refused_and_the_mascot_says_why() -> v
 
 
 func test_the_mascot_announces_the_first_shift_on_start() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var app: AppOverlay = main.get_node("AppOverlay")
 
@@ -80,7 +104,7 @@ func test_the_mascot_announces_the_first_shift_on_start() -> void:
 
 
 func test_the_end_of_a_shift_logs_the_quota_check_at_info_level() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var tuning: Tuning = main.call("tuning")
 
@@ -91,7 +115,7 @@ func test_the_end_of_a_shift_logs_the_quota_check_at_info_level() -> void:
 
 
 func test_the_mascot_says_the_quota_result_and_the_next_shift_together() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var tuning: Tuning = main.call("tuning")
 	var app: AppOverlay = main.get_node("AppOverlay")
@@ -103,7 +127,7 @@ func test_the_mascot_says_the_quota_result_and_the_next_shift_together() -> void
 
 
 func test_a_missed_quota_logs_the_study_session_and_shows_the_room() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var tuning: Tuning = main.call("tuning")
 	var app: AppOverlay = main.get_node("AppOverlay")
@@ -126,7 +150,7 @@ func test_a_missed_quota_logs_the_study_session_and_shows_the_room() -> void:
 
 func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var field: Field = main.get_node("Field")
 	var generator: Generator = field.get_node("Generator")
@@ -144,14 +168,14 @@ func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp() -> void:
 
 
 func test_there_is_no_skip_time_control_without_debug_mode() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 
 	assert_eq(main.find_children("*", "SkipTimePanel", true, false).size(), 0)
 
 
 func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var app: AppOverlay = main.get_node("AppOverlay")
 
@@ -170,7 +194,7 @@ func test_skip_time_runs_the_offline_resume_logs_it_and_shows_the_away_summary()
 
 func test_ripe_cotton_skipped_past_the_wither_time_is_logged_as_negligence_and_cleared() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var tuning: Tuning = main.call("tuning")
 	var field: Field = main.get_node("Field")
@@ -209,7 +233,7 @@ func test_ripe_cotton_skipped_past_the_wither_time_is_logged_as_negligence_and_c
 
 
 func test_offline_time_past_the_cap_is_logged_as_a_warning() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var tuning: Tuning = main.call("tuning")
 	var too_long := tuning.offline_cap_seconds * 2.0
@@ -224,7 +248,7 @@ func test_offline_time_past_the_cap_is_logged_as_a_warning() -> void:
 
 
 func test_negative_offline_time_is_logged_as_a_warning() -> void:
-	var main: Node = add_child_autofree(MAIN_SCENE.instantiate())
+	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 
 	main.call("_resume_offline", -60.0)

@@ -1,6 +1,8 @@
 extends Control
 ## The first screen: names the game, carries the content note, and offers Start and Sources.
-## The Sources page is built from the sources register. Sizes are set for the 1280x720 base
+## With a save in the slot it offers Continue and Start over instead of Start; Start over asks
+## for confirmation before it deletes the save. The Sources page is built from the sources
+## register. Sizes are set for the 1280x720 base
 ## viewport, which a phone in landscape scales down to about half, so text and buttons stay
 ## readable and tappable there.
 
@@ -11,6 +13,7 @@ const CONTENT_NOTE := (
 	"Happy Cotton depicts the forced labour of Uyghurs in Xinjiang and the separation of their"
 	+ " families, based on documented reporting. Sources are listed in the game."
 )
+const START_OVER_QUESTION := "Start over? Your saved game will be deleted for good."
 const MAIN_SCENE_PATH := "res://src/main.tscn"
 const BACKGROUND := Color(0.72, 0.69, 0.6)
 const INK := Color(0.16, 0.14, 0.12)
@@ -19,9 +22,15 @@ const BUTTON_SIZE := Vector2(320, 96)
 ## How Start leaves this screen: func(scene_path: String). Tests swap it so pressing Start
 ## doesn't replace the test runner's scene.
 var open_scene: Callable = _change_scene
+## The save slot Continue and Start over act on. Tests set their own before adding the screen.
+var save_store := SaveStore.new()
 
 var _title_page: Control
 var _sources_page: Control
+var _confirm_page: Control
+var _start_button: Button
+var _continue_button: Button
+var _start_over_button: Button
 
 
 func _ready() -> void:
@@ -32,21 +41,25 @@ func _ready() -> void:
 	add_child(background)
 	_title_page = _build_title_page()
 	_sources_page = _build_sources_page()
+	_confirm_page = _build_confirm_page()
 	add_child(_title_page)
 	add_child(_sources_page)
-	show_title()
+	add_child(_confirm_page)
 	start_pressed.connect(_go_to_main_scene)
-	GameLog.info("title shown")
+	show_title()
+	GameLog.info("title shown", {"has_save": save_store.has_save()})
 
 
 func show_title() -> void:
-	_title_page.visible = true
-	_sources_page.visible = false
+	var has_save := save_store.has_save()
+	_start_button.visible = not has_save
+	_continue_button.visible = has_save
+	_start_over_button.visible = has_save
+	_show_page(_title_page)
 
 
 func show_sources() -> void:
-	_title_page.visible = false
-	_sources_page.visible = true
+	_show_page(_sources_page)
 	GameLog.info("sources opened")
 
 
@@ -54,9 +67,47 @@ func is_showing_sources() -> bool:
 	return _sources_page.visible
 
 
+func is_confirming_start_over() -> bool:
+	return _confirm_page.visible
+
+
+func _show_page(page: Control) -> void:
+	for each_page: Control in [_title_page, _sources_page, _confirm_page]:
+		each_page.visible = each_page == page
+
+
 func _go_to_main_scene() -> void:
 	GameLog.info("start pressed")
+	_open_main_scene()
+
+
+func _open_main_scene() -> void:
 	open_scene.call(MAIN_SCENE_PATH)
+
+
+func _continue() -> void:
+	GameLog.info("continue pressed")
+	_open_main_scene()
+
+
+func _ask_to_start_over() -> void:
+	_show_page(_confirm_page)
+
+
+func _cancel_start_over() -> void:
+	GameLog.info("start over cancelled")
+	show_title()
+
+
+## Only a confirmed Start over empties the slot (a save that can't be read is kept aside). If
+## it can't, the game must not open on the old save as if it had, so the title stays.
+func _start_over() -> void:
+	if not save_store.discard():
+		GameLog.error("start over failed", {"problem": save_store.last_problem()})
+		show_title()
+		return
+	GameLog.info("start over confirmed")
+	_open_main_scene()
 
 
 func _change_scene(scene_path: String) -> void:
@@ -72,8 +123,26 @@ func _build_title_page() -> Control:
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	buttons.add_theme_constant_override("separation", 48)
-	buttons.add_child(_button("Start", "StartButton", start_pressed.emit))
+	_start_button = _button("Start", "StartButton", start_pressed.emit)
+	_continue_button = _button("Continue", "ContinueButton", _continue)
+	_start_over_button = _button("Start over", "StartOverButton", _ask_to_start_over)
+	for button: Button in [_start_button, _continue_button, _start_over_button]:
+		buttons.add_child(button)
 	buttons.add_child(_button("Sources", "SourcesButton", show_sources))
+	page.add_child(buttons)
+	return _wrap_centred(page)
+
+
+func _build_confirm_page() -> Control:
+	var page := _centred_column(32)
+	var question := _label(START_OVER_QUESTION, 40, "StartOverQuestion")
+	question.custom_minimum_size = Vector2(1000, 0)
+	page.add_child(question)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 48)
+	buttons.add_child(_button("Keep my game", "KeepGameButton", _cancel_start_over))
+	buttons.add_child(_button("Start over", "ConfirmStartOverButton", _start_over))
 	page.add_child(buttons)
 	return _wrap_centred(page)
 

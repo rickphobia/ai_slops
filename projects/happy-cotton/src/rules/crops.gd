@@ -109,6 +109,29 @@ func ripe_count() -> int:
 	return ripe
 
 
+## The plots as plain data for a save.
+func to_save() -> Dictionary:
+	return {
+		"grown": _grown.duplicate(),
+		"ripe_for": _ripe_for.duplicate(),
+		"withered": _withered.duplicate()
+	}
+
+
+## Takes the plots from a save. Ripe cotton is held to the wither time, in case the tuning
+## table shortened it since the save was written.
+func restore(reader: SaveReader) -> void:
+	var plots := count()
+	_grown = reader.numbers("grown", plots, EMPTY)
+	_ripe_for = reader.numbers("ripe_for", plots)
+	_withered = reader.flags("withered", plots)
+	for index in plots:
+		if _grown[index] < 0.0 and _grown[index] != EMPTY:
+			_grown[index] = EMPTY
+			reader.problems().append("crops.grown has a negative growth that isn't empty")
+		_ripe_for[index] = minf(_ripe_for[index], _wither_seconds)
+
+
 func view(index: int) -> PlotView:
 	var grown := _grown[index]
 	if grown == EMPTY:

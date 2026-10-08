@@ -1,0 +1,184 @@
+extends GutTest
+## Saving the Farm, through its public interface: to_save() gives plain data with a format
+## version, and a Farm restored from it (after a trip through JSON, as the save store does)
+## plays on exactly as the saved one: through the next rest hour, Shift and Study Session.
+## A save that can't be read names what is wrong and leaves the Farm as it was.
+
+const PLOTS := 4
+## Never under the dropped-cotton chance, so picks never drop and both Farms roll alike.
+const NO_DROPS := 0.9
+
+
+func _new_farm() -> Farm:
+	var farm := Farm.new(FastTuning.exhausting_table(), PLOTS, func() -> float: return NO_DROPS)
+	farm.take_messages()
+	return farm
+
+
+## The save as the store writes and reads it back.
+func _through_json(save: Dictionary) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(JSON.stringify(save, "", true, true))
+	return parsed
+
+
+## Two plots picked (the price of a rest hour, one short of the Quota), one growing, one
+## ripe, and the Worker part way through a lap on the Generator, tired enough that field work
+## is slow.
+func _played_farm() -> Farm:
+	var farm := _new_farm()
+	for index in 3:
+		farm.plant(index)
+	farm.run_generator()
+	farm.advance(FastTuning.GROW_SECONDS + 5.0)
+	farm.pick(0)
+	farm.advance(FastTuning.SLOW_ACTION_SECONDS)
+	farm.pick(1)
+	farm.advance(FastTuning.SLOW_ACTION_SECONDS)
+	farm.plant(0)
+	farm.run_generator()
+	farm.advance(12.0)
+	farm.take_messages()
+	assert_eq(farm.labour_points(), FastTuning.REST_HOUR_PRICE, "enough for a rest hour")
+	return farm
+
+
+## Everything a player could see of the Farm, and what The App was told.
+func _seen(farm: Farm) -> Dictionary:
+	var plots := []
+	for view in farm.plots():
+		plots.append([view.stage, view.seconds_left])
+	var shift := farm.shift()
+	var worker := farm.worker()
+	var messages := []
+	for message in farm.take_messages():
+		messages.append([message.key, message.values])
+	return {
+		"plots": plots,
+		"shift": [shift.number, shift.quota, shift.picked, shift.seconds_left],
+		"labour_points": farm.labour_points(),
+		"worker": [worker.activity, worker.laps_left, worker.exhaustion],
+		"exhaustion_floor": farm.exhaustion_floor(),
+		"study_session_seconds_left": farm.study_session_seconds_left(),
+		"rest": [farm.rest_hour().seconds_left, farm.rest_hour().taken_away],
+		"messages": messages,
+	}
+
+
+## The same play on both Farms, checking after each step that a player sees the same.
+func _assert_play_alike(saved: Farm, restored: Farm, step: Callable, what: String) -> void:
+	step.call(saved)
+	step.call(restored)
+	assert_eq(_seen(restored), _seen(saved), what)
+
+
+func test_the_save_is_plain_data_with_the_format_version() -> void:
+	var save := _played_farm().to_save()
+
+	var version: int = save["version"]
+	assert_eq(version, Farm.SAVE_VERSION)
+	assert_eq(_through_json(save).size(), save.size(), "every field survives JSON")
+
+
+func test_a_restored_farm_plays_on_exactly_as_the_saved_one() -> void:
+	var saved := _played_farm()
+	var restored := _new_farm()
+
+	var problems := restored.restore(_through_json(saved.to_save()))
+
+	assert_eq(problems, [] as Array[String])
+	assert_eq(_seen(restored), _seen(saved), "as restored")
+	var rest := func(farm: Farm) -> void:
+		farm.buy_rest_hour()
+		farm.advance(FastTuning.REST_HOUR_SECONDS + 3.0)
+	_assert_play_alike(saved, restored, rest, "through the rest hour")
+	assert_eq(saved.labour_points(), 0, "the rest hour was bought")
+	var work := func(farm: Farm) -> void:
+		farm.plant(1)
+		farm.advance(FastTuning.SLOW_ACTION_SECONDS)
+		farm.plant(3)
+		farm.run_generator()
+		farm.advance(20.0)
+	_assert_play_alike(saved, restored, work, "planting and running")
+	var end_shift := func(farm: Farm) -> void: farm.advance(farm.shift().seconds_left)
+	_assert_play_alike(saved, restored, end_shift, "through the end of the Shift")
+	assert_true(saved.in_study_session(), "the Quota was missed")
+	var study := func(farm: Farm) -> void:
+		farm.advance(FastTuning.STUDY_SESSION_SECONDS / 2.0)
+		farm.resume_offline(FastTuning.STUDY_SESSION_SECONDS)
+		farm.advance(5.0)
+	_assert_play_alike(saved, restored, study, "through the Study Session, part offline")
+	assert_eq(restored.to_save(), saved.to_save(), "nothing hidden differs either")
+
+
+func test_a_restored_farm_drops_the_messages_queued_before_it() -> void:
+	var farm := Farm.new(FastTuning.table(), PLOTS)
+
+	farm.restore(_through_json(_played_farm().to_save()))
+
+	assert_eq(farm.take_messages(), [] as Array[AppMessage])
+
+
+func test_a_save_of_another_version_is_refused_and_the_farm_left_as_it_was() -> void:
+	var save := _through_json(_played_farm().to_save())
+	save["version"] = Farm.SAVE_VERSION + 1
+	var farm := _new_farm()
+	var fresh := farm.to_save()
+
+	var problems := farm.restore(save)
+
+	assert_eq(problems.size(), 1)
+	assert_string_contains(problems[0], "version %d" % (Farm.SAVE_VERSION + 1))
+	assert_eq(farm.to_save(), fresh)
+
+
+func test_a_damaged_save_names_every_bad_field_and_changes_nothing() -> void:
+	var save := _through_json(_played_farm().to_save())
+	save.erase("labour_points")
+	save["picked"] = 1.5
+	var crops: Dictionary = save["crops"]
+	crops["withered"] = ["no", false, false, false]
+	var toil: Dictionary = save["toil"]
+	toil["breath_left"] = -1.0
+	var farm := _new_farm()
+	var fresh := farm.to_save()
+
+	var problems := farm.restore(save)
+
+	assert_eq(
+		problems,
+		(
+			[
+				"crops.withered holds something other than true or false",
+				"toil.breath_left is below 0.0",
+				"picked is not a whole number",
+				"labour_points is missing or not a number",
+			]
+			as Array[String]
+		)
+	)
+	assert_eq(farm.to_save(), fresh)
+
+
+func test_a_save_for_another_number_of_plots_is_refused() -> void:
+	var farm := Farm.new(FastTuning.exhausting_table(), PLOTS + 1)
+
+	var problems := farm.restore(_through_json(_played_farm().to_save()))
+
+	assert_has(problems, "crops.grown has 4 entries, not 5")
+
+
+func test_a_save_that_is_not_a_farm_is_refused() -> void:
+	var problems := _new_farm().restore({"hello": "world"})
+
+	assert_has(problems, "version is missing or not a number")
+	assert_has(problems, "crops is missing or not a section")
+
+
+func test_timers_longer_than_the_tuning_now_allows_are_cut_to_it() -> void:
+	var save := _through_json(_played_farm().to_save())
+	save["rest_left"] = FastTuning.REST_HOUR_SECONDS * 10.0
+	var farm := _new_farm()
+
+	farm.restore(save)
+
+	assert_eq(farm.rest_hour().seconds_left, FastTuning.REST_HOUR_SECONDS)

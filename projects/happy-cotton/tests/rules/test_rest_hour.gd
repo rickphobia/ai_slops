@@ -51,7 +51,7 @@ func test_buying_a_rest_hour_spends_its_price_and_sets_him_resting() -> void:
 	assert_true(result.happened)
 	assert_eq(_farm.labour_points(), 0)
 	assert_eq(_farm.worker().activity, WorkerView.Activity.RESTING)
-	assert_eq(_farm.rest_seconds_left(), FastTuning.REST_HOUR_SECONDS)
+	assert_eq(_farm.rest_hour().seconds_left, FastTuning.REST_HOUR_SECONDS)
 	assert_has(_keys(), Farm.REST_STARTED)
 
 
@@ -66,7 +66,7 @@ func test_it_is_refused_when_he_cannot_afford_it() -> void:
 	assert_false(result.happened)
 	assert_eq(result.reason, Farm.NOT_ENOUGH_LABOUR_POINTS)
 	assert_eq(_farm.labour_points(), FastTuning.LABOUR_POINTS_PER_PICK)
-	assert_eq(_farm.rest_seconds_left(), 0.0)
+	assert_eq(_farm.rest_hour().seconds_left, 0.0)
 
 
 func test_resting_lowers_exhaustion_a_little_at_a_time() -> void:
@@ -89,7 +89,7 @@ func test_a_whole_rest_hour_takes_away_its_recovery_then_sends_him_to_the_field(
 	_farm.advance(FastTuning.REST_HOUR_SECONDS)
 
 	assert_almost_eq(_farm.exhaustion(), before - FastTuning.REST_HOUR_RECOVERY, 0.001)
-	assert_eq(_farm.rest_seconds_left(), 0.0)
+	assert_eq(_farm.rest_hour().seconds_left, 0.0)
 	assert_eq(_farm.worker().activity, WorkerView.Activity.IN_FIELD)
 	assert_has(_keys(), Farm.REST_ENDED)
 
@@ -165,7 +165,7 @@ func test_a_missed_quota_takes_the_rest_hour_away_for_the_next_shift() -> void:
 
 	assert_false(result.happened)
 	assert_eq(result.reason, Farm.REST_HOUR_TAKEN_AWAY)
-	assert_true(_farm.rest_hour_taken_away())
+	assert_true(_farm.rest_hour().taken_away)
 	assert_eq(_farm.labour_points(), FastTuning.REST_HOUR_PRICE)
 
 
@@ -176,13 +176,13 @@ func test_a_met_quota_gives_the_rest_hour_back() -> void:
 	_farm = Farm.new(tuning, PLOTS)
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 	_farm.advance(FastTuning.STUDY_SESSION_SECONDS)
-	assert_true(_farm.rest_hour_taken_away())
+	assert_true(_farm.rest_hour().taken_away)
 
 	# Shift 2 asks for two picks.
 	_earn_a_rest_hour()
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 
-	assert_false(_farm.rest_hour_taken_away())
+	assert_false(_farm.rest_hour().taken_away)
 	assert_true(_farm.buy_rest_hour().happened)
 
 
@@ -201,6 +201,6 @@ func test_a_study_session_cuts_a_rest_short() -> void:
 
 	_farm.advance(5.0)
 
-	assert_eq(_farm.rest_seconds_left(), 0.0)
+	assert_eq(_farm.rest_hour().seconds_left, 0.0)
 	assert_true(_farm.in_study_session())
 	assert_eq(_farm.worker().activity, WorkerView.Activity.IN_FIELD)
