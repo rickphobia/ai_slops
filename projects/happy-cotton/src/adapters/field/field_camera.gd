@@ -1,9 +1,9 @@
 class_name FieldCamera
 extends RefCounted
 ## Where the field's camera looks and how far back it sits, kept within limits: the point it
-## looks at stays over the fenced field, so the field never leaves the screen, and the zoom
-## stays between a near and a far distance. The camera's angle is not stored here and never
-## changes; the camera only slides along it.
+## looks at stays over the field and the track around it, so neither can leave the screen,
+## and the zoom stays between a near and a far distance. The camera's angle is not stored
+## here and never changes; the camera only slides along it.
 
 ## The closest the camera may get to the ground point it looks at, in metres.
 const NEAR_DISTANCE := 5.0
