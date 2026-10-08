@@ -78,12 +78,16 @@ func _show_page(page: Control) -> void:
 
 func _go_to_main_scene() -> void:
 	GameLog.info("start pressed")
+	_open_main_scene()
+
+
+func _open_main_scene() -> void:
 	open_scene.call(MAIN_SCENE_PATH)
 
 
 func _continue() -> void:
 	GameLog.info("continue pressed")
-	open_scene.call(MAIN_SCENE_PATH)
+	_open_main_scene()
 
 
 func _ask_to_start_over() -> void:
@@ -95,15 +99,15 @@ func _cancel_start_over() -> void:
 	show_title()
 
 
-## Only a confirmed Start over deletes the save. If it can't, the game must not open on the
-## old save as if it had, so the title stays.
+## Only a confirmed Start over empties the slot (a save that can't be read is kept aside). If
+## it can't, the game must not open on the old save as if it had, so the title stays.
 func _start_over() -> void:
 	if not save_store.discard():
-		GameLog.error("start over failed", {"problem": "could not delete the save"})
+		GameLog.error("start over failed", {"problem": save_store.last_problem()})
 		show_title()
 		return
 	GameLog.info("start over confirmed")
-	open_scene.call(MAIN_SCENE_PATH)
+	_open_main_scene()
 
 
 func _change_scene(scene_path: String) -> void:

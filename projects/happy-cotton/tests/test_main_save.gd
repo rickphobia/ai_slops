@@ -84,14 +84,15 @@ func test_the_end_of_a_shift_is_saved() -> void:
 	assert_eq(_saved_farm(main).shift().number, 2)
 
 
-func test_losing_focus_saves_the_game() -> void:
+func test_leaving_the_game_saves_it() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	main.call("_process", 1.0)
 	_lines.clear()
 
-	main.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var watch: LeavingWatch = main.find_children("*", "LeavingWatch", true, false)[0]
+	watch.leaving.emit()
 
 	assert_eq(_lines, ['[debug] game saved reason="hidden"'] as Array[String])
 	var tuning: Tuning = main.call("tuning")

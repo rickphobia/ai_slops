@@ -143,3 +143,17 @@ func test_a_confirmed_start_over_deletes_the_save_and_opens_the_main_scene() -> 
 
 	assert_false(_store.has_save())
 	assert_eq(_opened_scenes, ["res://src/main.tscn"] as Array[String])
+
+
+func test_starting_over_from_a_damaged_save_keeps_it_aside() -> void:
+	var file := FileAccess.open(SLOT, FileAccess.WRITE)
+	file.store_string("{ damaged")
+	file.close()
+	var screen := _title_screen()
+	_press(screen, "StartOverButton")
+
+	_press(screen, "ConfirmStartOverButton")
+
+	assert_false(_store.has_save())
+	assert_eq(FileAccess.get_file_as_string(FOLDER + "/save.damaged-1.json"), "{ damaged")
+	DirAccess.remove_absolute(FOLDER + "/save.damaged-1.json")

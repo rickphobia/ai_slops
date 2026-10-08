@@ -2,7 +2,7 @@ extends Node
 ## Entry scene: logs which build is running, loads and checks the tuning table, continues the
 ## saved Farm (or starts a new one) and wires it to the field, The App and the wall clock, and
 ## adds the Skip time control in debug mode. It autosaves after every command, at the end of
-## each Shift, when the game loses focus or is closed, and every AUTOSAVE_SECONDS of play.
+## each Shift, when the player leaves (see LeavingWatch), and every AUTOSAVE_SECONDS of play.
 ## Kept thin: no game rules here.
 
 const TUNING_PATH := "res://data/tuning.tres"
@@ -40,6 +40,9 @@ func _ready() -> void:
 	GameLog.info("tuning loaded", {"path": TUNING_PATH})
 	_clock = WallClock.new(Time.get_unix_time_from_system)
 	_open_save()
+	var leaving_watch := LeavingWatch.new()
+	leaving_watch.leaving.connect(_save.bind("hidden"))
+	add_child(leaving_watch)
 	if DebugMode.is_on():
 		GameLog.info("debug mode on")
 		var skip_time := SkipTimePanel.new()
@@ -54,14 +57,15 @@ func _open_save() -> void:
 	var stored := save_store.read()
 	if stored.status == StoredSave.Status.NONE:
 		GameLog.info("new game", {"path": save_store.path()})
-		_begin(Farm.new(_tuning, _field.plot_count()))
+		_begin(_new_farm())
 		return
 	var problem := stored.problem
 	if stored.status == StoredSave.Status.FOUND:
-		var farm := Farm.new(_tuning, _field.plot_count())
+		var farm := _new_farm()
 		var problems := farm.restore(stored.farm)
 		if problems.is_empty():
 			GameLog.info("save loaded", {"path": save_store.path(), "shift": farm.shift().number})
+			# Counted before _begin() saves, so the time away is counted once.
 			_farm = farm
 			var away := _clock.offline_seconds_since(stored.saved_at)
 			if away != 0.0:
@@ -78,7 +82,8 @@ func _offer_start_over(problem: String) -> void:
 	GameLog.warning("save unreadable", {"problem": problem, "kept_as": kept_as})
 	if kept_as.is_empty():
 		_can_save = false
-		GameLog.error("save not kept aside, saving is off", {"path": save_store.path()})
+		var not_kept := {"path": save_store.path(), "problem": save_store.last_problem()}
+		GameLog.error("save not kept aside, saving is off", not_kept)
 	var notice := DamagedSaveNotice.new()
 	notice.start_over_pressed.connect(_on_start_over_after_damaged_save)
 	add_child(notice)
@@ -86,7 +91,11 @@ func _offer_start_over(problem: String) -> void:
 
 func _on_start_over_after_damaged_save() -> void:
 	GameLog.info("start over after a damaged save")
-	_begin(Farm.new(_tuning, _field.plot_count()))
+	_begin(_new_farm())
+
+
+func _new_farm() -> Farm:
+	return Farm.new(_tuning, _field.plot_count())
 
 
 ## Wires the Farm to the field and The App, and saves it at once: a new Farm, or a restored
@@ -122,17 +131,6 @@ func _process(delta: float) -> void:
 	elif _since_autosave >= AUTOSAVE_SECONDS:
 		_save("timer")
 	_show_farm()
-
-
-## Saves when the game loses focus (another tab or app), is paused or is closed.
-func _notification(what: int) -> void:
-	var leaving := [
-		NOTIFICATION_APPLICATION_FOCUS_OUT,
-		NOTIFICATION_APPLICATION_PAUSED,
-		NOTIFICATION_WM_CLOSE_REQUEST,
-	]
-	if what in leaving:
-		_save("hidden")
 
 
 ## A tap on an empty plot plants it, on a Withered one clears it, and on any other plot it

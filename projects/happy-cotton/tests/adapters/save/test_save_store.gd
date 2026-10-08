@@ -92,3 +92,12 @@ func test_discard_empties_the_slot() -> void:
 
 	assert_false(_store.has_save())
 	assert_true(_store.discard(), "an empty slot stays empty")
+
+
+func test_discard_keeps_a_damaged_save_aside_instead_of_deleting_it() -> void:
+	_put(SLOT, "damaged")
+
+	assert_true(_store.discard())
+
+	assert_false(_store.has_save())
+	assert_eq(FileAccess.get_file_as_string(FOLDER + "/save.damaged-1.json"), "damaged")
