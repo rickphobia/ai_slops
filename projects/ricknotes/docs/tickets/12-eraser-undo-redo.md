@@ -4,13 +4,13 @@
 
 **Blocked by:** 10 (Versions), 11 (Pens and highlighter)
 
-**Status:** ready
+**Status:** done
 
 **Touches:** core-session, app-toolbar
 
 **Effort:** low
 
-- [ ] Document session supports erasing strokes, undo and redo; each add or erase gesture is one undo step (tested)
-- [ ] Undo and redo changes are saved through the normal save path (tested)
-- [ ] Eraser tool, undo and redo buttons in the toolbar, disabled when there's nothing to undo or redo
-- [ ] On-tablet check written in the PR: write, erase, undo the erase, redo it, force-close, reopen
+- [x] Document session supports erasing strokes, undo and redo; each add or erase gesture is one undo step (tested)
+- [x] Undo and redo changes are saved through the normal save path (tested)
+- [x] Eraser tool, undo and redo buttons in the toolbar, disabled when there's nothing to undo or redo
+- [x] On-tablet check written in the PR: write, erase, undo the erase, redo it, force-close, reopen

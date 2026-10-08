@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
@@ -31,16 +33,20 @@ import com.rickphobia.ricknotes.logging.AppLog
 
 private val SWATCH = 32.dp
 
+// A pink eraser block, so it doesn't look like ink.
+private const val ERASER_ARGB = 0xFFF8BBD0.toInt()
+
 /**
- * The Document's pens and highlighter, picking [tool]. The tool in use has a thick ring round it;
- * tapping the pen in use moves on through [favouritePens].
+ * The Document's pens, highlighter and eraser, picking [tool] or [erasing]. The tool in use has a
+ * thick ring round it; tapping the pen in use moves on through [favouritePens].
  */
 @Composable
 fun PenToolbar(
     tool: MutableState<InkTool>,
+    erasing: MutableState<Boolean>,
     favouritePens: FavouritePens,
 ) {
-    val current = tool.value
+    val current = tool.value.takeUnless { erasing.value }
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -52,7 +58,8 @@ fun PenToolbar(
                 label = penName(colour),
                 selected = current == InkTool.Pen(colour),
                 onClick = {
-                    tool.value = current.afterTappingPen(colour, favouritePens)
+                    tool.value = current?.afterTappingPen(colour, favouritePens) ?: InkTool.Pen(colour)
+                    erasing.value = false
                     AppLog.d("tool: ${tool.value}")
                 },
             )
@@ -64,9 +71,34 @@ fun PenToolbar(
             selected = current == InkTool.Highlighter,
             onClick = {
                 tool.value = InkTool.Highlighter
+                erasing.value = false
                 AppLog.d("tool: highlighter")
             },
         )
+        ToolSwatch(
+            colour = Color(ERASER_ARGB),
+            shape = RoundedCornerShape(4.dp),
+            label = stringResource(R.string.eraser),
+            selected = erasing.value,
+            onClick = {
+                erasing.value = true
+                AppLog.d("tool: eraser")
+            },
+        )
+    }
+}
+
+/** Undo and redo buttons, each disabled when there is nothing for it to do. */
+@Composable
+fun UndoRedoButtons(
+    canUndo: Boolean,
+    canRedo: Boolean,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+) {
+    Row {
+        TextButton(onClick = onUndo, enabled = canUndo) { Text(stringResource(R.string.undo)) }
+        TextButton(onClick = onRedo, enabled = canRedo) { Text(stringResource(R.string.redo)) }
     }
 }
 

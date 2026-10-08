@@ -28,8 +28,10 @@ import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
 import com.rickphobia.ricknotes.files.PdfEntry
 import com.rickphobia.ricknotes.ink.DocumentInk
+import com.rickphobia.ricknotes.ink.PenMode
 import com.rickphobia.ricknotes.logging.AppLog
 import com.rickphobia.ricknotes.toolbar.PenToolbar
+import com.rickphobia.ricknotes.toolbar.UndoRedoButtons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -61,6 +63,7 @@ fun DocumentScreen(
     BackHandler(onBack = onBack)
     // Each Document opens with the first Favourite pen.
     val tool = remember(pdf.path) { mutableStateOf<InkTool>(InkTool.Pen(favouritePens.colours.first())) }
+    val erasing = remember(pdf.path) { mutableStateOf(false) }
     val pages = remember(pdf.path) { PdfPages(File(pdf.path)) }
     DisposableEffect(pages) { onDispose { pages.close() } }
     val opening by produceState<Opening>(Opening.InProgress, pages) {
@@ -79,16 +82,8 @@ fun DocumentScreen(
             TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
             Text(text = pdf.name, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.weight(1f))
-            PenToolbar(tool, favouritePens)
-            val ready = opening as? Opening.Ready
-            if (ready?.ink?.saveStatus == SaveStatus.FAILED) {
-                Text(
-                    text = stringResource(R.string.not_saved),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+            PenToolbar(tool, erasing, favouritePens)
+            (opening as? Opening.Ready)?.let { InkControls(it.ink) }
         }
         when (val current = opening) {
             Opening.InProgress -> {
@@ -106,9 +101,31 @@ fun DocumentScreen(
             is Opening.Ready -> {
                 SaveWhenLeaving(current.ink)
                 current.ink.warnings.forEach { InkWarning(it) }
-                PageList(OpenDocument(pages, current.pageSizes, pdf.path, positions, current.ink, tool::value))
+                PageList(
+                    OpenDocument(
+                        pages,
+                        current.pageSizes,
+                        pdf.path,
+                        positions,
+                        current.ink,
+                    ) { if (erasing.value) PenMode.Erase else PenMode.Draw(tool.value) },
+                )
             }
         }
+    }
+}
+
+/** Undo and redo, and "Not saved" while the ink isn't. */
+@Composable
+private fun InkControls(ink: DocumentInk) {
+    UndoRedoButtons(ink.canUndo, ink.canRedo, ink::undo, ink::redo)
+    if (ink.saveStatus == SaveStatus.FAILED) {
+        Text(
+            text = stringResource(R.string.not_saved),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
     }
 }
 

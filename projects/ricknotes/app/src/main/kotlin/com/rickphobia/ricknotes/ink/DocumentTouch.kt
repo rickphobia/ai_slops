@@ -41,10 +41,11 @@ internal interface TouchNavigation {
 
 /**
  * Carries out what `core`'s touch interpreter makes of each touch on an open Document. The pen's
- * strokes, with whichever [currentTool] is picked when each starts, are drawn by Jetpack Ink's
+ * strokes, with whichever [penMode] is picked when each starts, are drawn by Jetpack Ink's
  * low-latency [InProgressStrokesView] in page coordinates, and handed to [ink] once finished, which
- * draws them with their page from then on and saves them. The pen draws nothing on a read-only
- * Document.
+ * draws them with their page from then on and saves them. In [PenMode.Erase] the pen instead erases
+ * every stroke it touches on the page it went down on, as one undo step per gesture. The pen does
+ * nothing on a read-only Document.
  */
 internal class DocumentTouch(
     private val inProgress: InProgressStrokesView,
@@ -52,7 +53,7 @@ internal class DocumentTouch(
     private val placements: () -> List<PagePlacement>,
     private val navigation: TouchNavigation,
     private val clockMs: () -> Long,
-    private val currentTool: () -> InkTool,
+    private val penMode: () -> PenMode,
 ) : InProgressStrokesFinishedListener {
     private val interpreter = TouchInterpreter()
 
@@ -60,6 +61,14 @@ internal class DocumentTouch(
     private val drawing = mutableMapOf<Int, InProgressStrokeId>()
     private val started = mutableMapOf<InProgressStrokeId, StartedStroke>()
     private val handoff = WetInkHandoff<InProgressStrokeId>(inProgress::removeFinishedStrokes)
+
+    // Where the eraser was last, by pointer: it erases only on the page it touched down on.
+    private val erasers = mutableMapOf<Int, EraserAt>()
+
+    private data class EraserAt(
+        val pageId: PageId,
+        val point: PagePoint,
+    )
 
     private data class StartedStroke(
         val pageId: PageId,
@@ -78,11 +87,11 @@ internal class DocumentTouch(
                 }
 
                 is TouchAction.ExtendStroke -> {
-                    drawing[action.pointerId]?.let { inProgress.addToStroke(event, action.pointerId, it) }
+                    extend(event, action)
                 }
 
                 is TouchAction.EndStroke -> {
-                    drawing.remove(action.pointerId)?.let { inProgress.finishStroke(event, action.pointerId, it) }
+                    end(event, action.pointerId)
                 }
 
                 is TouchAction.CancelStroke -> {
@@ -125,22 +134,62 @@ internal class DocumentTouch(
             AppLog.d("pen down outside any page; no stroke")
             return
         }
+        when (val mode = penMode()) {
+            PenMode.Erase -> {
+                val point = page.toPage(ScreenPoint(action.x, action.y))
+                erasers[action.pointerId] = EraserAt(page.pageId, point)
+                ink.eraseAlong(page.pageId, point, point)
+            }
+
+            is PenMode.Draw -> {
+                startDrawing(view, event, action.pointerId, page, mode.tool)
+            }
+        }
+    }
+
+    private fun startDrawing(
+        view: View,
+        event: MotionEvent,
+        pointerId: Int,
+        page: PagePlacement,
+        tool: InkTool,
+    ) {
         // Without this Android batches pen samples once per frame, which the pen tip shows as lag.
         view.requestUnbufferedDispatch(event)
         // A finished stroke is cut off at its page's edge, so the wet one is too: no tail that
         // vanishes on pen up.
         inProgress.maskPath = outside(page, view.width.toFloat(), view.height.toFloat())
-        val tool = currentTool()
         val brush = inkBrush(tool.tool, tool.colourArgb, tool.widthPt)
-        val id = inProgress.startStroke(event, action.pointerId, brush, page.screenToPage())
-        drawing[action.pointerId] = id
+        val id = inProgress.startStroke(event, pointerId, brush, page.screenToPage())
+        drawing[pointerId] = id
         started[id] = StartedStroke(page.pageId, tool, clockMs())
+    }
+
+    private fun extend(
+        event: MotionEvent,
+        action: TouchAction.ExtendStroke,
+    ) {
+        drawing[action.pointerId]?.let { inProgress.addToStroke(event, action.pointerId, it) }
+        val last = erasers[action.pointerId] ?: return
+        val page = placements().firstOrNull { it.pageId == last.pageId } ?: return
+        val point = page.toPage(ScreenPoint(action.x, action.y))
+        ink.eraseAlong(last.pageId, last.point, point)
+        erasers[action.pointerId] = last.copy(point = point)
+    }
+
+    private fun end(
+        event: MotionEvent,
+        pointerId: Int,
+    ) {
+        drawing.remove(pointerId)?.let { inProgress.finishStroke(event, pointerId, it) }
+        if (erasers.remove(pointerId) != null) ink.finishErase()
     }
 
     private fun cancel(
         event: MotionEvent,
         pointerId: Int,
     ) {
+        if (erasers.remove(pointerId) != null) ink.cancelErase()
         val id = drawing.remove(pointerId) ?: return
         started.remove(id)
         inProgress.cancelStroke(id, event)

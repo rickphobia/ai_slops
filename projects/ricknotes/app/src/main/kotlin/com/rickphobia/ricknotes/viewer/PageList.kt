@@ -32,12 +32,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
-import com.rickphobia.ricknotes.core.ink.InkTool
 import com.rickphobia.ricknotes.core.ink.PageId
 import com.rickphobia.ricknotes.core.ink.PagePlacement
 import com.rickphobia.ricknotes.ink.DocumentInk
 import com.rickphobia.ricknotes.ink.InkLayer
 import com.rickphobia.ricknotes.ink.PageInk
+import com.rickphobia.ricknotes.ink.PenMode
 import com.rickphobia.ricknotes.logging.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -64,7 +64,7 @@ internal data class OpenDocument(
     val path: String,
     val positions: ReadingPositions,
     val ink: DocumentInk,
-    val currentTool: () -> InkTool,
+    val penMode: () -> PenMode,
 )
 
 /**
@@ -122,7 +122,7 @@ internal fun PageList(document: OpenDocument) {
                 ) { PageInk(ink.on(PageId.ofPdfPage(index)), size.widthPt.toFloat(), strokeRenderer) }
             }
         }
-        TouchLayer(ink, document.pageSizes, PageListView(view, listState, screen, gapPx), document.currentTool)
+        TouchLayer(document, PageListView(view, listState, screen, gapPx))
         PageNavigator(
             pageIndex = current,
             pageCount = pageCount,
@@ -150,10 +150,8 @@ private class PageListView(
 /** The ink layer over the pages: it takes every touch, writes with the pen and moves [list] with fingers. */
 @Composable
 private fun TouchLayer(
-    ink: DocumentInk,
-    pageSizes: List<PageSize>,
+    document: OpenDocument,
     list: PageListView,
-    currentTool: () -> InkTool,
 ) {
     val scope = rememberCoroutineScope()
     val flingBehavior = ScrollableDefaults.flingBehavior()
@@ -162,10 +160,10 @@ private fun TouchLayer(
             PageNavigation(list.zoom, list.listState, list.screen, scope, flingBehavior)
         }
     InkLayer(
-        ink = ink,
-        placements = { list.placements(pageSizes) },
+        ink = document.ink,
+        placements = { list.placements(document.pageSizes) },
         navigation = navigation,
-        currentTool = currentTool,
+        penMode = document.penMode,
     )
 }
 

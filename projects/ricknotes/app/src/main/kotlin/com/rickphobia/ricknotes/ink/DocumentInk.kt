@@ -4,7 +4,9 @@ import android.graphics.Matrix
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -16,10 +18,13 @@ import androidx.ink.brush.StockBrushes
 import androidx.ink.rendering.android.canvas.CanvasStrokeRenderer
 import androidx.ink.strokes.MutableStrokeInputBatch
 import com.rickphobia.ricknotes.core.ink.PageId
+import com.rickphobia.ricknotes.core.ink.PagePoint
 import com.rickphobia.ricknotes.core.ink.Stroke
+import com.rickphobia.ricknotes.core.ink.StrokeId
 import com.rickphobia.ricknotes.core.ink.Tool
 import com.rickphobia.ricknotes.core.session.SaveStatus
 import com.rickphobia.ricknotes.core.session.SessionWarning
+import com.rickphobia.ricknotes.core.session.strokesTouched
 import com.rickphobia.ricknotes.logging.AppLog
 import java.io.File
 import androidx.ink.strokes.Stroke as InkStroke
@@ -60,8 +65,8 @@ internal class DrawnStroke(
 
 /**
  * The ink of one open Document: its strokes for drawing, kept in `core`'s Document session, which
- * saves them to the Ink file beside [pdf]. [saveStatus] follows the session, so the screen can show
- * "Not saved".
+ * saves them to the Ink file beside [pdf] and keeps their undo history. [saveStatus] follows the
+ * session, so the screen can show "Not saved".
  */
 internal class DocumentInk private constructor(
     private val pdf: File,
@@ -71,18 +76,74 @@ internal class DocumentInk private constructor(
     private val session = held.session
     private val strokes = mutableStateListOf<DrawnStroke>().apply { addAll(loaded) }
 
+    // Strokes the eraser has touched in the gesture still going on: hidden, but not yet erased.
+    private val erasing = mutableStateMapOf<StrokeId, Unit>()
+
+    // Counts changes, so Compose reads canUndo and canRedo again after each one.
+    private val changes = mutableIntStateOf(0)
+
     val readOnly: Boolean get() = session.readOnly
     val warnings: List<SessionWarning> get() = session.warnings
     val saveStatus: SaveStatus get() = held.status.current.value
+    val canUndo: Boolean get() = changes.intValue.let { session.canUndo }
+    val canRedo: Boolean get() = changes.intValue.let { session.canRedo }
 
     fun add(stroke: DrawnStroke) {
         session.addStroke(stroke.stroke)
         strokes.add(stroke)
+        changes.intValue++
+    }
+
+    /** Hides the strokes on [pageId] the eraser touches moving from [from] to [to]; [finishErase] erases them. */
+    fun eraseAlong(
+        pageId: PageId,
+        from: PagePoint,
+        to: PagePoint,
+    ) {
+        val visible = strokes.map { it.stroke }.filter { it.id !in erasing }
+        strokesTouched(visible, pageId, from, to).forEach { erasing[it.id] = Unit }
+    }
+
+    /** Erases what the eraser touched in this gesture, as one undo step. */
+    fun finishErase() {
+        if (erasing.isEmpty()) return
+        val ids = erasing.keys.toSet()
+        session.eraseStrokes(ids)
+        strokes.removeAll { it.stroke.id in ids }
+        erasing.clear()
+        changes.intValue++
+        AppLog.d("erased ${ids.size} strokes")
+    }
+
+    /** Shows again what a cancelled gesture touched. */
+    fun cancelErase() = erasing.clear()
+
+    fun undo() {
+        if (session.undo()) followSession() else AppLog.w("undo with nothing to undo")
+    }
+
+    fun redo() {
+        if (session.redo()) followSession() else AppLog.w("redo with nothing to redo")
     }
 
     /** The page's strokes in drawing order: highlighter first, so it sits under the pen's writing. */
     fun on(pageId: PageId): List<DrawnStroke> =
-        strokes.filter { it.stroke.pageId == pageId }.sortedBy { it.stroke.tool != Tool.HIGHLIGHTER }
+        strokes
+            .filter { it.stroke.pageId == pageId && it.stroke.id !in erasing }
+            .sortedBy { it.stroke.tool != Tool.HIGHLIGHTER }
+
+    // Matches the drawn strokes to the session's after an undo or redo, keeping meshes already built.
+    private fun followSession() {
+        val built = strokes.associateBy { it.stroke.id }
+        val now =
+            session.strokes.mapNotNull { stroke ->
+                built[stroke.id]
+                    ?: stroke.toMesh()?.let { DrawnStroke(stroke, it) }
+            }
+        strokes.clear()
+        strokes.addAll(now)
+        changes.intValue++
+    }
 
     /** Saves on the save thread without waiting: for when the app goes to the background. */
     fun saveInBackground() = SaveThread.run(session::saveNow)
