@@ -95,8 +95,8 @@ The Worker running on the Generator: the work between planting and picking. It i
 _Avoid_: idle, chores, waiting, downtime, drill, punishment (that is a Study Session)
 
 **Generator**:
-The treadmill the Worker runs on. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
-_Avoid_: treadmill, wheel, machine, pump
+The machine at the corner of the Farm that the Worker powers by running laps of the track around the fence, pushing through its turnstile once a lap. It pumps water to the crops and powers the loudspeaker and The App; while the game is open, crops grow only while it turns.
+_Avoid_: treadmill, wheel, machine, pump, turnstile (that is one part of it)
 
 ### Small acts
 
