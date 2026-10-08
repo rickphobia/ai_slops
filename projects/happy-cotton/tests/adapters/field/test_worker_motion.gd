@@ -195,3 +195,53 @@ func test_he_never_plays_a_fighting_animation() -> void:
 	for animation in used:
 		for fighting: String in ["Punch", "Kick", "Sword", "Gun", "Shoot", "Death"]:
 			assert_false(String(animation).contains(fighting), "%s is a fighting move" % animation)
+
+
+func test_whipped_he_flinches_and_staggers_at_the_turnstile_then_runs_again() -> void:
+	_walk_out()
+	_hold(WorkerView.new(BREATHING, 5), 1.0)
+
+	_motion.flinch()
+	_run(WorkerMotion.FLINCH_SECONDS / 2.0)
+
+	assert_eq(_player.current_animation, WorkerMotion.STAGGERING)
+	assert_almost_eq(_body.position, _track.point_at(0.0), Vector3.ONE * 0.05)
+	_run(WorkerMotion.FLINCH_SECONDS)
+	assert_eq(_player.current_animation, WorkerMotion.RUNNING)
+
+
+func test_with_the_stagger_skipped_he_breathes_and_runs_on_without_it() -> void:
+	_motion.skip_stagger = true
+	_walk_out()
+	_run(LAP_SECONDS * 0.99, 0.0, 1)
+
+	_hold(WorkerView.new(BREATHING, 5), 1.0)
+	assert_eq(_player.current_animation, WorkerMotion.BREATHING)
+	_motion.flinch()
+	_run(WorkerMotion.FLINCH_SECONDS / 2.0)
+
+	assert_ne(_player.current_animation, WorkerMotion.STAGGERING)
+	assert_gt(_body.position.distance_to(_track.point_at(0.0)), 0.05)
+
+
+func test_his_feet_strike_the_track_in_step_with_his_running() -> void:
+	_walk_out()
+	watch_signals(_motion)
+
+	_run(LAP_SECONDS)
+
+	var strides := _track.length() / WorkerMotion.STRIDE_LENGTH
+	var steps: int = get_signal_emit_count(_motion, "stepped")
+	assert_almost_eq(float(steps), strides, 2.0)
+
+
+func test_his_speed_on_the_track_is_zero_unless_he_runs_it() -> void:
+	assert_eq(_motion.track_speed(), 0.0)
+	_walk_out()
+	_run(LAP_SECONDS * 0.5)
+	assert_almost_eq(_motion.track_speed(), _track.length() / LAP_SECONDS, 0.5)
+	_run(LAP_SECONDS * 0.49, 0.5, 1)
+
+	_hold(WorkerView.new(BREATHING, 5), 2.0)
+
+	assert_eq(_motion.track_speed(), 0.0)

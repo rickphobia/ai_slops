@@ -5,7 +5,8 @@ extends RefCounted
 ## 100 seconds, the first Quota is 3 picks and rises by 2 each Shift, and a pick earns 5
 ## Labour Points. A missed Quota's first Study Session lasts 20 seconds and each one in a row
 ## doubles, capped at 50: 20, 40, 50, 50. On the Generator a lap takes 10 seconds and the
-## Worker runs 10 laps (100 seconds, longer than a crop takes) before he stops to breathe for 5.
+## Worker runs 10 laps (100 seconds, longer than a crop takes) before he stops to breathe;
+## 3 seconds later the Overseer whistles, and 2 seconds after that he whips and the Worker runs.
 ## Offline, crops grow at half speed (60 seconds offline to ripen) and one return counts at
 ## most 1000 seconds. Each Withered plot docks 8 Labour Points, and Negligence starts an
 ## 80-second Study Session, longer than the 50-second cap for missed Quotas.
@@ -27,7 +28,10 @@ const STUDY_SESSION_SECONDS := 20.0
 const STUDY_SESSION_CAP_SECONDS := 50.0
 const LAP_SECONDS := 10.0
 const LAPS_BEFORE_BREATH := 10
-const BREATH_SECONDS := 5.0
+const WHISTLE_AFTER_SECONDS := 3.0
+const WHIP_AFTER_SECONDS := 2.0
+## His whole breath: until the whistle, then until the whip.
+const BREATH_SECONDS := WHISTLE_AFTER_SECONDS + WHIP_AFTER_SECONDS
 const OFFLINE_GROWTH_RATE := 0.5
 const OFFLINE_CAP_SECONDS := 1000.0
 const WITHER_SECONDS := 50.0
@@ -60,7 +64,8 @@ static func table() -> Tuning:
 	tuning.study_session_cap_seconds = STUDY_SESSION_CAP_SECONDS
 	tuning.lap_seconds = LAP_SECONDS
 	tuning.laps_before_breath = LAPS_BEFORE_BREATH
-	tuning.breath_seconds = BREATH_SECONDS
+	tuning.whistle_after_seconds = WHISTLE_AFTER_SECONDS
+	tuning.whip_after_seconds = WHIP_AFTER_SECONDS
 	tuning.offline_growth_rate = OFFLINE_GROWTH_RATE
 	tuning.offline_cap_seconds = OFFLINE_CAP_SECONDS
 	tuning.wither_seconds = SLOW_WITHER_SECONDS

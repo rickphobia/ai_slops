@@ -4,8 +4,10 @@ extends Node3D
 ## the Worker beside it, a dirt track around the fence and the Generator at the track's corner,
 ## outside the fence's gate. Shows each plot's growth stage as a cotton plant (see CropLooks),
 ## shows the time left on a growing plot, shows the Worker walking out to the track and
-## running laps of it (see WorkerMotion), and reports which plot, or the Generator, was
-## tapped. Knows nothing of the rules beyond the views it is shown.
+## running laps of it (see WorkerMotion), shows the Overseer beside the Generator whistling
+## and whipping when the rules say so (see OverseerLook), plays the field's sounds (see
+## FieldSounds), and reports which plot, or the Generator, was tapped. Knows nothing of the
+## rules beyond the views and events it is shown.
 ##
 ## Dragging pans the camera and pinching or the mouse wheel zooms it (within FieldCamera's
 ## limits); a tap counts on release, only if the pointer barely moved (PointerGesture).
@@ -29,6 +31,9 @@ const TAP_SLOP := 12.0
 const PAN_SPEED := 0.6
 ## The pointer id the mouse uses in a gesture; touch fingers are numbered from 0.
 const MOUSE_POINTER := -2
+## Where the Overseer stands from the turnstile: outside the track, by the loudspeaker pole,
+## watching the turnstile where the Worker stops.
+const OVERSEER_SPOT := Vector3(-1.9, 0.0, -1.7)
 ## How much colour is left in the world when the Worker is fully exhausted: nearly grey.
 const DRAINED_SATURATION := 0.1
 
@@ -59,6 +64,8 @@ var _labelled_plot := -1
 var _label_seconds_remaining := 0.0
 var _gesture := PointerGesture.new(TAP_SLOP)
 var _worker: WorkerMotion
+var _overseer: OverseerLook
+var _sounds := FieldSounds.new()
 var _track: TrackPath
 var _view: FieldCamera
 ## The unit vector from the ground back to the camera: the camera's fixed angle.
@@ -103,6 +110,10 @@ func _ready() -> void:
 	_full_saturation = _haze.environment.adjustment_saturation
 	_start_camera()
 	_start_worker()
+	_start_overseer()
+	add_child(_sounds)
+	_worker.stepped.connect(_sounds.footstep)
+	_worker.pushed_through_turnstile.connect(_sounds.turnstile)
 	_time_left.visible = false
 
 
@@ -142,6 +153,22 @@ func show_worker(view: WorkerView) -> void:
 	_haze.environment.adjustment_saturation = saturation_for(view.exhaustion, _full_saturation)
 
 
+## The Overseer acts on an event from the rules (Farm.OVERSEER_WHISTLE or OVERSEER_WHIP): he
+## blows his whistle, or cracks the whip and the Worker flinches and staggers. The camera
+## stays where the player put it.
+func show_overseer(event: StringName) -> void:
+	match event:
+		Farm.OVERSEER_WHISTLE:
+			_overseer.blow_whistle()
+			_sounds.whistle()
+		Farm.OVERSEER_WHIP:
+			_overseer.crack_whip()
+			_sounds.whip_crack()
+			_worker.flinch()
+		_:
+			GameLog.warning("unknown overseer event", {"event": event})
+
+
 ## The field's colour saturation at some Exhaustion: the scene's own when rested, falling
 ## evenly to DRAINED_SATURATION when spent.
 static func saturation_for(exhaustion: float, full_saturation: float) -> float:
@@ -165,6 +192,7 @@ static func time_left_text(seconds_left: float) -> String:
 
 func _process(delta: float) -> void:
 	_worker.update(delta)
+	_sounds.set_generator_speed(_worker.track_speed())
 	if _labelled_plot < 0:
 		return
 	_label_seconds_remaining -= delta
@@ -304,15 +332,28 @@ func _fence_half_size() -> Vector2:
 
 func _start_worker() -> void:
 	var body: Node3D = $Worker
-	var players := body.find_children("*", "AnimationPlayer", true, false)
-	var player: AnimationPlayer = null
-	if players.is_empty():
-		GameLog.warning("worker has no animation player")
-	else:
-		player = players[0] as AnimationPlayer
+	var player := _animation_player_of(body, "worker")
 	var gate := Vector3(-_fence_half_size().x + gate_inside, 0.0, gate_z)
 	_worker = WorkerMotion.new(body, player, _track, gate)
 	_worker.pushed_through_turnstile.connect(_generator.push_turnstile)
+
+
+func _start_overseer() -> void:
+	var body: Node3D = $Overseer
+	body.position = _generator.position + OVERSEER_SPOT
+	body.rotation.y = atan2(-OVERSEER_SPOT.x, -OVERSEER_SPOT.z)
+	var player := _animation_player_of(body, "overseer")
+	_overseer = OverseerLook.new(body, player)
+
+
+## The model's animation player, or null (with a warning) if it has none: he then moves
+## without animating.
+func _animation_player_of(body: Node3D, who: String) -> AnimationPlayer:
+	var animation_players := body.find_children("*", "AnimationPlayer", true, false)
+	if animation_players.is_empty():
+		GameLog.warning("%s has no animation player" % who)
+		return null
+	return animation_players[0] as AnimationPlayer
 
 
 func _material(colour: Color) -> StandardMaterial3D:

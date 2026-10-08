@@ -16,7 +16,8 @@ const LIMITS: Dictionary = {
 	"study_session_cap_seconds": [1.0, 604800.0],
 	"lap_seconds": [0.5, 600.0],
 	"laps_before_breath": [1.0, 1000.0],
-	"breath_seconds": [0.5, 600.0],
+	"whistle_after_seconds": [0.5, 600.0],
+	"whip_after_seconds": [0.5, 600.0],
 	"offline_growth_rate": [0.01, 1.0],
 	"offline_cap_seconds": [60.0, 2592000.0],
 	"wither_seconds": [1.0, 2592000.0],
@@ -69,9 +70,11 @@ const WHOLE_NUMBERS: Array[String] = [
 ## How many laps the Worker runs on the Generator before he stops to breathe. Leaving the
 ## Generator doesn't rest him: the laps since his last breath carry over.
 @export var laps_before_breath: float = NAN
-## How long he stands bent over on the Generator, breathing, before he runs again. Crops halt
-## meanwhile.
-@export var breath_seconds: float = NAN
+## How long he stands bent over on the Generator, breathing, before the Overseer blows his
+## whistle. Crops halt meanwhile.
+@export var whistle_after_seconds: float = NAN
+## How long after the whistle the Overseer uses the whip, and the Worker runs again.
+@export var whip_after_seconds: float = NAN
 ## How fast crops grow while the game is closed or its tab hidden (the night shift), as a share
 ## of how fast they grow while the Worker runs on the Generator. No Generator is needed.
 @export var offline_growth_rate: float = NAN

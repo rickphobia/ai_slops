@@ -104,3 +104,21 @@ func test_pressing_the_rest_hour_button_is_reported() -> void:
 	_overlay.rest_hour_button().pressed.emit()
 
 	assert_signal_emitted(_overlay, "rest_hour_pressed")
+
+
+func test_the_app_dims_while_the_generator_stands_still_and_brightens_when_it_turns() -> void:
+	_overlay.show_powered(false)
+	assert_eq(_overlay.rest_hour_button().modulate, AppOverlay.UNPOWERED)
+	assert_false(_overlay.is_powered())
+
+	_overlay.show_powered(true)
+
+	assert_eq(_overlay.rest_hour_button().modulate, Color.WHITE)
+	assert_true(_overlay.is_powered())
+
+
+func test_the_study_room_does_not_dim_with_the_app() -> void:
+	_overlay.show_powered(false)
+
+	var room := _overlay.find_children("*", "StudyRoom", true, false)[0] as CanvasItem
+	assert_eq(room.modulate, Color.WHITE)

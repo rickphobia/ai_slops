@@ -148,23 +148,27 @@ func test_a_missed_quota_logs_the_study_session_and_shows_the_room() -> void:
 	assert_false(app.in_study_room())
 
 
-func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp() -> void:
+func test_tapping_the_generator_sends_the_worker_and_lights_the_lamp_and_the_app() -> void:
 	GameLog.minimum_level = GameLog.Level.DEBUG
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)
 	var field: Field = main.get_node("Field")
 	var generator: Generator = field.get_node("Generator")
+	var app: AppOverlay = main.get_node("AppOverlay")
+	assert_false(app.is_powered(), "The App is dim before he runs")
 
 	field.generator_tapped.emit()
 
 	assert_has(_lines, "[debug] run generator")
 	assert_has(_lines, '[debug] worker activity="running"')
 	assert_true(generator.is_lit())
+	assert_true(app.is_powered())
 
 	field.plot_tapped.emit(0)
 
 	assert_has(_lines, '[debug] worker activity="in_field"')
 	assert_false(generator.is_lit())
+	assert_false(app.is_powered())
 
 
 func test_there_is_no_skip_time_control_without_debug_mode() -> void:

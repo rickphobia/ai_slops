@@ -36,3 +36,43 @@ func test_an_exhausted_worker_drains_this_fields_colour_only() -> void:
 	var tired_haze: WorldEnvironment = tired.get_node("Haze")
 	assert_almost_eq(tired_haze.environment.adjustment_saturation, Field.DRAINED_SATURATION, 0.001)
 	assert_eq(haze.environment.adjustment_saturation, full)
+
+
+func test_the_overseer_stands_outside_the_track_by_the_generator() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+	var overseer: Node3D = field.get_node("Overseer")
+	var turnstile := (field.get_node("Generator") as Node3D).position
+
+	assert_almost_eq(overseer.position.distance_to(turnstile), Field.OVERSEER_SPOT.length(), 0.01)
+
+
+func test_the_whip_makes_the_overseer_crack_it_and_the_worker_stagger() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+	var camera: Camera3D = field.get_node("Camera")
+	var camera_before := camera.global_transform
+
+	field.show_overseer(Farm.OVERSEER_WHIP)
+
+	var overseer: AnimationPlayer = (
+		field.get_node("Overseer").find_children("*", "AnimationPlayer", true, false)[0]
+	)
+	var worker: AnimationPlayer = (
+		field.get_node("Worker").find_children("*", "AnimationPlayer", true, false)[0]
+	)
+	assert_eq(overseer.current_animation, OverseerLook.WHIPPING)
+	assert_eq(worker.current_animation, WorkerMotion.STAGGERING)
+	assert_eq(camera.global_transform, camera_before, "the camera does not move in")
+
+
+func test_the_whistle_makes_the_overseer_blow_it() -> void:
+	var field: Field = FIELD_SCENE.instantiate()
+	add_child_autofree(field)
+
+	field.show_overseer(Farm.OVERSEER_WHISTLE)
+
+	var overseer: AnimationPlayer = (
+		field.get_node("Overseer").find_children("*", "AnimationPlayer", true, false)[0]
+	)
+	assert_eq(overseer.current_animation, OverseerLook.WHISTLING)

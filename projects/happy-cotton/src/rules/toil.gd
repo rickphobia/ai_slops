@@ -2,15 +2,24 @@ class_name Toil
 extends RefCounted
 ## The Worker on the Generator: whether he is on it, how far into his run he is, and his breath
 ## when he stops. Running adds Exhaustion lap by lap, and how many laps a run lasts is set by
-## his Exhaustion when it starts, so a tired Worker stops sooner. Farm owns this and decides
-## when time passes and when he is sent or brought back; tested through Farm, not on its own.
+## his Exhaustion when it starts, so a tired Worker stops sooner. His breath ends with the
+## Overseer: a whistle after a set time, then the whip after a further set time, and he runs
+## again. Farm owns this and decides when time passes and when he is sent or brought back;
+## tested through Farm, not on its own.
+
+## What pass_time() returns: the Overseer blew his whistle at the Worker stopped to breathe,
+## used the whip (and the Worker runs again), or did nothing.
+const WHISTLE := &"overseer_whistle"
+const WHIP := &"overseer_whip"
+const NO_EVENT := &""
 
 var _tuning: Tuning
 var _exhaustion: Exhaustion
 var _on_generator := false
 ## Seconds run since his last breath or rest. Leaving the Generator doesn't reset this.
 var _run_since_breath := 0.0
-## Seconds left of his breath; while above 0 on the Generator, he stands and crops halt.
+## Seconds left of his breath; while above 0 on the Generator, he stands and crops halt. The
+## whistle comes when it falls to whip_after_seconds, the whip when it reaches 0.
 var _breath_left := 0.0
 ## Laps this run lasts, set when it starts.
 var _laps_this_run: int
@@ -52,7 +61,7 @@ func restore(reader: SaveReader) -> void:
 	_on_generator = reader.flag("on_generator")
 	_laps_this_run = reader.whole("laps_this_run", 1)
 	_run_since_breath = minf(reader.number("run_since_breath"), _run_seconds())
-	_breath_left = minf(reader.number("breath_left"), _tuning.breath_seconds)
+	_breath_left = minf(reader.number("breath_left"), _breath_seconds())
 
 
 func is_running() -> bool:
@@ -73,31 +82,50 @@ func lap_progress() -> float:
 	return fmod(_run_since_breath, _tuning.lap_seconds) / _tuning.lap_seconds
 
 
-## Seconds until he stops to breathe or starts running again; INF while he is off the
-## Generator.
+## Seconds until he stops to breathe, the Overseer whistles, or the whip sends him running
+## again; INF while he is off the Generator.
 func seconds_until_turn() -> float:
 	if not _on_generator:
 		return INF
+	if _breath_left > _tuning.whip_after_seconds:
+		return _breath_left - _tuning.whip_after_seconds
 	if _breath_left > 0.0:
 		return _breath_left
 	return _run_seconds() - _run_since_breath
 
 
 ## Some seconds of his time outside a Study Session, never past the next turn. The crops'
-## growth for them is the caller's.
-func pass_time(seconds: float) -> void:
+## growth for them is the caller's. Returns WHISTLE or WHIP if the
+## Overseer acted at the end of them, NO_EVENT otherwise. The whip changes no numbers.
+func pass_time(seconds: float) -> StringName:
 	if not _on_generator:
-		return
+		return NO_EVENT
 	if _breath_left > 0.0:
-		_breath_left = 0.0 if seconds >= _breath_left else _breath_left - seconds
-		return
+		var whistle_due := _breath_left - _tuning.whip_after_seconds
+		if whistle_due > 0.0:
+			if seconds >= whistle_due:
+				_breath_left = _tuning.whip_after_seconds
+				return WHISTLE
+			_breath_left -= seconds
+			return NO_EVENT
+		if seconds >= _breath_left:
+			_breath_left = 0.0
+			return WHIP
+		_breath_left -= seconds
+		return NO_EVENT
 	_exhaustion.add(_tuning.exhaustion_per_lap * seconds / _tuning.lap_seconds)
 	if seconds >= _run_seconds() - _run_since_breath:
 		_run_since_breath = 0.0
-		_breath_left = _tuning.breath_seconds
+		_breath_left = _breath_seconds()
 		_laps_this_run = _exhaustion.laps_before_breath()
 	else:
 		_run_since_breath += seconds
+	return NO_EVENT
+
+
+## His whole breath: until the whistle, then until the whip.
+func _breath_seconds() -> float:
+	return _tuning.whistle_after_seconds + _tuning.whip_after_seconds
 
 
 func _run_seconds() -> float:
