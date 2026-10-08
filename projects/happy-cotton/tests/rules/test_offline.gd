@@ -234,7 +234,7 @@ func test_a_rest_waits_offline_like_the_shift() -> void:
 	farm.advance(FastTuning.GROW_SECONDS)
 	farm.pick(0)
 	farm.pick(1)
-	farm.buy_rest_hour()
+	farm.buy_privilege(Farm.REST_HOUR)
 
 	farm.resume_offline(100.0)
 

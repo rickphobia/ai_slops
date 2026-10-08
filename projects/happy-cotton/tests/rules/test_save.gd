@@ -88,7 +88,7 @@ func test_a_restored_farm_plays_on_exactly_as_the_saved_one() -> void:
 	assert_eq(problems, [] as Array[String])
 	assert_eq(_seen(restored), _seen(saved), "as restored")
 	var rest := func(farm: Farm) -> void:
-		farm.buy_rest_hour()
+		farm.buy_privilege(Farm.REST_HOUR)
 		farm.advance(FastTuning.REST_HOUR_SECONDS + 3.0)
 	_assert_play_alike(saved, restored, rest, "through the rest hour")
 	assert_eq(saved.labour_points(), 0, "the rest hour was bought")

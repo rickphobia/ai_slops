@@ -46,7 +46,7 @@ func test_buying_a_rest_hour_spends_its_price_and_sets_him_resting() -> void:
 	_earn_a_rest_hour()
 	_farm.take_messages()
 
-	var result := _farm.buy_rest_hour()
+	var result := _farm.buy_privilege(Farm.REST_HOUR)
 
 	assert_true(result.happened)
 	assert_eq(_farm.labour_points(), 0)
@@ -61,7 +61,7 @@ func test_it_is_refused_when_he_cannot_afford_it() -> void:
 	_farm.advance(FastTuning.GROW_SECONDS)
 	_farm.pick(0)
 
-	var result := _farm.buy_rest_hour()
+	var result := _farm.buy_privilege(Farm.REST_HOUR)
 
 	assert_false(result.happened)
 	assert_eq(result.reason, Farm.NOT_ENOUGH_LABOUR_POINTS)
@@ -72,7 +72,7 @@ func test_it_is_refused_when_he_cannot_afford_it() -> void:
 func test_resting_lowers_exhaustion_a_little_at_a_time() -> void:
 	_earn_a_rest_hour()
 	var before := _farm.exhaustion()
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 
 	_farm.advance(5.0)
 
@@ -83,7 +83,7 @@ func test_a_whole_rest_hour_takes_away_its_recovery_then_sends_him_to_the_field(
 	_earn_a_rest_hour()
 	_farm.plant(0)
 	var before := _farm.exhaustion()
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 	_farm.take_messages()
 
 	_farm.advance(FastTuning.REST_HOUR_SECONDS)
@@ -108,7 +108,7 @@ func test_rest_never_brings_exhaustion_below_the_floor() -> void:
 	_farm.advance(FastTuning.SHIFT_SECONDS - FastTuning.GROW_SECONDS)
 	assert_eq(_farm.exhaustion_floor(), 30.0)
 
-	assert_true(_farm.buy_rest_hour().happened)
+	assert_true(_farm.buy_privilege(Farm.REST_HOUR).happened)
 	_farm.advance(FastTuning.REST_HOUR_SECONDS)
 
 	assert_eq(_farm.exhaustion(), 30.0)
@@ -118,7 +118,7 @@ func test_rest_takes_him_off_the_generator_so_crops_halt() -> void:
 	_earn_a_rest_hour()
 	_farm.plant(0)
 	_farm.run_generator()
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 
 	_farm.advance(10.0)
 
@@ -128,7 +128,7 @@ func test_rest_takes_him_off_the_generator_so_crops_halt() -> void:
 func test_the_shift_keeps_counting_while_he_rests() -> void:
 	_earn_a_rest_hour()
 	var before := _farm.shift().seconds_left
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 
 	_farm.advance(10.0)
 
@@ -137,16 +137,16 @@ func test_the_shift_keeps_counting_while_he_rests() -> void:
 
 func test_he_cannot_work_while_he_rests() -> void:
 	_earn_a_rest_hour()
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 
 	assert_eq(_farm.plant(2).reason, Farm.RESTING)
 	assert_eq(_farm.run_generator().reason, Farm.RESTING)
-	assert_eq(_farm.buy_rest_hour().reason, Farm.RESTING)
+	assert_eq(_farm.buy_privilege(Farm.REST_HOUR).reason, Farm.RESTING)
 
 
 func test_after_his_rest_he_starts_a_fresh_run() -> void:
 	_earn_a_rest_hour()
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 	_farm.advance(FastTuning.REST_HOUR_SECONDS)
 
 	_farm.run_generator()
@@ -161,7 +161,7 @@ func test_a_missed_quota_takes_the_rest_hour_away_for_the_next_shift() -> void:
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 	_farm.advance(FastTuning.STUDY_SESSION_SECONDS)
 
-	var result := _farm.buy_rest_hour()
+	var result := _farm.buy_privilege(Farm.REST_HOUR)
 
 	assert_false(result.happened)
 	assert_eq(result.reason, Farm.REST_HOUR_TAKEN_AWAY)
@@ -183,24 +183,35 @@ func test_a_met_quota_gives_the_rest_hour_back() -> void:
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 
 	assert_false(_farm.rest_hour().taken_away)
-	assert_true(_farm.buy_rest_hour().happened)
+	assert_true(_farm.buy_privilege(Farm.REST_HOUR).happened)
 
 
 func test_it_is_refused_in_a_study_session() -> void:
 	_farm = _farm_with_shift(FastTuning.SHIFT_SECONDS)
 	_farm.advance(FastTuning.SHIFT_SECONDS)
 
-	assert_eq(_farm.buy_rest_hour().reason, Farm.IN_STUDY_SESSION)
+	assert_eq(_farm.buy_privilege(Farm.REST_HOUR).reason, Farm.IN_STUDY_SESSION)
 
 
 func test_a_study_session_cuts_a_rest_short() -> void:
 	_farm = _farm_with_shift(FastTuning.SHIFT_SECONDS)
 	_earn_a_rest_hour()
 	_farm.advance(FastTuning.SHIFT_SECONDS - FastTuning.GROW_SECONDS - 5.0)
-	_farm.buy_rest_hour()
+	_farm.buy_privilege(Farm.REST_HOUR)
 
 	_farm.advance(5.0)
 
 	assert_eq(_farm.rest_hour().seconds_left, 0.0)
 	assert_true(_farm.in_study_session())
 	assert_eq(_farm.worker().activity, WorkerView.Activity.IN_FIELD)
+
+
+func test_a_privilege_the_farm_does_not_sell_is_refused_and_costs_nothing() -> void:
+	_earn_a_rest_hour()
+	var points := _farm.labour_points()
+
+	var result := _farm.buy_privilege(&"day_off")
+
+	assert_false(result.happened)
+	assert_eq(result.reason, Farm.NO_SUCH_PRIVILEGE)
+	assert_eq(_farm.labour_points(), points)
