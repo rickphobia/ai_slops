@@ -21,6 +21,9 @@ extends RefCounted
 ## The Generator has two Upgrade tiers: the first costs 10 Labour Points (two picks), doubles
 ## growth per second of running and raises the Quota by 1; the second costs 20, triples growth
 ## and raises the Quota by 2 more.
+## The tools have two tiers: the first costs 10, halves a slow pick's time and the drop chance
+## (a 1-second pick, a 1-in-4 drop) and raises the Quota by 1; the second costs 20, leaves a
+## quarter of each and raises the Quota by 2 more.
 
 const GROW_SECONDS := 30.0
 const SHIFT_SECONDS := 100.0
@@ -57,6 +60,9 @@ const OFFLINE_RECOVERY_PER_HOUR := 36.0
 const GENERATOR_PRICES: Array[int] = [10, 20]
 const GENERATOR_MULTIPLIERS: Array[float] = [2.0, 3.0]
 const GENERATOR_QUOTA_RISES: Array[int] = [1, 2]
+const TOOLS_PRICES: Array[int] = [10, 20]
+const TOOLS_WORK_SHARES: Array[float] = [0.5, 0.25]
+const TOOLS_QUOTA_RISES: Array[int] = [1, 2]
 
 
 static func table() -> Tuning:
@@ -98,6 +104,12 @@ static func table() -> Tuning:
 			)
 		)
 	tuning.generator_tiers = tiers
+	var tools_tiers: Array[ToolsTier] = []
+	for index in TOOLS_PRICES.size():
+		tools_tiers.append(
+			ToolsTier.make(TOOLS_PRICES[index], TOOLS_WORK_SHARES[index], TOOLS_QUOTA_RISES[index])
+		)
+	tuning.tools_tiers = tools_tiers
 	return tuning
 
 

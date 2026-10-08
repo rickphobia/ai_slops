@@ -60,6 +60,24 @@ func test_buying_a_generator_tier_logs_it_celebrates_and_shows_in_the_field() ->
 	assert_eq(generator.tier(), 1)
 
 
+func test_buying_a_tools_tier_logs_it_celebrates_and_shows_in_the_field() -> void:
+	var main: Node = add_child_autofree(_main())
+	await wait_process_frames(1)
+	var app: AppOverlay = main.get_node("AppOverlay")
+	var rack: ToolRack = main.get_node("Field/ToolRack")
+	var tuning: Tuning = main.call("tuning")
+	var tier := tuning.tools_tiers[0]
+	main.call("_on_labour_points_requested", 100)
+	app.open_store()
+
+	app.upgrade_pressed.emit(Farm.TOOLS)
+
+	assert_has(_lines, '[info] upgrade bought item=&"tools" tier=1 price=%d' % tier.price)
+	assert_false(app.is_store_open(), "the store closes so the celebration shows")
+	assert_string_contains(app.speech(), "Tools tier 1")
+	assert_eq(rack.tier(), 1)
+
+
 func test_buying_a_rest_hour_logs_it_and_the_store_button_shows_the_rest() -> void:
 	var main: Node = add_child_autofree(_main())
 	await wait_process_frames(1)

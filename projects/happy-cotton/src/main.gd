@@ -309,7 +309,10 @@ func _show_app() -> void:
 	var lines: Array[String] = []
 	for message in _farm.take_messages():
 		_log_message(message)
-		if message.key in [Farm.QUOTA_MET, Farm.GENERATOR_UPGRADED, Farm.REST_STARTED]:
+		if (
+			message.key
+			in [Farm.QUOTA_MET, Farm.GENERATOR_UPGRADED, Farm.TOOLS_UPGRADED, Farm.REST_STARTED]
+		):
 			_app.celebrate()
 		var text := AppText.render(message)
 		if text.is_empty():
@@ -327,6 +330,8 @@ func _show_app() -> void:
 	for item in store:
 		if item.id == Farm.GENERATOR:
 			_field.show_generator_tier(item.tier)
+		elif item.id == Farm.TOOLS:
+			_field.show_tools_tier(item.tier)
 
 
 func _log_message(message: AppMessage) -> void:

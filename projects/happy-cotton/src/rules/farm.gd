@@ -24,7 +24,8 @@ extends RefCounted
 ## Exhaustion towards a floor that rises every Shift. A missed Quota takes the rest hour away
 ## for the next Shift. Offline time recovers Exhaustion slowly, never below the floor.
 ## The store (see Store) sells Upgrades tier by tier: a Generator tier makes each second of
-## running grow more cotton at once, and raises the Quota from the next Shift on.
+## running grow more cotton at once, and a tools tier makes a slow pick shorter and an
+## exhausted one less likely to drop its cotton; each raises the Quota from the next Shift on.
 ## to_save() gives the whole Farm as plain data and restore() takes it back, so a restored Farm
 ## plays on exactly as the saved one would have.
 
@@ -48,6 +49,7 @@ const REST_HOUR := &"rest_hour"
 const NO_SUCH_PRIVILEGE := &"no_such_privilege"
 ## The Upgrades buy_upgrade() sells.
 const GENERATOR := &"generator"
+const TOOLS := &"tools"
 ## buy_upgrade() was given an Upgrade the Farm does not sell.
 const NO_SUCH_UPGRADE := &"no_such_upgrade"
 ## Every reason a store item can be refused with; the App text table explains each.
@@ -60,9 +62,10 @@ const STORE_REFUSALS: Array[StringName] = [
 ]
 
 ## The save format to_save() writes and restore() reads. Raise it when the format changes.
-## Version 2 added the store; a version 1 save restores with no Upgrades.
-const SAVE_VERSION := 2
-const SAVE_VERSIONS_READ: Array[int] = [1, SAVE_VERSION]
+## Version 2 added the store; a version 1 save restores with no Upgrades. Version 3 added the
+## tools; a version 2 save restores with none.
+const SAVE_VERSION := 3
+const SAVE_VERSIONS_READ: Array[int] = [1, 2, SAVE_VERSION]
 
 ## Why resume_offline() didn't use the clock's time as given (AwayReport.clock_problem).
 const NEGATIVE_OFFLINE_TIME := &"negative_offline_time"
@@ -99,6 +102,9 @@ const COTTON_DROPPED := &"cotton_dropped"
 ## A Generator tier was bought: values tier (from 1), price, multiplier (growth against no
 ## Upgrade), quota_rise (from the next Shift).
 const GENERATOR_UPGRADED := &"generator_upgraded"
+## A tools tier was bought: values tier (from 1), price, share (of a slow pick's time and of the
+## drop chance, against no Upgrade), quota_rise (from the next Shift).
+const TOOLS_UPGRADED := &"tools_upgraded"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -114,6 +120,7 @@ const MESSAGE_KEYS: Array[StringName] = [
 	REST_ENDED,
 	COTTON_DROPPED,
 	GENERATOR_UPGRADED,
+	TOOLS_UPGRADED,
 ]
 ## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
 ## Worker stopped to breathe.
@@ -161,7 +168,7 @@ func _init(tuning: Tuning, plot_count: int, roll: Callable = Callable()) -> void
 	_crops = Crops.new(tuning.grow_seconds, tuning.wither_seconds, plot_count)
 	_exhaustion = Exhaustion.new(tuning)
 	_toil = Toil.new(tuning, _exhaustion)
-	_store = Store.new(tuning.generator_tiers)
+	_store = Store.new(tuning.generator_tiers, tuning.tools_tiers)
 	if roll.is_valid():
 		_roll = roll
 	else:
@@ -189,15 +196,18 @@ func plant(index: int) -> CommandResult:
 
 
 ## Picks ripe cotton. Exhausted past the mistake threshold, he can drop it: the plot is
-## emptied, but nothing counts towards the Quota and nothing is earned.
+## emptied, but nothing counts towards the Quota and nothing is earned. Better tools make a
+## slow pick shorter and a drop less likely.
 func pick(index: int) -> CommandResult:
 	var refusal := _pick_refusal(index)
 	if refusal != &"":
 		return CommandResult.refused(refusal)
 	# How tired he was as he reached for it decides whether he drops it.
 	var roll: float = _roll.call()
-	var drops := _exhaustion.can_drop_cotton() and roll < _tuning.dropped_cotton_chance
-	_start_field_work(_tuning.exhaustion_per_pick)
+	var work_share := _store.work_share()
+	var drop_chance := _tuning.dropped_cotton_chance * work_share
+	var drops := _exhaustion.can_drop_cotton() and roll < drop_chance
+	_start_field_work(_tuning.exhaustion_per_pick, work_share)
 	_crops.empty(index)
 	if drops:
 		_messages.append(AppMessage.new(COTTON_DROPPED, {}))
@@ -233,25 +243,28 @@ func run_generator() -> CommandResult:
 	return CommandResult.done()
 
 
-## Buys the next tier of an Upgrade with Labour Points. The only one so far is GENERATOR. It
-## works at once; its Quota rise counts from the next Shift.
+## Buys the next tier of an Upgrade (GENERATOR or TOOLS) with Labour Points. It works at once;
+## its Quota rise counts from the next Shift.
 func buy_upgrade(upgrade: StringName) -> CommandResult:
-	if upgrade != GENERATOR:
+	if upgrade != GENERATOR and upgrade != TOOLS:
 		return CommandResult.refused(NO_SUCH_UPGRADE)
-	var refusal := _generator_refusal()
+	var refusal := _upgrade_refusal(upgrade)
 	if refusal != &"":
 		return CommandResult.refused(refusal)
-	var tier := _store.next_generator_tier()
-	var price := roundi(tier.price)
-	_ledger.spend(price)
-	_store.buy_generator_tier()
-	var values := {
-		"tier": _store.generator_tier(),
-		"price": price,
-		"multiplier": tier.growth_multiplier,
-		"quota_rise": roundi(tier.quota_rise),
-	}
-	_messages.append(AppMessage.new(GENERATOR_UPGRADED, values))
+	if upgrade == GENERATOR:
+		var tier := _store.next_generator_tier()
+		_ledger.spend(roundi(tier.price))
+		_store.buy_generator_tier()
+		var values := _upgraded_values(_store.generator_tier(), tier.price, tier.quota_rise)
+		values["multiplier"] = tier.growth_multiplier
+		_messages.append(AppMessage.new(GENERATOR_UPGRADED, values))
+	else:
+		var tier := _store.next_tools_tier()
+		_ledger.spend(roundi(tier.price))
+		_store.buy_tools_tier()
+		var values := _upgraded_values(_store.tools_tier(), tier.price, tier.quota_rise)
+		values["share"] = tier.work_share
+		_messages.append(AppMessage.new(TOOLS_UPGRADED, values))
 	return CommandResult.done()
 
 
@@ -413,10 +426,10 @@ func restore(save: Dictionary) -> Array[String]:
 	var busy_left := minf(reader.number("busy_left"), _tuning.slow_action_seconds)
 	var rest_left := minf(reader.number("rest_left"), _tuning.rest_hour_seconds)
 	var rest_taken_away := reader.flag("rest_taken_away")
-	var store := Store.new(_tuning.generator_tiers)
+	var store := Store.new(_tuning.generator_tiers, _tuning.tools_tiers)
 	var shift_upgrade_rise := 0
 	if version >= 2:
-		store.restore(reader.section("store"))
+		store.restore(reader.section("store"), version >= 3)
 		shift_upgrade_rise = reader.whole("shift_upgrade_quota_rise")
 	if not reader.problems().is_empty():
 		return reader.problems()
@@ -514,14 +527,22 @@ func _rest_hour_refusal() -> StringName:
 	return &""
 
 
-## Why the next Generator tier can't be bought right now, or &"" when it can.
-func _generator_refusal() -> StringName:
-	var tier := _store.next_generator_tier()
+## The values of an Upgrade-bought message every Upgrade shares.
+func _upgraded_values(tier: int, price: float, quota_rise: float) -> Dictionary:
+	return {"tier": tier, "price": roundi(price), "quota_rise": roundi(quota_rise)}
+
+
+## Why the next tier of an Upgrade can't be bought right now, or &"" when it can.
+func _upgrade_refusal(upgrade: StringName) -> StringName:
+	var tier: Resource = (
+		_store.next_generator_tier() if upgrade == GENERATOR else _store.next_tools_tier()
+	)
 	if tier == null:
 		return FULLY_UPGRADED
 	if in_study_session():
 		return IN_STUDY_SESSION
-	if not _ledger.can_afford(roundi(tier.price)):
+	var tier_price: float = tier.get("price")
+	if not _ledger.can_afford(roundi(tier_price)):
 		return NOT_ENOUGH_LABOUR_POINTS
 	return &""
 
@@ -529,23 +550,45 @@ func _generator_refusal() -> StringName:
 ## Everything the store sells, Upgrades first, each with its price and why it can't be bought
 ## right now.
 func store() -> Array[StoreItemView]:
-	var next := _store.next_generator_tier()
-	var current := _store.growth_multiplier()
-	var price := 0
-	var effect := current
-	var rise := 0
-	if next != null:
-		price = roundi(next.price)
-		effect = next.growth_multiplier
-		rise = roundi(next.quota_rise)
-	var tiers := Vector2i(_store.generator_tier(), _store.generator_top_tier())
-	var generator := StoreItemView.upgrade(
-		GENERATOR, tiers, price, Vector2(effect, current), rise, _generator_refusal()
+	var generator_next := _store.next_generator_tier()
+	var generator := _upgrade_view(
+		GENERATOR,
+		Vector2i(_store.generator_tier(), _store.generator_top_tier()),
+		generator_next,
+		generator_next.growth_multiplier if generator_next != null else 0.0,
+		_store.growth_multiplier()
+	)
+	var tools_next := _store.next_tools_tier()
+	var tools := _upgrade_view(
+		TOOLS,
+		Vector2i(_store.tools_tier(), _store.tools_top_tier()),
+		tools_next,
+		tools_next.work_share if tools_next != null else 0.0,
+		_store.work_share()
 	)
 	var rest_hour := StoreItemView.new(
 		REST_HOUR, StoreItemView.Kind.PRIVILEGE, _rest_hour_price(), _rest_hour_refusal()
 	)
-	return [generator, rest_hour]
+	return [generator, tools, rest_hour]
+
+
+## The store's view of an Upgrade. Fully upgraded (`next` null), it shows the owned tier's
+## effect, no price and no Quota rise.
+func _upgrade_view(
+	upgrade: StringName, tiers: Vector2i, next: Resource, next_effect: float, current: float
+) -> StoreItemView:
+	var price := 0
+	var effect := current
+	var rise := 0
+	if next != null:
+		var next_price: float = next.get("price")
+		var next_rise: float = next.get("quota_rise")
+		price = roundi(next_price)
+		effect = next_effect
+		rise = roundi(next_rise)
+	return StoreItemView.upgrade(
+		upgrade, tiers, price, Vector2(effect, current), rise, _upgrade_refusal(upgrade)
+	)
 
 
 ## What The App should say since the last call, oldest first. Empties the queue.
@@ -662,11 +705,12 @@ func _unable_to_work() -> StringName:
 
 
 ## Field work brings him back from the Generator. Exhausted, it is slow, judged by how tired he
-## was when he started; then it adds its own Exhaustion.
-func _start_field_work(exhaustion_added: float) -> void:
+## was when he started, and `slow_share` of the usual slow time (tools shorten a pick); then it
+## adds its own Exhaustion.
+func _start_field_work(exhaustion_added: float, slow_share: float = 1.0) -> void:
 	_toil.bring_back()
 	if _exhaustion.slows_work():
-		_busy_left = _tuning.slow_action_seconds
+		_busy_left = _tuning.slow_action_seconds * slow_share
 	_exhaustion.add(exhaustion_added)
 
 

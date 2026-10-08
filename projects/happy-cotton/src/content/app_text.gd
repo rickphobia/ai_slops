@@ -34,11 +34,17 @@ const STORE_QUOTA_RISE := "Quota +{quota_rise} from next Shift. More to give, mo
 ## What each item is called in the store, and The App's pitch for it (values: effect, current).
 const STORE_NAMES: Dictionary[StringName, String] = {
 	Farm.GENERATOR: "Generator",
+	Farm.TOOLS: "Tools",
 	Farm.REST_HOUR: "Rest hour",
 }
 const STORE_BLURBS: Dictionary[StringName, String] = {
 	Farm.GENERATOR:
 	"Turn every step into more harvest! Growth ×{effect} per second of running (now ×{current}).",
+	Farm.TOOLS:
+	(
+		"Sharper tools for faster hands! Tired picks take ×{effect} the time and drop"
+		+ " ×{effect} as much cotton (now ×{current})."
+	),
 	Farm.REST_HOUR: "A short rest, kindly granted. The Shift goes on while you recover.",
 }
 
@@ -119,6 +125,14 @@ static func lines() -> Dictionary[StringName, AppLine]:
 				"Congratulations! Generator tier {tier} is yours for {price} Labour Points!"
 				+ " Every second of running now grows ×{multiplier} the cotton. Your Quota rises"
 				+ " by {quota_rise} from next Shift, so everyone shares your success!"
+			)
+		),
+		Farm.TOOLS_UPGRADED:
+		AppLine.new(
+			(
+				"Wonderful! Tools tier {tier} is yours for {price} Labour Points! Tired picks"
+				+ " now take ×{share} the time and drop ×{share} as much cotton. Your Quota"
+				+ " rises by {quota_rise} from next Shift. Better tools, bigger dreams!"
 			)
 		),
 	}
