@@ -129,12 +129,19 @@ class PicktimeBrowserSite:
         date_item = page.locator(f'.data-date-item[data-date="{ymd}"]')
         if date_item.count() == 0 or "disable" in (date_item.get_attribute("class") or ""):
             return NotOpen()
+        # The page opens on its first open date and loads that date's Slots by itself. Its empty
+        # message stays on screen while the chosen date loads, so wait for it, then mark it as
+        # not ours. Without this, a full today read as "date not open" just after Release Time.
+        page.locator(".booking-page-timings-btn, .no-slots").first.wait_for()
+        page.locator(".no-slots").evaluate_all(
+            "elements => elements.forEach(element => element.dataset.courtBookerStale = '')"
+        )
         date_item.click()
 
         steps.start("pick slot")
-        # Wait for this date's Slots (or its empty message), not those of the default date.
-        page.locator(f'.booking-page-timings-btn[startdate^="{ymd}"], .no-slots').first.wait_for()
-        if page.locator(f'.booking-page-timings-btn[startdate^="{ymd}"]').count() == 0:
+        own_slots = f'.booking-page-timings-btn[startdate^="{ymd}"]'
+        page.locator(f"{own_slots}, .no-slots:not([data-court-booker-stale])").first.wait_for()
+        if page.locator(own_slots).count() == 0:
             return NotOpen()
         slot_button = page.locator(f'.booking-page-timings-btn[startdate="{ymd}{slot:%H%M}"]')
         if slot_button.count() == 0:

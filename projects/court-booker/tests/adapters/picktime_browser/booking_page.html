@@ -8,6 +8,8 @@
   Query parameters set up what the page shows:
     open    comma-separated dates (YYYYMMDD) that are open; the others in the strip are disabled
     slots   comma-separated start times (HHMM) still free on each open date; empty shows no Slots
+    first_day_slots  the same for the first open date, which the page shows on its own as soon
+            as the dates appear, like the live page does with today (default: slots)
     result  what Book answers: confirmed, taken or rejected
     message the error text for result=rejected
     covered yes puts an overlay on top of the form, so Book can't be clicked
@@ -31,9 +33,11 @@
     <script>
       const params = new URLSearchParams(location.search);
       const openDates = (params.get("open") || "").split(",").filter(Boolean);
-      const freeSlots = (params.get("slots") ?? "0800,1000,1200,1400,1600,1800,2000")
-        .split(",")
-        .filter(Boolean);
+      const startTimes = (value) => value.split(",").filter(Boolean);
+      const freeSlots = startTimes(params.get("slots") ?? "0800,1000,1200,1400,1600,1800,2000");
+      const firstDaySlots = params.has("first_day_slots")
+        ? startTimes(params.get("first_day_slots"))
+        : freeSlots;
       const result = params.get("result") || "confirmed";
       const view = document.getElementById("view");
       let chosen = "";
@@ -72,19 +76,21 @@
               ? showAlert("This date is not open for booking")
               : showSlots(item.dataset.date);
         });
+        if (openDates.length > 0) showSlots(openDates[0]);
       }
 
       function showSlots(ymd) {
         const box = view.querySelector(".timeslots");
-        // Slots arrive after a moment, as they do from Picktime's /book/slots call.
-        box.innerHTML = "";
+        const slots = ymd === openDates[0] ? firstDaySlots : freeSlots;
+        // Slots arrive after a moment, as they do from Picktime's /book/slots call. Until then
+        // the previous date's Slots or empty message stay on screen under a spinner.
         setTimeout(() => {
-          if (freeSlots.length === 0) {
+          if (slots.length === 0) {
             box.innerHTML = `<div class="no-slots"><span>No time slots are available for this
               date. Please select another date above to check availability.</span></div>`;
             return;
           }
-          box.innerHTML = freeSlots
+          box.innerHTML = slots
             .map(
               (hhmm) => `<div class="col-xs-6 col-sm-3"><button
                 class="btn btn-default booking-page-timings-btn " startdate="${ymd}${hhmm}"
