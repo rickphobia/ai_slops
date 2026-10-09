@@ -117,6 +117,17 @@ def test_books_the_slot_with_the_profile_in_the_right_fields(
     ]
 
 
+def test_waits_for_the_chosen_dates_slots_not_the_first_dates_empty_message(
+    page_server: BookingPageServer, submissions: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    # Like just after Release Time: today is full, and the page shows today's empty message
+    # until the newly opened date's Slots arrive.
+    attempt = book(site_for(page_server, tmp_path, first_day_slots=""), time(20, 0))
+
+    assert attempt.outcome == Booked()
+    assert [submission["startdate"] for submission in submissions] == ["202610082000"]
+
+
 def test_writes_a_screenshot_of_the_final_page(
     page_server: BookingPageServer, submissions: list[dict[str, Any]], tmp_path: Path
 ) -> None:
