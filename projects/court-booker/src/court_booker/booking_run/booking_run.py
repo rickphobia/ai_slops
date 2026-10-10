@@ -4,7 +4,7 @@ import logging
 import time as monotonic_time
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from typing import Protocol
 
 from court_booker.booking_requests.booking_requests import (
@@ -27,6 +27,7 @@ from court_booker.court_booking_site import (
 )
 from court_booker.profile.profile import Profile, ProfileStore, ProfileUnreadable
 from court_booker.random_source import RandomSource
+from court_booker.schedule.schedule import ScheduleRules, release_time
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,9 @@ class RunRules:
     # How many times a network error is retried; each wait doubles the one before
     max_retries: int
     retry_backoff: timedelta
+    # A date found closed this soon after its Release Time is tried again, every retry_backoff:
+    # Picktime may open it a few seconds late, or its page may still be loading.
+    not_open_grace: timedelta
 
 
 class SlotResultRecorder(Protocol):
@@ -60,6 +64,7 @@ class BookingRun:
         sleeper: Sleeper,
         random: RandomSource,
         rules: RunRules,
+        schedule: ScheduleRules,
     ) -> None:
         self._recorder = recorder
         self._profiles = profiles
@@ -68,12 +73,14 @@ class BookingRun:
         self._sleeper = sleeper
         self._random = random
         self._rules = rules
+        self._schedule = schedule
 
     def run(self, request: BookingRequest, heartbeat: Callable[[], None]) -> None:
         """Try every Slot of `request`, calling `heartbeat` after each attempt and each wait.
 
-        One Slot's failure never stops the others, except a date that isn't open yet: that
-        fails every Slot left without asking the site again.
+        One Slot's failure never stops the others, except a date that is still not open once the
+        grace period after its Release Time is over: that fails every Slot left without asking
+        the site again.
         """
         started = monotonic_time.monotonic()
         logger.info(
@@ -127,8 +134,11 @@ class BookingRun:
     def _book_slot(
         self, request: BookingRequest, slot: time, profile: Profile, heartbeat: Callable[[], None]
     ) -> SlotOutcome:
-        """Book one Slot, retrying network errors; record its result and return the outcome."""
+        """Book one Slot, retrying network errors and a date not open just after Release Time;
+        record its result and return the outcome.
+        """
         retries = 0
+        grace_ends = release_time(request.play_date, self._schedule) + self._rules.not_open_grace
         while True:
             attempted_at = self._clock.now()
             self._record(
@@ -142,6 +152,9 @@ class BookingRun:
                 heartbeat()
                 retries += 1
                 continue
+            if isinstance(attempt.outcome, NotOpen) and self._try_again_before(grace_ends):
+                self._wait_for_date_to_open(request, slot, heartbeat)
+                continue
             status, reason = _status_of(attempt, retries)
             result = SlotResult(
                 slot,
@@ -153,6 +166,24 @@ class BookingRun:
             )
             self._record(request, result)
             return attempt.outcome
+
+    def _try_again_before(self, grace_ends: datetime) -> bool:
+        return self._clock.now() + self._rules.retry_backoff < grace_ends
+
+    def _wait_for_date_to_open(
+        self, request: BookingRequest, slot: time, heartbeat: Callable[[], None]
+    ) -> None:
+        since_release = self._clock.now() - release_time(request.play_date, self._schedule)
+        logger.info(
+            "date not open yet, trying again",
+            extra={
+                **_log_fields(request),
+                "slot": slot_text(slot),
+                "seconds_since_release": round(since_release.total_seconds(), 1),
+            },
+        )
+        self._sleeper.sleep(self._rules.retry_backoff)
+        heartbeat()
 
     def _attempt(
         self, request: BookingRequest, slot: time, profile: Profile, retries: int

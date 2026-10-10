@@ -135,6 +135,11 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
             retry_backoff=timedelta(
                 seconds=_non_negative_int(environ, "COURT_BOOKER_RETRY_BACKOFF_SECONDS", default=10)
             ),
+            not_open_grace=timedelta(
+                seconds=_non_negative_int(
+                    environ, "COURT_BOOKER_NOT_OPEN_GRACE_SECONDS", default=60
+                )
+            ),
         ),
         scheduler_interval=timedelta(seconds=tick_seconds),
         scheduler_stale_after=timedelta(seconds=stale_seconds),

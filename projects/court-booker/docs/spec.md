@@ -65,7 +65,7 @@ At the date's **Release Time**, court-booker waits a random moment between 00:01
 34. As the Operator, I want one Slot's failure not to stop the remaining Slots, so that I still get the others.
 35. As the Operator, I want a screenshot saved for every Slot attempt, so that a failure can be understood without trying again.
 36. As the Operator, I want to view a Failed Slot's screenshot from the status page, so that I can see what Picktime showed.
-37. As the Operator, I want a Booking Request whose date is not yet open on Picktime when it runs marked Failed with "date not open on Picktime yet", so that a change to the venue's Booking Window shows up clearly instead of silently.
+37. As the Operator, I want a Booking Request whose date is not yet open on Picktime when it runs marked Failed with "date not open on Picktime yet", so that a change to the venue's Booking Window shows up clearly instead of silently. A date found closed within a short grace period after its Release Time (default 60 seconds) is tried again first, so a date Picktime opens a few seconds late doesn't cost the night.
 38. As the Operator, I want Picktime's own error text (for example, a limit on bookings per unit) shown on a Failed Slot, so that I learn about venue rules I didn't know.
 
 ### Downtime and recovery
@@ -132,7 +132,7 @@ At the date's **Release Time**, court-booker waits a random moment between 00:01
   - Whether a request is due, late (more than 5 minutes past its run time when picked up) or missed (date already passed).
 - **booking_run** (domain): runs one due Booking Request, given a clock, a random source, the Profile and a `CourtBookingSite`:
   - Tries each Slot in time order, with a random pause between Slots.
-  - Maps outcomes: Booked; Taken (never retried); network failure (retried up to the configured count, with exponential backoff, then Failed); any other Picktime error (Failed with Picktime's text, not retried); date not open (Failed with that reason, and the remaining Slots too).
+  - Maps outcomes: Booked; Taken (never retried); network failure (retried up to the configured count, with exponential backoff, then Failed); any other Picktime error (Failed with Picktime's text, not retried); date not open (tried again during the grace period after Release Time, then Failed with that reason, and the remaining Slots too).
   - Records each Slot's outcome as soon as it is known.
 - **scheduler** (domain): one tick.
   - Expires old data.

@@ -224,6 +224,71 @@ def test_a_date_not_open_fails_that_slot_and_the_rest_without_trying_them(
     assert card.endswith("20:00: Failed (date not open on Picktime yet)")
 
 
+@pytest.fixture
+def client_with_grace(tmp_path: Path, clock: FakeClock, site: FakeSite) -> TestClient:
+    """The run at 90 s after Release Time falls inside a 120 s grace period."""
+    client = make_client(
+        tmp_path / "court-booker.sqlite3",
+        clock,
+        FixedRandom(),
+        site,
+        COURT_BOOKER_NOT_OPEN_GRACE_SECONDS="120",
+    )
+    token = csrf_token_in(client.get(f"{PREFIX}/login").text)
+    client.post(f"{PREFIX}/login", data={"password": OPERATOR_PASSWORD, "csrf_token": token})
+    save_profile(client)
+    return client
+
+
+def test_a_date_not_open_just_after_release_time_is_tried_again(
+    client_with_grace: TestClient, clock: FakeClock, site: FakeSite
+) -> None:
+    create(client_with_grace, PLAY_DATE, ["20:00"])
+    site.script = {time(20): [NotOpen()]}
+
+    run_due(client_with_grace, clock)
+
+    # Tried at 90 s, closed; 8 s attempt, 10 s wait; tried again at 108 s and booked.
+    assert [call.at for call in site.calls] == [RUN_AT, RUN_AT + timedelta(seconds=18)]
+    assert clock.sleeps == [timedelta(seconds=10)]
+    assert "20:00: Booked" in request_cards(client_with_grace)[0]
+
+
+def test_a_date_still_closed_when_the_grace_period_ends_fails_as_before(
+    client_with_grace: TestClient, clock: FakeClock, site: FakeSite
+) -> None:
+    create(client_with_grace, PLAY_DATE, ["18:00", "20:00"])
+    site.script = {time(18): [NotOpen()] * 5}
+
+    run_due(client_with_grace, clock)
+
+    # Tries at 90 s and 108 s; a third would start at 126 s, past the 120 s grace period.
+    assert [call.at for call in site.calls] == [RUN_AT, RUN_AT + timedelta(seconds=18)]
+    card = request_cards(client_with_grace)[0]
+    assert "18:00: Failed (date not open on Picktime yet) tried" in card
+    assert card.endswith("20:00: Failed (date not open on Picktime yet)")
+
+
+def test_each_try_again_of_a_closed_date_is_logged(
+    client_with_grace: TestClient,
+    clock: FakeClock,
+    site: FakeSite,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    create(client_with_grace, PLAY_DATE, ["20:00"])
+    site.script = {time(20): [NotOpen()]}
+
+    with caplog.at_level(logging.INFO):
+        run_due(client_with_grace, clock)
+
+    retries = [
+        vars(r) for r in caplog.records if r.getMessage() == "date not open yet, trying again"
+    ]
+    assert [
+        (r["request_id"], r["play_date"], r["slot"], r["seconds_since_release"]) for r in retries
+    ] == [(1, PLAY_DATE, "20:00", 98.0)]
+
+
 def test_a_crash_in_one_attempt_fails_only_that_slot(
     client: TestClient, clock: FakeClock, site: FakeSite
 ) -> None:
