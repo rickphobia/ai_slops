@@ -72,9 +72,11 @@ const STORE_REFUSALS: Array[StringName] = [
 ## The save format to_save() writes and restore() reads. Raise it when the format changes.
 ## Version 2 added the store; a version 1 save restores with no Upgrades. Version 3 added the
 ## tools; a version 2 save restores with none. Version 4 added the Bills; a version 3 save
-## restores with nothing earned and no laps run yet this Shift.
-const SAVE_VERSION := 4
-const SAVE_VERSIONS_READ: Array[int] = [1, 2, 3, SAVE_VERSION]
+## restores with nothing earned and no laps run yet this Shift. Version 5 added the school
+## fees; an older save restores with them paid up and due school_fees_every_shifts Shifts after
+## its own.
+const SAVE_VERSION := 5
+const SAVE_VERSIONS_READ: Array[int] = [1, 2, 3, 4, SAVE_VERSION]
 ## The lowest balance a save can hold: Debt can grow, but not without end.
 const LEAST_SAVED_BALANCE := -1000000000
 
@@ -124,6 +126,9 @@ const PAY_SLIP := &"pay_slip"
 const FELL_INTO_DEBT := &"fell_into_debt"
 ## Earnings paid the last of the Debt: values points (Labour Points left over).
 const DEBT_CLEARED := &"debt_cleared"
+## The App tells a new game that the Worker's two Children are at a state boarding school
+## (values: school_fees_shift, every).
+const CHILDREN_AT_SCHOOL := &"children_at_school"
 ## Every key the rules can emit; the App text table must have text for each.
 const MESSAGE_KEYS: Array[StringName] = [
 	SHIFT_STARTED,
@@ -143,6 +148,7 @@ const MESSAGE_KEYS: Array[StringName] = [
 	PAY_SLIP,
 	FELL_INTO_DEBT,
 	DEBT_CLEARED,
+	CHILDREN_AT_SCHOOL,
 ]
 ## Overseer events, for the field and its sounds; never App text. He blew his whistle at the
 ## Worker stopped to breathe.
@@ -197,6 +203,9 @@ func _init(tuning: Tuning, plot_count: int, roll: Callable = Callable()) -> void
 		_random = RandomNumberGenerator.new()
 		_random.randomize()
 		_roll = _random.randf
+	_ledger = Ledger.new(0, 0, _fees_every())
+	var children := {"school_fees_shift": _ledger.next_fees_shift(), "every": _fees_every()}
+	_messages.append(AppMessage.new(CHILDREN_AT_SCHOOL, children))
 	_start_shift()
 
 
@@ -410,6 +419,9 @@ func to_save() -> Dictionary:
 		"picked": _picked,
 		"labour_points": _ledger.balance(),
 		"shift_earned": _ledger.earned(),
+		"school_fees_shift": _ledger.next_fees_shift(),
+		"school_fees_unpaid": _ledger.fees_unpaid(),
+		"school_fees_unpaid_in_a_row": _ledger.fees_unpaid_in_a_row(),
 		"study_left": _study_left,
 		"misses_in_a_row": _misses_in_a_row,
 		"busy_left": _busy_left,
@@ -446,6 +458,13 @@ func restore(save: Dictionary) -> Array[String]:
 	var picked := reader.whole("picked")
 	var balance := reader.whole("labour_points", LEAST_SAVED_BALANCE)
 	var shift_earned := reader.whole("shift_earned") if version >= 4 else 0
+	var fees_shift := shift_number + _fees_every()
+	var fees_unpaid := false
+	var fees_unpaid_in_a_row := 0
+	if version >= 5:
+		fees_shift = reader.whole("school_fees_shift", 1)
+		fees_unpaid = reader.flag("school_fees_unpaid")
+		fees_unpaid_in_a_row = reader.whole("school_fees_unpaid_in_a_row")
 	var study_left := reader.number("study_left")
 	var misses_in_a_row := reader.whole("misses_in_a_row")
 	var busy_left := minf(reader.number("busy_left"), _tuning.slow_action_seconds)
@@ -464,7 +483,7 @@ func restore(save: Dictionary) -> Array[String]:
 	_shift_number = shift_number
 	_shift_elapsed = shift_elapsed
 	_picked = picked
-	_ledger = Ledger.new(balance, shift_earned)
+	_ledger = Ledger.new(balance, shift_earned, fees_shift, fees_unpaid, fees_unpaid_in_a_row)
 	_study_left = study_left
 	_misses_in_a_row = misses_in_a_row
 	_busy_left = busy_left
@@ -489,7 +508,18 @@ func plots() -> Array[PlotView]:
 
 
 func shift() -> ShiftView:
-	return ShiftView.new(_shift_number, _quota(), _picked, _tuning.shift_seconds - _shift_elapsed)
+	var seconds_left := _tuning.shift_seconds - _shift_elapsed
+	return ShiftView.new(_shift_number, _quota(), _picked, seconds_left, _ledger.next_fees_shift())
+
+
+## Set when a school-fees Bill left a shortfall; cleared when the Debt reaches zero.
+func school_fees_unpaid() -> bool:
+	return _ledger.fees_unpaid()
+
+
+## School-fees Bills in a row that left a shortfall; a covered one resets the count.
+func school_fees_unpaid_in_a_row() -> int:
+	return _ledger.fees_unpaid_in_a_row()
 
 
 ## Labour Points to spend; 0 while in Debt.
@@ -679,6 +709,10 @@ func _charge_bills() -> void:
 func _note_debt_cleared(cleared: bool) -> void:
 	if cleared:
 		_messages.append(AppMessage.new(DEBT_CLEARED, {"points": _ledger.labour_points()}))
+
+
+func _fees_every() -> int:
+	return roundi(_tuning.school_fees_every_shifts)
 
 
 ## Doubles for each miss in a row, up to the cap.

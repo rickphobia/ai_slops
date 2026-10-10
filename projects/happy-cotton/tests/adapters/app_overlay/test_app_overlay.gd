@@ -26,11 +26,11 @@ func test_the_clock_reads_minutes_and_seconds_rounded_up() -> void:
 
 
 func test_it_shows_the_quota_the_time_left_and_the_labour_points() -> void:
-	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0), 30)
+	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0, 3), 30)
 
 	var texts := _label_texts()
 	assert_has(texts, "Quota 5 / 12")
-	assert_has(texts, "Shift 2  ·  1:30 left")
+	assert_has(texts, "Shift 2  ·  1:30 left  ·  School fees after Shift 3")
 	assert_has(texts, "30 Labour Points")
 
 
@@ -43,13 +43,13 @@ func _badge() -> BalanceBadge:
 
 
 func test_debt_shows_in_red_where_the_labour_points_are() -> void:
-	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0), 0, 14)
+	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0, 3), 0, 14)
 
 	assert_has(_label_texts(), "Debt 14 Labour Points")
 	assert_does_not_have(_label_texts(), "0 Labour Points")
 	assert_true(_badge().shows_debt())
 
-	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0), 3, 0)
+	_overlay.show_shift(ShiftView.new(2, 12, 5, 90.0, 3), 3, 0)
 
 	assert_has(_label_texts(), "3 Labour Points")
 	assert_false(_badge().shows_debt())
@@ -98,7 +98,7 @@ func test_the_mascot_says_what_it_is_given() -> void:
 
 func test_celebrating_does_not_fail_before_or_after_a_shift_is_shown() -> void:
 	_overlay.celebrate()
-	_overlay.show_shift(ShiftView.new(1, 3, 4, 10.0), 0)
+	_overlay.show_shift(ShiftView.new(1, 3, 4, 10.0, 3), 0)
 
 	assert_has(_label_texts(), "Quota 4 / 3", "a surplus is shown, the bar just stays full")
 

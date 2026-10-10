@@ -39,11 +39,12 @@ func test_a_new_farm_starts_the_first_shift_with_the_first_quota_and_no_points()
 	assert_eq(_farm.labour_points(), 0)
 
 
-func test_a_new_farm_announces_the_first_shift() -> void:
+func test_a_new_farm_tells_of_the_children_then_announces_the_first_shift() -> void:
 	var messages := _farm.take_messages()
 
-	assert_eq(_keys(messages), [Farm.SHIFT_STARTED] as Array[StringName])
-	assert_eq(messages[0].values, {"shift": 1, "quota": FastTuning.FIRST_QUOTA})
+	var expected: Array[StringName] = [Farm.CHILDREN_AT_SCHOOL, Farm.SHIFT_STARTED]
+	assert_eq(_keys(messages), expected)
+	assert_eq(messages[1].values, {"shift": 1, "quota": FastTuning.FIRST_QUOTA})
 
 
 func test_taking_messages_empties_the_queue() -> void:
@@ -238,5 +239,6 @@ func test_every_key_the_rules_emit_is_listed() -> void:
 		Farm.PAY_SLIP,
 		Farm.FELL_INTO_DEBT,
 		Farm.DEBT_CLEARED,
+		Farm.CHILDREN_AT_SCHOOL,
 	]
 	assert_eq(Farm.MESSAGE_KEYS, emitted)

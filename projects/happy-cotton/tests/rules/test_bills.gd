@@ -233,3 +233,66 @@ func test_a_fractional_electricity_price_bills_whole_labour_points() -> void:
 	_end_shift()
 
 	assert_eq(_whole(_pay_slips()[0].values, "electricity"), 2, "3 laps at 0.5 rounds to 2")
+
+
+func _school_fees(slip: AppMessage) -> int:
+	return _whole(slip.values, "school_fees")
+
+
+func test_a_new_game_says_the_children_are_at_a_state_boarding_school() -> void:
+	var farm := Farm.new(FastTuning.billing_table(), PLOTS)
+
+	var children := _messages(Farm.CHILDREN_AT_SCHOOL, farm.take_messages())
+
+	assert_eq(children.size(), 1)
+	assert_eq(_whole(children[0].values, "school_fees_shift"), 3)
+	assert_eq(_whole(children[0].values, "every"), FastTuning.SCHOOL_FEES_EVERY_SHIFTS)
+
+
+func test_school_fees_are_charged_after_rent_every_third_shift_only() -> void:
+	var fees: Array[int] = []
+	for shift in 6:
+		_farm.debug_add_labour_points(100)
+		_miss_shift()
+		fees.append(_school_fees(_pay_slips()[0]))
+
+	var expected: Array[int] = [0, 0, FastTuning.SCHOOL_FEES, 0, 0, FastTuning.SCHOOL_FEES]
+	assert_eq(fees, expected)
+
+
+func test_the_shift_view_says_when_the_next_school_fees_are_due() -> void:
+	assert_eq(_farm.shift().school_fees_shift, 3)
+	for shift in 3:
+		_farm.debug_add_labour_points(100)
+		_miss_shift()
+
+	assert_eq(_farm.shift().school_fees_shift, 6)
+
+
+func test_school_fees_that_leave_a_shortfall_are_unpaid_until_the_debt_is_cleared() -> void:
+	for shift in 3:
+		_miss_shift()
+
+	var slip := _pay_slips()[-1].values
+	assert_false(_flag(slip, "school_fees_covered"))
+	assert_true(_farm.school_fees_unpaid())
+	assert_eq(_farm.school_fees_unpaid_in_a_row(), 1)
+
+	_farm.debug_add_labour_points(_farm.debt() - 1)
+	assert_true(_farm.school_fees_unpaid(), "still in Debt")
+	_farm.debug_add_labour_points(1)
+	assert_false(_farm.school_fees_unpaid())
+	assert_eq(_farm.school_fees_unpaid_in_a_row(), 1, "clearing Debt does not reset the count")
+
+
+func test_unpaid_school_fees_count_up_in_a_row_and_covered_ones_reset_the_count() -> void:
+	for shift in 6:
+		_miss_shift()
+	assert_eq(_farm.school_fees_unpaid_in_a_row(), 2)
+
+	_farm.debug_add_labour_points(_farm.debt() + 100)
+	for shift in 3:
+		_miss_shift()
+
+	assert_eq(_farm.school_fees_unpaid_in_a_row(), 0)
+	assert_false(_farm.school_fees_unpaid())

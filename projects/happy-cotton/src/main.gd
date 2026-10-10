@@ -370,6 +370,11 @@ func _log_bills(slip: Dictionary) -> void:
 	var rent := {"shift": shift, "bill": "rent", "amount": slip["rent"]}
 	rent["covered"] = slip["rent_covered"]
 	GameLog.info("bill charged", rent)
+	var school_fees: int = slip["school_fees"]
+	if school_fees > 0:
+		var fees := {"shift": shift, "bill": "school fees", "amount": school_fees}
+		fees["covered"] = slip["school_fees_covered"]
+		GameLog.info("bill charged", fees)
 
 
 func _log_command(command: String, index: int, result: CommandResult) -> void:

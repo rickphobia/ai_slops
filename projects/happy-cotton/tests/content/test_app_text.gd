@@ -27,6 +27,10 @@ const SAMPLE_VALUES := {
 	"rent_covered": false,
 	"balance": -2,
 	"debt": 2,
+	"every": 3,
+	"school_fees_shift": 6,
+	"school_fees": 20,
+	"school_fees_covered": false,
 }
 
 

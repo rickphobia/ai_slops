@@ -16,7 +16,7 @@ const DOUBLESPEAK: Dictionary[String, String] = {
 
 ## Overlay labels, filled with String.format.
 const QUOTA_BAR := "Quota {picked} / {quota}"
-const SHIFT_TIMER := "Shift {shift}  ·  {time} left"
+const SHIFT_TIMER := "Shift {shift}  ·  {time} left  ·  School fees after Shift {school_fees_shift}"
 const LABOUR_POINTS := "{points} Labour Points"
 ## Shown in red where the Labour Points usually are.
 const DEBT := "Debt {debt} Labour Points"
@@ -26,6 +26,7 @@ const PAY_SLIP_TITLE := "Pay slip  ·  Shift {shift}"
 const PAY_SLIP_EARNED := "Earned this Shift: +{earned}"
 const PAY_SLIP_ELECTRICITY := "Electricity, {laps} laps: −{electricity}. Thanks for the power!"
 const PAY_SLIP_RENT := "Dormitory rent: −{rent}. A warm bed, kindly provided!"
+const PAY_SLIP_SCHOOL_FEES := "School fees: −{school_fees}. An investment in your Children!"
 const PAY_SLIP_LEFT := "Yours to keep: {points} Labour Points"
 const PAY_SLIP_DEBT := "Owed to the Farm: {debt} Labour Points. We will settle it together!"
 const PAY_SLIP_CLOSE := "Thank you!"
@@ -156,6 +157,18 @@ static func lines() -> Dictionary[StringName, AppLine]:
 				"Your account is {debt} Labour Points in Debt. Don't worry: everything you earn"
 				+ " goes to settling it first. Privileges and Upgrades can wait!"
 			)
+		),
+		# The boarding school is documented (zenz-2019: children of detained parents placed in
+		# state boarding schools). The fees are the game's invention: The App states them as its
+		# own terms, not as fact, and no source is cited for them.
+		Farm.CHILDREN_AT_SCHOOL:
+		AppLine.new(
+			(
+				"Good news about your family! Your two Children are cared for at a state"
+				+ " boarding school, far from any bad influence. Their school fees come out of"
+				+ " your pay every {every} Shifts, the first after Shift {school_fees_shift}."
+			),
+			["zenz-2019"]
 		),
 		Farm.DEBT_CLEARED:
 		AppLine.new(

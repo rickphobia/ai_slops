@@ -92,15 +92,15 @@ func is_powered() -> bool:
 	return _powered
 
 
-## Shows the Shift's Quota progress and time left, and the Worker's Labour Points, or his Debt
-## in red in their place while he owes any.
+## Shows the Shift's Quota progress, time left and when the next school fees are due, and the
+## Worker's Labour Points, or his Debt in red in their place while he owes any.
 func show_shift(shift: ShiftView, labour_points: int, debt := 0) -> void:
 	_quota_bar.max_value = shift.quota
 	_quota_bar.value = mini(shift.picked, shift.quota)
 	_quota_label.text = AppText.QUOTA_BAR.format({"picked": shift.picked, "quota": shift.quota})
-	_shift_label.text = AppText.SHIFT_TIMER.format(
-		{"shift": shift.number, "time": clock_text(shift.seconds_left)}
-	)
+	var timer := {"shift": shift.number, "time": clock_text(shift.seconds_left)}
+	timer["school_fees_shift"] = shift.school_fees_shift
+	_shift_label.text = AppText.SHIFT_TIMER.format(timer)
 	_balance.show_balance(labour_points, debt)
 
 
