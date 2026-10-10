@@ -4,7 +4,7 @@ Books the badminton Court at 1120 Park Avenue on Picktime the moment a date open
 
 ## Status
 
-`in progress`: walking skeleton, Operator login, the encrypted Profile, Booking Requests, the Picktime browser adapter with `dry-run`, and booking at Release Time. The Operator saves the Profile and creates Booking Requests; a background scheduler books each one's Slots on Picktime at its run time, and the list shows each Slot as Booked, Taken or Failed. Recovery after downtime, the 30-day cleanup and the screenshot view come next (`docs/tickets/07-recovery-cleanup-screenshots.md`).
+`in progress`: walking skeleton, Operator login, the encrypted Profile, Booking Requests, the Picktime browser adapter with `dry-run`, and booking at Release Time. The Operator saves the Profile and creates Booking Requests; a background scheduler books each one's Slots on Picktime at its run time, and the list shows each Slot as Booked, Taken or Failed. It recovers after downtime, deletes old data after 30 days, shows each attempt's screenshot, and tries a date again if Picktime hasn't opened it in the first minute after Release Time.
 
 ## Requirements
 
@@ -101,7 +101,8 @@ Every setting is an environment variable, read and validated once at startup by 
 | `COURT_BOOKER_SLOT_PAUSE_MIN_SECONDS` | no | `5` | A run waits a random time between the min and max seconds between two Slots |
 | `COURT_BOOKER_SLOT_PAUSE_MAX_SECONDS` | no | `20` | Must not be less than the min |
 | `COURT_BOOKER_RETRY_COUNT` | no | `2` | How many times a Slot attempt that hit a network error is retried |
-| `COURT_BOOKER_RETRY_BACKOFF_SECONDS` | no | `10` | The wait before the first retry; each later wait doubles it |
+| `COURT_BOOKER_RETRY_BACKOFF_SECONDS` | no | `10` | The wait before the first retry; each later wait doubles it. Also the wait between tries of a date not open yet |
+| `COURT_BOOKER_NOT_OPEN_GRACE_SECONDS` | no | `60` | A date found not open this soon after its Release Time is tried again; no try starts later than this. `0` fails it at once |
 | `COURT_BOOKER_SCHEDULER_TICK_SECONDS` | no | `5` | How often the scheduler looks for due Booking Requests; a run starts at most this late |
 | `COURT_BOOKER_SCHEDULER_STALE_SECONDS` | no | `600` | `/healthz` fails when the scheduler hasn't ticked or made progress for this long. Must be more than the tick |
 
@@ -193,7 +194,7 @@ Logs: `docker logs court-booker-<tag>-<n>`, or Dozzle.
 - **Booking at Release Time** (`scheduler/`, `booking_run/`): when the app starts, a background thread runs one scheduler tick at once and then one every `COURT_BOOKER_SCHEDULER_TICK_SECONDS`. A tick claims the earliest due Waiting request, moving it to Booking… in one locked database step (so no request is ever run twice, and edit and cancel are refused from then on), runs it, marks it Done, and repeats until nothing is due. A run decrypts the Profile then (so Profile edits reach waiting requests) and tries each Slot in time order, with a random pause between them. Each Slot's status is saved as soon as it's known:
   - **Booked**: Picktime confirmed it.
   - **Taken**: someone else has it. Never retried.
-  - **Failed**, with a reason: a network error still failing after `COURT_BOOKER_RETRY_COUNT` retries (waiting longer each time); Picktime's own refusal text (not retried); "date not open on Picktime yet" (that Slot and every later one, without asking Picktime again: the Booking Window setting is probably wrong); or a Profile that can't be read; "missed" or "interrupted, check Picktime" (below).
+  - **Failed**, with a reason: a network error still failing after `COURT_BOOKER_RETRY_COUNT` retries (waiting longer each time); Picktime's own refusal text (not retried); "date not open on Picktime yet" (that Slot and every later one, without asking Picktime again: the Booking Window setting is probably wrong). Within `COURT_BOOKER_NOT_OPEN_GRACE_SECONDS` of Release Time a closed date is first tried again every `COURT_BOOKER_RETRY_BACKOFF_SECONDS`, in case Picktime opens it a few seconds late; each try is logged as `date not open yet, trying again` with `seconds_since_release`; or a Profile that can't be read; "missed" or "interrupted, check Picktime" (below).
 
   One Slot's result never stops the others. Once a request has started, the list shows each Slot's status, when it was tried, and a link to its screenshot.
 - **Recovery and cleanup** (`scheduler/`): what the statuses mean after downtime.

@@ -52,6 +52,7 @@ def create_app(
             sleeper=sleeper,
             random=random_source,
             rules=settings.booking_run,
+            schedule=settings.schedule,
         ),
         clock=clock,
         schedule=settings.schedule,
